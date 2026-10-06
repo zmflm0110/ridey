@@ -420,7 +420,7 @@ revoke all on live.tick_log from anon, authenticated;
 -- 5분마다: 도착한 것 넣기 → 목록 만들기 → 다음 요청 (지금·직전 시간은 매번, 2~6시간 전은 30분마다, 빠진 칸은 몇 개씩)
 create or replace function live.tick() returns void language plpgsql as $$
 declare now_ timestamp := (now() at time zone 'Asia/Seoul')::timestamp; k int; h text; miss int := 0;
-        started timestamptz := clock_timestamp(); tm timestamptz := clock_timestamp(); ms jsonb := '{}'; n int;
+        started timestamptz := clock_timestamp(); tm timestamptz := clock_timestamp(); ms jsonb := '{}'; n int; whole boolean;
 begin
   if not pg_try_advisory_xact_lock(hashtext('live.tick')) then return; end if;   -- 예약과 손으로 돌린 것이 겹치면 하나만
   n := live.collect();
@@ -439,16 +439,16 @@ begin
   insert into live.snapshot(id, at, body) values (1, now_, live.compute(now_) || jsonb_build_object('score', live.score(now_)))
     on conflict (id) do update set at = excluded.at, body = excluded.body;
   ms := ms || jsonb_build_object('list', round(1000 * extract(epoch from clock_timestamp() - tm))); tm := clock_timestamp();
-  -- 한 시간 자료는 반납 순으로 쌓인다(새 반납은 끝에 붙음, 2026-10-02 확인) → 지금·직전 시간은 마지막 꽉 찬 쪽부터만(겹쳐서 한 쪽).
-  -- 30분마다 직전~6시간 전은 처음부터 다시(늦게 끼어든 기록 바로잡기). 매번 30여 쪽 → 서너 쪽.
-  for k in 0..1 loop
+  -- 한 시간 자료는 반납 순으로 쌓인다(새 반납은 끝에 붙음, 2026-10-02 확인) → 마지막 꽉 찬 쪽부터만(겹쳐서 한 쪽) 받는다.
+  -- 지금·직전 시간은 5분마다, 2~6시간 전(늦게 반납된 긴 대여)은 30분마다. 처음부터 다시(늦게 끼어든·고쳐진 기록 바로잡기)는 3시간마다.
+  -- 전엔 30분마다 2~6시간 전을 처음부터(약 60쪽) 받아 그다음 작업의 넣기가 22초로 튀었다(평소 3초, 2026-10-06 tick_log).
+  whole := extract(hour from now_)::int % 3 = 0 and extract(minute from now_)::int < 5;
+  for k in 0..6 loop
+    continue when k >= 2 and extract(minute from now_)::int % 30 >= 5;
     h := to_char(now_ - make_interval(hours => k), 'YYYY-MM-DD/HH24');
-    if k = 1 and extract(minute from now_)::int % 30 < 5 then perform live.request(h);
+    if k >= 1 and whole then perform live.request(h);
     else perform live.request(h, greatest(1, coalesce((select total from live.hours where hour = h), 0) / 1000)); end if;
   end loop;
-  if extract(minute from now_)::int % 30 < 5 then
-    for k in 2..6 loop perform live.request(to_char(now_ - make_interval(hours => k), 'YYYY-MM-DD/HH24')); end loop;
-  end if;
   for h in select to_char(t, 'YYYY-MM-DD/HH24') from generate_series(date_trunc('hour', now_) - interval '8 days', date_trunc('hour', now_) - interval '7 hours', interval '1 hour') t
            where to_char(t, 'YYYY-MM-DD/HH24') not in (select hour from live.hours) order by t desc loop
     exit when miss >= 6;
