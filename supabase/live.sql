@@ -454,10 +454,12 @@ begin
     exit when miss >= 6;
     perform live.request(h); miss := miss + 1;
   end loop;
-  delete from live.rentals where t1 < now_ - interval '9 days';   -- t1 색인으로 (t0 로는 표 전체를 훑었다). t1 ≥ t0 라 9일 안 대여는 안 지워짐
+  -- 8일만 둔다(쓰는 범위가 최대 8일: AI 특징 = 마지막 헛대여(24시간 안) 앞 7일). 무료 DB 500MB 중 대여 표가 346MB 까지 커져서 9일 → 8일(2026-10-06)
+  delete from live.rentals where t1 < now_ - interval '8 days';   -- t1 색인으로 (t0 로는 표 전체를 훑었다). t1 ≥ t0 라 8일 안 대여는 안 지워짐
   delete from live.alarms where at < now_ - interval '10 days' and next_dud is null;   -- 채점된 경보는 계속 둔다(작음)
   insert into live.tick_log(at, ms) values (now_, ms || jsonb_build_object('rest', round(1000 * extract(epoch from clock_timestamp() - tm)),
-                                                                          'total', round(1000 * extract(epoch from clock_timestamp() - started))))
+                                                                          'total', round(1000 * extract(epoch from clock_timestamp() - started)),
+                                                                          'db_mb', pg_database_size(current_database()) / 1048576))   -- 무료 한도 500MB
     on conflict (at) do nothing;
   delete from live.tick_log where at < now_ - interval '3 days';
 end $$;

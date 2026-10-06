@@ -66,9 +66,9 @@ begin
     delete from net._http_response where id = q.id;
   end loop;
   delete from live.ev_req where made_at < now() - interval '15 minutes';   -- 답 없는 요청은 버림
-  -- 클라우드엔 4일만(하루 약 16만 줄·20MB — 10일이면 무료 DB 500MB 의 1/3). 맥이 tools/ev_pull.py 로 4일 안에 한 번씩 내려받아 다 모은다.
-  delete from live.ev_snap where at < (now() at time zone 'Asia/Seoul') - interval '4 days';
-  delete from live.ev_runs where at < (now() at time zone 'Asia/Seoul') - interval '4 days';
+  -- 클라우드엔 3일만(하루 약 14만 줄·14MB). 맥이 tools/ev_pull.py 로 3일 안에 한 번씩 내려받아 다 모은다. (4일 → 3일, 2026-10-06: 무료 DB 500MB 중 426MB)
+  delete from live.ev_snap where at < (now() at time zone 'Asia/Seoul') - interval '3 days';
+  delete from live.ev_runs where at < (now() at time zone 'Asia/Seoul') - interval '3 days';
   return n;
 end $$;
 
