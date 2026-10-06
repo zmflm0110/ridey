@@ -19,6 +19,8 @@
   그 전에 기계가 메모리 부족으로 Postgres 캐시를 디스크로 밀어내 캐시 420쪽 읽기에 17\~30초 → tick 을 잠시 멈추고 잠잠해진 뒤(무작위 읽기 탐침 0.3초) 색인을 만듦(10분).
   큰 작업 뒤엔 20\~40분 동안 예약이 `job startup timeout` 일 수 있다. 오래 안 풀리면 대시보드 → Project Settings → General → Restart project.
   예약을 멈추기/켜기: `select cron.alter_job(<jobid>, active := false/true)` (jobid 는 `select jobid, jobname from cron.job`).
+  **5분 작업 구조(10-06)**: 넣기 → 후보 7일 연쇄 표시를 한 번 세어 live.mark_cache(UNLOGGED) → 경보 기록·지금 목록이 같이 씀(live.cand_marks).
+  지금·직전 시간은 5분마다, 2\~6시간 전은 30분마다 모두 '새로 붙은 쪽만', 처음부터 다시는 3시간마다. 바꿀 땐 `tools/live_sql_compare.py --old <커밋>`(로컬 Postgres: 스크래치패드에 initdb 다시)로 같은 답부터.
   **DB 크기(무료 한도 500MB)**: 10-06 에 426MB(대여 표 346MB — 덮개 기본 키 178MB, 충전기 57MB) → 대여 9→8일, 충전기 4→3일. tick_log 의 `db_mb` 로 본다. 덮개 색인 REINDEX 는 같은 크기의 임시 공간이 들어 한도를 넘을 수 있으니 하지 말 것.
 - **스스로 배우기(2026-10-02)**: DB 가 3시간마다 live.samples 에 목록 표본·확률, 정답은 자동. 주 1회 `python tools/retrain.py` (점검 → docs/model_live.md), 500개+ 모이면 `--deploy` 로 나을 때만 교체.
 - **충전기(2026-10-02)**: 클라우드 DB 가 5분마다(`supabase/ev.sql`, ev-tick, Vault 'datagokr'). **클라우드엔 3일만 남김(하루 약 14MB) → 3일 안에 한 번 `tools/ev_pull.py`** (맥 data/ev.sqlite 에 다 모임). 맥 수집기 kr.bikedoctor.ev 는 끔(plist 는 data/launchagents-off/). 검증: `tools/ev_pull.py` → `analysis/ev_validate.py`.
