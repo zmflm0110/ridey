@@ -124,6 +124,9 @@ def main():
         res = {}
         for db in ("old", "new"):
             out = {}
+            if run(a.port, db, "select to_regproc('live.cand_marks') is not null").strip() == "t":   # 5분 작업처럼 한 번 세어 둔 것을 같이 쓰는 길도 비교
+                _, dt = timed(a.port, db, f"truncate live.mark_cache; insert into live.mark_cache select {ts}, * from live.mark_rows({ts} - interval '7 days', live.cand({ts}))")
+                times[db].setdefault("marks(캐시)", []).append(dt)
             for name, q in (("record_alarms", f"select live.record_alarms({ts})"), ("settle", f"select live.settle({ts})"),
                             ("compute", f"select live.compute({ts}) - 'rentals_in_window'"), ("score", f"select live.score({ts}, false)")):
                 out[name], dt = timed(a.port, db, q)

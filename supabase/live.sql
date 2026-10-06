@@ -171,6 +171,20 @@ create or replace function live.cand(now_ timestamp) returns text[] language sql
   where d.t1 >= now_ - interval '24 hours' and d.st0 = d.st1 and d.t1 - d.t0 <= interval '180 seconds' and d.dist_m < 300
     and p.st0 = p.st1 and p.t1 - p.t0 <= interval '180 seconds' and p.dist_m < 300 $$;
 
+-- 후보 자전거의 7일 연쇄 표시 — 5분 작업에서 경보 기록과 지금 목록이 같은 것을 두 번 셌다(뒤에 도는 쪽이 2.5~4.6초, 2026-10-06 tick_log).
+-- 작업 안에서 한 번 세어 이 표에 두고 둘이 같이 쓴다. 로그를 안 남기는 표(UNLOGGED)라 디스크 쓰기가 적고, 다른 시각을 물으면 그 자리에서 센다(답은 같음).
+create unlogged table if not exists live.mark_cache (at timestamp not null, bike text, t0 timestamp, t1 timestamp, st1 text, dud boolean, retry boolean, streak int);
+revoke all on live.mark_cache from anon, authenticated;
+create or replace function live.cand_marks(now_ timestamp)
+returns table (bike text, t0 timestamp, t1 timestamp, st1 text, dud boolean, retry boolean, streak int) language plpgsql stable as $$
+begin
+  if exists (select 1 from live.mark_cache c where c.at = now_) then
+    return query select c.bike, c.t0, c.t1, c.st1, c.dud, c.retry, c.streak from live.mark_cache c where c.at = now_;
+  else
+    return query select * from live.mark_rows(now_ - interval '7 days', live.cand(now_));
+  end if;
+end $$;
+
 -- 다음 '다른 사람'(재시도 아님)의 대여: at_ 뒤 첫 대여부터, 바로 앞 대여와 생년·성별이 같으면 건너뜀.
 -- mark_rows(since_, …) 의 retry 와 같은 뜻(since_ 앞 대여는 앞사람으로 안 봄). 9일 창 전체를 표시하지 않고 기본 키 색인으로 몇 줄만 (2026-10-02)
 create or replace function live.next_rider(bike_ text, at_ timestamp, since_ timestamp)
@@ -321,7 +335,7 @@ $$;
 -- 지금 목록 (live.json 과 같은 모양)
 create or replace function live.compute(now_ timestamp default (now() at time zone 'Asia/Seoul')::timestamp) returns jsonb language sql stable as $$
 with m as (
-  select * from live.mark_rows(now_ - interval '7 days', live.cand(now_))
+  select * from live.cand_marks(now_)
 ), last as (
   select distinct on (bike) bike, t1, st1, case when dud then streak + 1 else 0 end chain
   from m order by bike, t0 desc
@@ -352,12 +366,12 @@ select jsonb_build_object(
 $$;
 
 -- 지금 보이는 경보를 적어 둔다 (처음 본 때 = seen_at) — 채점용
--- 후보 자전거를 먼저 변수로 — 인자 자리에서 부르면 plpgsql 계획이 나빠 9~21초 걸렸다(변수면 1초, 2026-09-30)
+-- 후보·연쇄 표시는 live.cand_marks 로 — 5분 작업 안에서는 한 번 세어 둔 것을 지금 목록과 같이 쓴다
 create or replace function live.record_alarms(now_ timestamp) returns int language plpgsql as $$
-declare n int; b text[] := live.cand(now_);
+declare n int;
 begin
   insert into live.alarms(bike, at, station, seen_at)
-  select bike, t1, st1, now_ from live.mark_rows(now_ - interval '7 days', b)
+  select bike, t1, st1, now_ from live.cand_marks(now_)
   where dud and not retry and streak = 1 and t1 >= now_ - interval '24 hours'
   on conflict (bike, at) do nothing;
   get diagnostics n = row_count;
@@ -425,6 +439,9 @@ begin
   if not pg_try_advisory_xact_lock(hashtext('live.tick')) then return; end if;   -- 예약과 손으로 돌린 것이 겹치면 하나만
   n := live.collect();
   ms := ms || jsonb_build_object('collect', round(1000 * extract(epoch from clock_timestamp() - tm)), 'rows', n); tm := clock_timestamp();
+  truncate live.mark_cache;
+  insert into live.mark_cache select now_, * from live.mark_rows(now_ - interval '7 days', live.cand(now_));
+  ms := ms || jsonb_build_object('marks', round(1000 * extract(epoch from clock_timestamp() - tm))); tm := clock_timestamp();
   perform live.record_alarms(now_);
   ms := ms || jsonb_build_object('alarms', round(1000 * extract(epoch from clock_timestamp() - tm))); tm := clock_timestamp();
   perform live.settle(now_);
