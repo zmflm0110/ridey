@@ -29,7 +29,7 @@
   <g font-size="14">
     <rect x="324" y="156" width="250" height="70" rx="14" fill="#fff"/>
     <text x="340" y="184" font-weight="700" fill="#191F28">① 받기 (pg_net)</text>
-    <text x="340" y="206" fill="#646F7C">최근 9일 대여 · 바뀐 줄만 고쳐 씀</text>
+    <text x="340" y="206" fill="#646F7C">최근 8일 대여 · 새로 붙은 쪽만 받음</text>
     <rect x="590" y="156" width="250" height="70" rx="14" fill="#fff"/>
     <text x="606" y="184" font-weight="700" fill="#191F28">② SQL 엔진 — 연쇄 세기</text>
     <text x="606" y="206" fill="#646F7C">서로 다른 사람 · 3분 · 300m</text>
@@ -43,7 +43,7 @@
     <text x="340" y="416" fill="#646F7C">확률 순 · 대여소는 기대 고장 수 순</text>
     <rect x="590" y="366" width="250" height="78" rx="14" fill="#fff"/>
     <text x="606" y="394" font-weight="700" fill="#191F28">⑤ 스스로 채점</text>
-    <text x="606" y="416" fill="#646F7C">경보 뒤 다음 사람 · 1,700명+ 32%</text>
+    <text x="606" y="416" fill="#646F7C">경보 뒤 다음 사람 · 3,000명+ 31%</text>
     <rect x="324" y="462" width="516" height="62" rx="14" fill="#fff" stroke="#35C7A0" stroke-dasharray="6 5"/>
     <text x="340" y="490" font-weight="700" fill="#191F28">⑥ 스스로 배우기 — 3시간마다 목록 입력·확률 저장, 다음 사람 결과로 정답 자동</text>
     <text x="340" y="511" fill="#646F7C">주 1회 다시 배워 최근 자료에서 더 나을 때만 교체 (tools/retrain.py)</text>
@@ -77,8 +77,8 @@
     <text x="928" y="400" fill="#4E5968">구별 순위 · 정비 동선 · CSV</text>
     <text x="928" y="422" fill="#4E5968">"약 31대 진짜 · 최소 20대"</text>
     <rect x="910" y="456" width="250" height="68" rx="16" fill="#E3F5EF"/>
-    <text x="928" y="484" font-size="16" font-weight="700" fill="#167A66">3초 확인 · 현장 조사</text>
-    <text x="928" y="506" fill="#4E5968">넣기만 · 횟수 제한 · 사진 비공개</text>
+    <text x="928" y="484" font-size="16" font-weight="700" fill="#167A66">현장 확인 · 현장 조사</text>
+    <text x="928" y="506" fill="#4E5968">순회 중 탭 한 번 · 횟수 제한 · 사진 비공개</text>
   </g>
   <path d="M860 168 H908" stroke="#4E5968" stroke-width="2" marker-end="url(#a)"/>
   <path d="M1035 216 V234" stroke="#4E5968" stroke-width="2"/>
