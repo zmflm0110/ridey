@@ -1,4 +1,4 @@
-// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 지금 목록(클라우드) → 구 고르기·정비 동선 → 조회 경고 → 3초 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막.
+// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
 // 지금 목록은 진짜 클라우드(Supabase 가 5분마다 만든 것)에서 받는다(인터넷 필요). 확인·조사 기록은 임시 서버 DB 로만(클라우드 DB 에 안 씀).
 //   node tests/web/record_demo.js [나갈 폴더=docs/demo]   → demo.mp4 (ffmpeg 필요)
 // 화질: Playwright 녹화는 폰 크기(390) 그대로라 2배 틀의 왼쪽 위에만 찍혔다(나머지 회색) → 2배 화면(780×1688)을 계속 캡처해 시각대로 잇는다.
@@ -57,6 +57,34 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(7200 * SLOW);   // 길 → 자전거 → R·I·D·E·Y → 체크 → 'Ready before you ride.' 타자
   await cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
   slowNow = 1;
+  // 자막 상자 (사이트·앱 모두)
+  const capStyle = () => page.addStyleTag({ content: `#cap{position:fixed;left:10px;right:10px;bottom:18px;z-index:9999;background:rgba(11,19,32,.9);color:#fff;
+    font:600 16px/1.45 -apple-system,"Apple SD Gothic Neo","Noto Sans CJK KR",sans-serif;padding:12px 14px;border-radius:14px;transition:opacity .3s;pointer-events:none}
+    #cap small{display:block;font-weight:400;opacity:.8;font-size:13px} #cap.top{top:10px;bottom:auto}` });
+  // top: 시연 화면에서는 아래 숫자판을 가리지 않게 위(머리글 자리)에
+  const cap = async (t, sub = "", top = false) => { await page.evaluate(([t, s, top]) => {
+    let c = document.querySelector("#cap"); if (!c) { c = document.createElement("div"); c.id = "cap"; document.body.appendChild(c); }
+    c.className = top ? "top" : ""; c.innerHTML = t + (s ? `<small>${s}</small>` : ""); }, [t, sub, top]); };
+  // 이야기 — 실제 자전거 한 대의 12일 (사이트의 시간 축 그림을 왼쪽에서 오른쪽으로 밀며)
+  await capStyle();
+  await page.evaluate(() => { const r = document.querySelector("#spb .tl").getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 150, behavior: "instant" }); });
+  await wait(1200);
+  await cap("서울 강서구 따릉이 SPB-69683, 2026년 6월 실제 기록.", "6월 12일 오후 3시 43분 — 서로 다른 두 번째 사람도 빌리자마자 반납.", true);
+  await wait(4200);
+  // 가로 밀기는 여기(node)서 조금씩 — 캡처가 쉬지 않고 돌면 페이지 안 애니메이션 시계가 흔들려 한 번에 끝까지 갔다가 되돌아왔다
+  const slide = async (to, ms) => {
+    const [from, max] = await page.evaluate(() => { const e = document.querySelector("#spb .tl"); return [e.scrollLeft, e.scrollWidth - e.clientWidth]; });
+    const end = to * max, n = Math.max(1, Math.round(ms / 50));
+    for (let i = 1; i <= n; i++) {
+      const k = i / n;
+      await page.evaluate((v) => { document.querySelector("#spb .tl").scrollLeft = v; }, from + (end - from) * k * k * (3 - 2 * k));
+      await wait(50);
+    }
+  };
+  await cap("다음 날 아침 첫 고장 신고. 그런데도 그 뒤 54번 더 빌렸다가 바로 반납.", "출근길엔 37분 사이에 7명이 연달아.", true);
+  await slide(0.5, 4200); await wait(1600);
+  await cap("12일 동안 서로 다른 73명. 기록엔 다 남아 있었어요.", "RIDEY 는 두 번째 사람이 반납한 그 순간 알아요.", true);
+  await slide(1, 3600); await wait(2400);
   paused = true;   // 앱을 불러오는 빈 화면은 빼고 잇는다
   await page.goto(URL, { waitUntil: "networkidle" });
   await phone();
@@ -65,21 +93,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(1500);   // 지도 조각까지
   cut = true; paused = false;
   const live = (await page.$eval("#day", (d) => d.value)) === "live";
-  // 자막 상자
-  await page.addStyleTag({ content: `#cap{position:fixed;left:10px;right:10px;bottom:18px;z-index:9999;background:rgba(11,19,32,.9);color:#fff;
-    font:600 16px/1.45 -apple-system,"Apple SD Gothic Neo","Noto Sans CJK KR",sans-serif;padding:12px 14px;border-radius:14px;transition:opacity .3s;pointer-events:none}
-    #cap small{display:block;font-weight:400;opacity:.8;font-size:13px} #cap.top{top:10px;bottom:auto}` });
-  // top: 시연 화면에서는 아래 숫자판을 가리지 않게 위(머리글 자리)에
-  const cap = async (t, sub = "", top = false) => { await page.evaluate(([t, s, top]) => {
-    let c = document.querySelector("#cap"); if (!c) { c = document.createElement("div"); c.id = "cap"; document.body.appendChild(c); }
-    c.className = top ? "top" : ""; c.innerHTML = t + (s ? `<small>${s}</small>` : ""); }, [t, sub, top]); };
+  await capStyle();
   // 누르기: 2배 그림(scale 2) 에서는 마우스 좌표가 어긋나서 DOM 에서 바로 누름
   const tap = (sel) => page.$eval(sel, (el) => el.click());
   const tab = (t) => tap(`#tabs button[data-tab="${t}"]`);
   const show = (sel) => page.evaluate((sel) => { const r = document.querySelector(sel).getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 130, behavior: "smooth" }); }, sel);   // 머리글 아래로 온전히
   const type = async (sel, text) => { for (const ch of text) { await page.type(sel, ch); await wait(90); } };
 
-  await cap("따릉이 고장 신고, 귀찮아서 대부분 안 해요.", "고장 자전거는 앱에 '대여 가능' 으로 남아 다음 사람이 또 헛걸음합니다.");
+  await cap("신고는 귀찮고, 순회 직원도 타 봐야 아는 고장은 못 봐요.", "경보 자전거의 82~91% 가 하루 안에 또 빌려졌어요 — 그래서 '어디부터 볼지' 를 알려 줍니다.");
   await wait(3800);
   await cap(live ? "RIDEY는 서울시 공개 대여기록을 5분마다 읽어요." : "RIDEY는 서울시 공개 대여기록만 봅니다.",
     "서로 다른 사람이 연달아 빌리자마자(3분·300m 안) 반납한 자전거 = 고장 의심. 센서·장비 없이.");

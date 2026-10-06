@@ -221,7 +221,7 @@ function renderRoute(bikes) {
   $("#route-list").innerHTML = stops.map((s, i) =>
     `<li><div><b>${esc(s.name)}</b><span class="s">${hhmm(sim.arr[i])} 도착 · 의심 ${s.arr.length}대</span></div>` +
     `<span class="n accent">${people(stationValue(s, sim.arr[i]))}</span></li>`).join("") +
-    `<li class="total"><span>${here ? "내 위치에서 " : ""}${stops.length}곳 · 약 ${Math.round(sim.used)}분 · 막을 헛걸음 예상 <b style="display:inline;color:var(--accent)">${sim.value.toFixed(1)}명</b>` +
+    `<li class="total"><span>${here ? "내 위치에서 " : ""}${stops.length}곳 · 약 ${Math.round(sim.used)}분 · 막을 헛걸음 예상 <b style="display:inline;color:var(--accent)">${people(sim.value)}</b>` +
     `${sim.value > rankValue + 0.05 ? ` (순위대로 돌 때보다 ${(sim.value - rankValue).toFixed(1)}명 더)` : ""}</span></li>`;
   if (typeof L === "undefined" || !state.map) return;
   if (state.routeLayer) state.routeLayer.remove();
