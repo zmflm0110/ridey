@@ -25,11 +25,11 @@ document.querySelectorAll("#tabs button").forEach((b) =>
 // ── 아침 목록
 let liveTimer = null;
 const DEMO_DAY = "2026-06-15";   // 앱 안(오프라인 캐시)에 늘 있는 시연 날
-async function loadDay(day) {
+async function loadDay(day, prefetched) {
   state.day = day;
   clearInterval(liveTimer);
   try {
-    state.morning = day === "live" ? (await getLive()) || state.morning
+    state.morning = day === "live" ? (prefetched !== undefined ? prefetched : await getLive()) || state.morning
       : state.sbDays.has(day) ? (await sbOpsList(day).catch(() => null)) || await getJSON(`${state.opsBase}${day}.json`)   // Supabase(06:10) 먼저, 없으면 GitHub
       : await getJSON(state.ops.has(day) ? `${state.opsBase}${day}.json` : `data/morning/${day}.json`);
     if (!state.morning) throw new Error("no live");
@@ -53,7 +53,8 @@ function relookup() { if ($("#lookup-result").innerHTML && $("#bike-input").valu
 // 실시간: 맥 server/live.py(1분, 같은 와이파이) · Supabase(5분, DB 가 스스로) · GitHub(예약이 드묾) 중 가장 새 것.
 // 채점·자료 지연 표시는 GitHub 쪽에만 있어 가장 새 목록에 빌려 붙인다.
 async function getLive() {
-  const src = [["mac", getJSON(`data/live.json?t=${Date.now()}`)], ["supabase", sbLive()], ["cloud", getJSON(`${CLOUD.data}live.json?t=${Date.now()}`)]];
+  const within = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);   // 백업은 3초까지만 기다림
+  const src = [["mac", within(getJSON(`data/live.json?t=${Date.now()}`), 3000)], ["supabase", sbLive()], ["cloud", within(getJSON(`${CLOUD.data}live.json?t=${Date.now()}`), 3000)]];
   const got = await Promise.allSettled(src.map(([, p]) => p));
   const all = got.map((g, i) => g.status === "fulfilled" && g.value && g.value.at ? { ...g.value, source: src[i][0] } : null).filter(Boolean);
   const ok = all.filter((m) => minsAgo(m.at) <= (m.source === "mac" ? 20 : 180));   // 3시간 안이면 늦었다고 알리고 보여 줌(6월 시연 자료보다 낫다)
@@ -383,10 +384,13 @@ function lookup(raw) {
 $("#lookup-form").addEventListener("submit", (e) => { e.preventDefault(); lookup($("#bike-input").value); });
 
 let scanning = false;
+// 스크립트 하나 받기 (QR 읽기 라이브러리는 처음 누를 때만 — 첫 화면에서 57KB 덜 받음)
+const loadScript = (src) => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.append(s); });
 $("#scan-btn").addEventListener("click", async () => {
   const video = $("#cam"), canvas = $("#cam-canvas");
   if (scanning) { stopScan(); return; }
   try {
+    if (!window.jsQR) await loadScript("vendor/jsqr/jsQR.js").catch(() => {});
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     video.srcObject = stream; video.hidden = false; await video.play(); scanning = true;
     $("#scan-btn").textContent = "그만 찍기";
@@ -531,24 +535,34 @@ function defaultDay(days) {
 
 // ── 시작
 (async () => {
-  const list = await getJSON("data/stations.json");
+  // 서로 기다릴 필요 없는 자료는 한꺼번에 받기 시작한다 — 전엔 12번을 하나씩 차례로 받아 느린 4G 에서 첫 숫자까지 8.5초 걸렸다(2026-10-06)
+  const liveP = getLive();
+  const stationsP = getJSON("data/stations.json");
+  const opsLocalP = getJSON("data/ops/index.json").catch(() => null);
+  const opsCloudP = getJSON(`${CLOUD.data}ops/index.json?t=${Date.now()}`).catch(() => []);
+  const sbDaysP = sbOpsDays().catch(() => []);
+  const morningP = getJSON("data/morning/index.json");
+  const sbScoresP = sbScores().catch(() => ({}));
+  const routeValueP = getJSON("data/route_value.json").catch(() => null);   // 정비 동선 값 표
+  const busyDemoP = getJSON("data/busy.json").catch(() => ({}));   // 대여소 시간대별 대여 — 시연 날짜는 그때 자료(6/15 앞 7일)
+  const list = await stationsP;
   list.forEach((s) => { s.name = s.name.trim(); state.stations[s.id] = s; });   // 원본 이름 앞에 빈칸이 붙은 곳이 많다
   // 시연 목록(data/morning, 월별 파일) + 운영 목록(data/ops, 매일 06:10 — 서버에만 있음)
   // 운영 목록: 맥 서버에 있으면 거기, 없으면(밖·GitHub Pages) GitHub 가 매일 06:10 만든 것
   state.opsBase = "data/ops/";
-  let ops = await getJSON("data/ops/index.json").catch(() => null);
-  if (!ops || !ops.length) { ops = await getJSON(`${CLOUD.data}ops/index.json?t=${Date.now()}`).catch(() => []); state.opsBase = `${CLOUD.data}ops/`; }
-  state.sbDays = new Set(await sbOpsDays().catch(() => []));   // Supabase 가 매일 06:10 에 만든 목록
+  let ops = await opsLocalP;
+  if (!ops || !ops.length) { ops = await opsCloudP; state.opsBase = `${CLOUD.data}ops/`; }
+  const scoresP = getJSON(`${state.opsBase}scores.json`).catch(() => null);   // 운영 중에만 있음
+  const busyOpsP = getJSON(`${state.opsBase}busy.json`).catch(() => null);   // 운영(실시간·매일 목록)은 서버가 지난 7일로 쓴 것
+  state.sbDays = new Set(await sbDaysP);   // Supabase 가 매일 06:10 에 만든 목록
   state.ops = new Set([...ops, ...state.sbDays]);
   ops = [...state.ops];
-  const days = [...new Set([...(await getJSON("data/morning/index.json")), ...ops])].sort();
-  try { state.scores = await getJSON(`${state.opsBase}scores.json`); } catch {}   // 운영 중에만 있음
-  try { Object.assign(state.scores, await sbScores()); } catch {}   // Supabase 채점이 있으면 그것으로
-  state.routeValue = await getJSON("data/route_value.json").catch(() => null);   // 정비 동선 값 표
-  // 대여소 시간대별 대여 — 시연 날짜는 그때 자료(busy.json, 6/15 앞 7일), 운영(실시간·매일 목록)은 서버가 지난 7일로 쓴 ops/busy.json
-  state.busyDemo = await getJSON("data/busy.json").catch(() => ({}));
-  state.busyOps = await getJSON(`${state.opsBase}busy.json`).catch(() => null);
-  const live = await getLive();
+  const days = [...new Set([...(await morningP), ...ops])].sort();
+  Object.assign(state.scores, (await scoresP) || {}, await sbScoresP);   // Supabase 채점이 있으면 그것으로
+  state.routeValue = await routeValueP;
+  // 붐빔 표(약 140KB)는 정비 동선에만 쓰므로 기다리지 않는다 — 도착하면 동선만 다시 (첫 화면이 그만큼 빨리)
+  Promise.all([busyDemoP, busyOpsP]).then(([demo, ops]) => { state.busyDemo = demo; state.busyOps = ops; if (state.morning) renderLists(); });
+  const live = await liveP;
   const pick = live && !new URLSearchParams(location.search).get("day") ? "live" : defaultDay(days);
   // 지금 → 매일 아침 목록(최근 것부터) → 시연 자료. 이름은 사람이 읽는 말로, 값은 날짜 그대로
   const label = (d) => state.ops.has(d) ? (d === kstToday() ? `오늘 아침 (${koDay(d)})` : `${koDay(d)} 아침`) : `${d} (시연)`;
@@ -556,7 +570,7 @@ function defaultDay(days) {
   $("#day").innerHTML = (live ? `<option value="live" ${pick === "live" ? "selected" : ""}>지금 (실시간)</option>` : "") +
     ordered.map((d) => `<option value="${d}" ${d === pick ? "selected" : ""}>${label(d)}</option>`).join("");
   $("#day").addEventListener("change", (e) => loadDay(e.target.value));
-  await loadDay($("#day").value);
+  await loadDay($("#day").value, live);   // 실시간 목록은 위에서 받은 것 그대로 (두 번 받지 않게)
   stationOptions(null);
   flushQueue();
   if ("serviceWorker" in navigator && !window.Capacitor) navigator.serviceWorker.register("sw.js").catch(() => {});   // 안드로이드 앱은 파일이 앱 안에 있어 필요 없음

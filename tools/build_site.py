@@ -19,8 +19,9 @@ json.dump({"date": rp["date"], "events": [[e["s"], code[e["type"]], e.get("stati
 m = json.load(open(W / "morning" / "2026-06-15.json"))
 json.dump({"date": m["date"], "bikes": [[b["bike"], b["station_name"].strip(), b["chain"], b["level"], b["last_dud"]] for b in m["bikes"]]},
           open(S / "data" / "morning.json", "w"), ensure_ascii=False, separators=(",", ":"))
-for n in ("1_morning", "2_lookup", "3_rescue", "4_replay"):
-    shutil.copy(ROOT / "docs" / "shots" / f"{n}.png", S / "img" / f"{n}.png")
+for n in ("1_morning", "2_lookup", "3_rescue", "4_replay"):   # 가벼운 WebP(tools/make_webp.py 가 만듦 — 여기선 표준 라이브러리만)
+    shutil.copy(ROOT / "docs" / "shots" / f"{n}.webp", S / "img" / f"{n}.webp")
+    (S / "img" / f"{n}.png").unlink(missing_ok=True)
 for p in sorted((S / "data").iterdir()) + sorted((S / "img").iterdir()):
     print(f"{p.relative_to(ROOT)}  {p.stat().st_size / 1024:.0f}KB")
 
