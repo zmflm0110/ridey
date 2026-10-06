@@ -173,8 +173,17 @@ function renderLists() {
   const bikes = shown();
   renderRank(bikes);
   renderRoute(bikes);
-  $("#bike-list").innerHTML = bikes.slice(0, 80).map(bikeRow).join("");
+  // 처음엔 10대만(토스처럼 짧게) — 사람이 고장이라고 확인한 자전거는 접혀 있어도 맨 위에. '모두 보기' 로 펼침
+  const sure = (b) => (checkedOf(b.bike).broken ? 0 : 1);
+  const list = [...bikes].sort((a, b) => sure(a) - sure(b));
+  const lim = state.allBikes ? 80 : 10;
+  $("#bike-list").innerHTML = list.slice(0, lim).map(bikeRow).join("");
+  const more = $("#bike-more");
+  more.hidden = list.length <= 10;
+  more.textContent = state.allBikes ? "접기" : `${Math.min(list.length, 80)}대 모두 보기`;
+  more.setAttribute("aria-expanded", String(!!state.allBikes));
 }
+$("#bike-more").addEventListener("click", () => { state.allBikes = !state.allBikes; renderLists(); });
 
 // 정비 동선: 순위 위 10곳을 (내 위치 또는 1위 대여소에서) 도는 순서 — route.js
 // 정비 동선 — 근무 시간 안에 '막을 헛걸음' 이 가장 많은 대여소와 순서 (route.js planValue, 되짚기: docs/route_backtest.md)
@@ -193,6 +202,7 @@ function routeStart() {   // 운영(오늘·실시간)이면 지금부터, 지�
   if (state.day === "live" || state.day === today) { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
   return 9 * 60;
 }
+const people = (v) => (v < 0.05 ? "0.1명 미만" : `${v.toFixed(1)}명`);
 const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(Math.floor(m % 60)).padStart(2, "0")}`;
 function renderRoute(bikes) {
   const minutes = +$("#shift").value, t0 = routeStart();
@@ -209,7 +219,7 @@ function renderRoute(bikes) {
   const rankValue = simulate(start, rankStops, stationValue, t0).value;
   $("#route-list").innerHTML = stops.map((s, i) =>
     `<li><div><b>${esc(s.name)}</b><span class="s">${hhmm(sim.arr[i])} 도착 · 의심 ${s.arr.length}대</span></div>` +
-    `<span class="n accent">${stationValue(s, sim.arr[i]).toFixed(1)}명</span></li>`).join("") +
+    `<span class="n accent">${people(stationValue(s, sim.arr[i]))}</span></li>`).join("") +
     `<li class="total"><span>${here ? "내 위치에서 " : ""}${stops.length}곳 · 약 ${Math.round(sim.used)}분 · 막을 헛걸음 예상 <b style="display:inline;color:var(--accent)">${sim.value.toFixed(1)}명</b>` +
     `${sim.value > rankValue + 0.05 ? ` (순위대로 돌 때보다 ${(sim.value - rankValue).toFixed(1)}명 더)` : ""}</span></li>`;
   if (typeof L === "undefined" || !state.map) return;

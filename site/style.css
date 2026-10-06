@@ -229,7 +229,7 @@ table.parity thead th { font-size: 13.5px; color: var(--muted); font-weight: 600
 .grid-viz span.k { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
 
 /* 쓰는 사람 */
-.who-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 64px; align-items: center; margin-top: 48px; }
+.who-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 64px; align-items: start; margin-top: 48px; }
 .who-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .who-list button { width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; border-radius: 14px; padding: 18px 20px; }
 .who-list button:hover { background: var(--surface); }
@@ -265,10 +265,10 @@ footer .wrap { display: flex; justify-content: space-between; gap: 18px; flex-wr
 footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
 
 /* 나타나기 */
-.reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
-.reveal.in { opacity: 1; transform: none; }
+.js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }   /* 스크립트가 없으면 처음부터 보임 */
+.js .reveal.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  .reveal { opacity: 1; transform: none; transition: none; }
+  .js .reveal { opacity: 1; transform: none; transition: none; }
   .steps-anim li { opacity: 1; transform: none; transition: none; }
   .bar .col { transition: none; }
   h1 .caret, .pill::before { animation: none; }
@@ -345,7 +345,8 @@ footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
 .dark-card .led { width: 7px; height: 7px; border-radius: 50%; background: #9ca3af; }
 .dark-card .led.on { background: #34d399; box-shadow: 0 0 10px #34d399; }
 .dark-card svg { width: 38px; height: 38px; margin: 24px 0 18px; color: #f3f4f6; }
-.dark-card b { display: block; font-size: 22px; font-weight: 560; letter-spacing: -0.02em; }
+.dark-card b { display: block; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.dark-card b small { font-size: 14px; font-weight: 500; color: #a3a8b0; margin-left: 6px; }
 .dark-card span { color: #a3a8b0; font-size: 14px; }
 .swap { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 20px; font-weight: 650; font-size: 17px; }
 .swap i { font-style: normal; color: var(--faint); font-weight: 400; }
@@ -412,7 +413,8 @@ footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
 .story-nav::-webkit-scrollbar { display: none; }
 .story-nav a { flex: none; width: 76px; display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none; color: var(--ink); font-size: 13px; font-weight: 550; }
 .story-nav .ring { width: 64px; height: 64px; border-radius: 50%; padding: 3px; background: linear-gradient(135deg, #7ee0cf 0%, #2bb3a1 45%, #0f766e 100%); transition: transform .2s; }
-.story-nav .ring span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--canvas); border: 3px solid var(--canvas); font-size: 24px; }
+.story-nav .ring span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--canvas); border: 3px solid var(--canvas); color: var(--accent); }
+.story-nav .ring svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .story-nav a:hover .ring { transform: scale(1.06); }
 .story-nav a:focus-visible { outline: none; }
 .story-nav a:focus-visible .ring { outline: 3px solid var(--focus); outline-offset: 3px; }
@@ -423,7 +425,7 @@ footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
 .phone { border-radius: 44px; }
 .phone img { border-radius: 35px; }
 .agent, .band { border-radius: 32px; }
-@media (max-width: 600px) { .story-nav { justify-content: flex-start; gap: 12px; margin-top: 30px; } .story-nav a { width: 68px; } .story-nav .ring { width: 58px; height: 58px; } }
+@media (max-width: 600px) { .story-nav { display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; gap: 18px 8px; margin-top: 30px; overflow: visible; } .story-nav a { width: auto; } .story-nav .ring { width: 58px; height: 58px; } }
 
 /* 실시간 채점 카드 */
 .livescore { margin-top: 16px; }
@@ -431,3 +433,37 @@ footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
 .livescore .big > b { font-family: var(--font-brand); font-size: 52px; font-weight: 800; line-height: 1; background: var(--wgrad); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
 .livescore .big span { color: var(--muted); font-size: 15.5px; }
 .livescore .big span b { color: var(--ink); }
+
+/* 실제 자전거 한 대의 12일 (SPB-69683) — 점 = 빌리자마자 반납한 서로 다른 사람, 막대 = 그냥 타고 감. 색은 밝은·어두운 화면 모두 검증한 값 */
+:root { --tl-dud: #c2460d; --tl-ride: #008f7a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tl-dud: #e06b39; --tl-ride: #23a28c; } }
+:root[data-theme="dark"] { --tl-dud: #e06b39; --tl-ride: #23a28c; }
+.hl { color: var(--tl-dud); }
+.tl { margin: 44px 0 0; background: var(--surface); border-radius: 24px; padding: 22px 22px 18px; }
+.tl-svg { display: block; width: 100%; height: auto; font-family: inherit; }
+.tl-svg .tl-axis { stroke: var(--line); stroke-width: 1.5; }
+.tl-svg .tl-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+.tl-svg .tl-day { fill: var(--faint); font-size: 13px; }
+.tl-svg .tl-dud { fill: var(--tl-dud); stroke: var(--surface); stroke-width: 1.5; }
+.tl-svg .tl-ride { fill: var(--tl-ride); }
+.tl-svg .tl-dud:hover, .tl-svg .tl-ride:hover { stroke: var(--ink); stroke-width: 2; }
+.tl-svg .tl-alarm { stroke: var(--accent); stroke-width: 2; }
+.tl-svg .tl-alarm-t { fill: var(--accent); font-size: 14px; font-weight: 700; }
+.tl-svg .tl-rep { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.tl-svg .tl-rep-t { fill: var(--ink); font-size: 13.5px; font-weight: 600; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: center; margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+.tl-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.tl-legend i { display: inline-block; }
+.tl-legend .k-dud { width: 10px; height: 10px; border-radius: 50%; background: var(--tl-dud); }
+.tl-legend .k-ride { width: 3px; height: 12px; border-radius: 2px; background: var(--tl-ride); }
+.tl-legend .k-alarm { width: 14px; height: 0; border-top: 2px solid var(--accent); }
+.tl-legend .k-rep { width: 14px; height: 0; border-top: 2px dashed var(--ink); }
+.tl-steps { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.tl-steps li { background: var(--surface); border-radius: 16px; padding: 16px 16px 18px; display: grid; gap: 6px; align-content: start; }
+.tl-steps li b { font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.tl-steps li span { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.tl-steps li.on { background: var(--accent-soft); }
+.tl-steps li.on b { color: var(--accent); }
+@media (max-width: 900px) { .tl-steps { grid-template-columns: 1fr 1fr; } }
+.tl-hint { display: none; }
+@media (max-width: 600px) { .tl { padding: 14px 8px 12px; border-radius: 18px; overflow-x: auto; } .tl-svg { min-width: 640px; } .tl-hint { display: block; position: sticky; left: 0; margin: 4px 0 0; font-size: 12.5px; color: var(--faint); } .tl-steps { grid-template-columns: 1fr; } }

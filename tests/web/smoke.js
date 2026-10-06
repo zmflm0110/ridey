@@ -67,7 +67,12 @@ const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if
     const nGu = +label.match(/(\d+)대/)[1];
     await page.click(`#stories .story[data-gu="${gu}"]`);
     const inList = await page.$$eval("#bike-list li", (li) => li.length);
-    check(inList === Math.min(nGu, 80) && (await page.textContent("#morning-summary")).includes(gu), `${gu} 만 보기 (${nGu}대)`);
+    check(inList === Math.min(nGu, 10) && (await page.textContent("#morning-summary")).includes(gu), `${gu} 만 보기 (${nGu}대, 처음엔 10대)`);
+    if (nGu > 10) {
+      await page.click("#bike-more");
+      check((await page.$$eval("#bike-list li", (li) => li.length)) === Math.min(nGu, 80), `'모두 보기' 로 ${Math.min(nGu, 80)}대`);
+      await page.click("#bike-more");
+    }
     const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#csv-btn")]);
     const csvText = fs.readFileSync(await dl.path(), "utf8");
     const lines = csvText.replace(/^\ufeff/, "").trim().split("\r\n");
