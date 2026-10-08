@@ -107,7 +107,7 @@
 <table>
   <tr>
     <td align="center"><img src="docs/shots/1_morning.png" alt="아침 목록" width="200"><br><b>정비 — 먼저 볼 곳</b><br><sub>구별 순위 · 동선 · CSV</sub></td>
-    <td align="center"><img src="docs/shots/2_lookup.png" alt="자전거 조회" width="200"><br><b>이용자 — 빌리기 전</b><br><sub>번호·QR·카메라 → 경고와 이유</sub></td>
+    <td align="center"><img src="docs/shots/2_lookup.png" alt="자전거 조회" width="200"><br><b>이용자 — 빌리기 전</b><br><sub>번호·QR·카메라 → 경고와 이유<br>내 대여소의 '피할 번호'</sub></td>
     <td align="center"><img src="docs/shots/3_rescue.png" alt="현장 확인" width="200"><br><b>현장 확인</b><br><sub>의심 자전거 앞에서 탭 한 번</sub></td>
     <td align="center"><img src="docs/shots/4_replay.png" alt="하루 재생" width="200"><br><b>하루 재생</b><br><sub>신고보다 먼저 켜지는 경보</sub></td>
   </tr>
