@@ -1,4 +1,4 @@
-# 올릴 때마다: 엔진·서버 단위 테스트 + 웹앱 휴대폰 화면 검사 + 진짜 오프라인 시연 검사 (원본 자료·인증키 불필요)
+# 올릴 때마다: 엔진·서버 단위 테스트 + 클라우드 SQL 과 파이썬이 같은 답인지(진짜 Postgres) + 웹앱 휴대폰 화면 검사 + 진짜 오프라인 시연 검사 (원본 자료·인증키 불필요)
 name: test
 on:
   push:
@@ -7,6 +7,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:   # 클라우드 SQL(supabase/*.sql) 이 파이썬 엔진과 같은 답인지 진짜 Postgres 에서 (tests/test_sql_parity.py)
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PG_TEST_DSN: "host=localhost port=5432 user=postgres password=postgres"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
