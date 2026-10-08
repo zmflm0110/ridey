@@ -7,7 +7,7 @@
 
 ## 다시 시작할 때 (2026-09-27 18시 기준 — 핵심은 클라우드 DB 안에서 돈다)
 - **돌고 있는 것 — Supabase(맥·GitHub 없이)**: 프로젝트 `iqvquwvoljzuvdgtbpnu`(ap-southeast-1), `supabase/live.sql`. pg_cron `live-tick` 5분마다 — 서울 API(pg_net) → `live.rentals` → 지금 목록·경보·실시간 채점(`live.snapshot`), 06:10 뒤 아침 목록·어제 채점.
-  공개 뷰 `live_snapshot`·`ops_lists`·`ops_scores`(앱·웹앱·사이트가 publishable 키로 읽음). 쓰기 표 rescue·survey·사진(`supabase/schema.sql`). 서울 키는 Supabase Vault `seoul_openapi`. DB 비밀번호는 키체인 `supabase-db`.
+  공개 뷰 `live_snapshot`·`ops_lists`·`ops_scores`·`ops_alarm_days`(앱·웹앱·사이트가 publishable 키로 읽음). 쓰기 표 rescue·survey·사진(`supabase/schema.sql`). 서울 키는 Supabase Vault `seoul_openapi`. DB 비밀번호는 키체인 `supabase-db`.
   확인: `psql … -c "select status from cron.job_run_details order by start_time desc limit 3"` (접속 문자열은 `tools/supabase_live_load.py` DSN). 파이썬과 맞춰 보기: `tools/supabase_live_load.py --parity`.
 - **무료 DB 는 가볍게 (2026-10-02 사고)**: 무료 Nano = 메모리 0.5GB, 디스크 기본 5MB/s·250 IOPS(넘치면 'IO 예산' 에서 빌려 쓰고, 다 쓰면 기본 속도로 떨어짐).
   그날 클라우드에서 무거운 측정(EXPLAIN ANALYZE 반복, work_mem 16MB, 전체 훑기)을 몇 시간 했더니 22:40 부터 예약이 `job startup timeout`(새 연결이 10초 안에 안 열림), `select 1` 도 12초, 풀 접속 ECHECKOUTTIMEOUT.
@@ -29,10 +29,15 @@
 - **맥**: 실시간 서비스는 꺼 둠(사용자 결정 2026-09-26). 안드로이드 APK 는 `cd android-app && npm run release`(자바 = Homebrew openjdk@21).
 - **실시간 채점 (업데이트형)**: 9/27 10:20 시작(그 전 경보는 늦게 채운 것이라 live_only 에서 빠짐). 18:15 첫 100건 — 108명 중 49명(45%), 19:20 140명 중 54명(39%). 정해진 결과는 `live.alarms.next_dud` 에 적음(`live.settle`, 다음 대여가 7시간 지난 뒤). 주 1회 숫자 갱신(README·보고서; 사이트는 자동).
 - **규칙 vs 머신러닝 (2026-09-27)**: `analysis/ml_compare.py` → `docs/ml_compare.md`. 부스팅이 실시간 목록 +4.0%p(6월)·+3.2%p(3월), 아침·정비 순서는 들쭉날쭉 → 규칙 유지. 연쇄 재시도 버그(재시도면 연쇄 −1)도 이때 찾아 고침 — 6/15 목록 79→81대.
+- **운영 성적표(2026-10-08)**: 공개 뷰 `ops_alarm_days`(경보가 울린 날마다 결과가 정해진 15분 안 경보·그중 다음 다른 사람도 반납). 사이트 #livescore·웹앱·아이폰 지금 화면·발표 7장·README(`analysis/ops_days.py` → docs/img/ops-days*.svg)·시연 영상.
+  9/27\~10/7 11일 모두 24\~39%. 숫자 갱신 때 사이트 기본값(LS_DAYS)·발표 7장·README 그림은 손으로(사이트·앱은 뷰에서 자동).
+- **실시간 경보 순간 확률 점검(10-08, 경보 1,905건)**: 모델 평균 35.4% vs 실제 28.9%. 낮은 칸이 높게(모델 25% → 실제 16%, 34% → 27%), 45% 이상은 맞음 — 목록 시점 점검의 '연쇄 2명 높게·3명+ 낮게' 와 같은 방향.
+  저녁(16\~23시) 경보가 덜 맞음(26%·25% vs 아침 5\~9시 37%), 다음 사람이 24시간 넘게 안 오면 20%. 지난 기록(1·3·6월)에선 시간대 특징 이득 없었음(docs/model_features.md) — 가을만의 것인지 더 모아 봄. 보정 층 −1.7%(기준 −2%)라 그대로.
+- **고장신고 파일은 반년 단위**(OA-15644: 2601-2606 다음은 2607-2612) → 9월 실시간 경보를 실제 신고와 맞추는 건 대회 전엔 불가.
 - **다음에 할 일**
-  1. 사용자: 9/30 참가 신청서(PDF, 서명) · 아이폰 케이블 연결 → 새 앱(아이콘 바뀜) 설치 · 10월 현장 조사 2주.
-  2. 시연 영상을 RIDEY 이름·새 로고로 다시 찍기(`tests/web/record_demo.js`) — 사용자 확인 뒤.
-  3. 사용자: 현장 조사(앱 '현장 조사' → Supabase → `server/supabase_export.py` → `analysis/field_validation.py data/survey.csv live`).
+  1. 사용자: 학교 양식 작품설명서(초안 docs/description_draft.md) · 아이폰 케이블 연결 → 새 앱 설치(눈 가린 조사·성적표 막대) · 현장 조사.
+  2. 주기: 충전기 `tools/ev_pull.py` 3일 안(마지막 10-08 17:15) · 주 1회 `tools/retrain.py`(다음 10-15) · DB 크기 470MB 넘으면 손보기 · 숫자 갱신.
+  3. 사용자: 현장 조사(앱 '현장 조사' → '오늘 갈 곳 — 눈 가리고' → Supabase → `server/supabase_export.py` → `analysis/field_validation.py data/survey.csv live`).
 
 ## 목표 대회 — 2026 디지털콘텐츠개발대회 (교내, 생활 부문) — 2026-09-26 확정
 - 심사(생활): **기획 25 · 개발 45 · 디자인 20 · 시연·발표 10**. 개인 또는 팀 1\~5인(팀원 변경 불가).
