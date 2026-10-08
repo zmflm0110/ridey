@@ -1,9 +1,11 @@
 import SwiftUI
+import CoreText
 import HeotgeoleumCore
 
 @main
 struct HeotgeoleumApp: App {
     @State private var model = AppModel()
+    init() { BrandFont.register() }
 
     var body: some Scene {
         WindowGroup {
@@ -47,10 +49,10 @@ struct RootView: View {
             if let t = model.toast {
                 Text(t)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 18).padding(.vertical, 14)
+                    .foregroundStyle(Palette.onAccent)
+                    .padding(.horizontal, 20).padding(.vertical, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(white: 0.12).opacity(0.94), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Palette.accent.opacity(0.96), in: Capsule())
                     .padding(.horizontal, 16)
                     .padding(.bottom, 64)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -63,49 +65,67 @@ struct RootView: View {
     }
 }
 
-/// 토스처럼 — 옅은 회색 바탕 위 테두리 없는 흰 카드, 글자는 짙은 회색 한 가지 + 옅은 회색, 강조색은 로고 청록 하나.
-/// 어두운 화면은 로고 남색 바탕. (로고 색: 민트 #35C7A0·청록 #20A68A·남색 #17232E — site/style.css 와 같음)
+/// 새 브랜드 (docs/brand.md) — 잉크·종이(바탕) + 신호 주황(경보) + 차분한 파랑(확인함). 웹앱 web/style.css 와 같은 값.
+/// 이름은 그대로 두고 뜻만 바꿈: accent = 잉크(주 단추·강조), red = 신호색 글자, yellow = 옅은 신호(연쇄 2명), good = 파랑(괜찮음·확인함)
 enum Palette {
     static func dyn(_ light: UInt32, _ dark: UInt32) -> Color {
         func c(_ h: UInt32) -> UIColor { UIColor(red: CGFloat((h >> 16) & 255) / 255, green: CGFloat((h >> 8) & 255) / 255, blue: CGFloat(h & 255) / 255, alpha: 1) }
         return Color(UIColor { $0.userInterfaceStyle == .dark ? c(dark) : c(light) })
     }
-    static let accent = dyn(0x167A66, 0x35C7A0)     // 단추·강조 (흰 글자 대비 되는 청록) / 어두운 화면 민트
-    static let accentSoft = dyn(0xE3F5EF, 0x123229)
-    static let onAccent = dyn(0xFFFFFF, 0x0B1320)
-    static let mint = dyn(0x35C7A0, 0x35C7A0)
-    static let ink = dyn(0x191F28, 0xF5F7F6)         // 제목·숫자
-    static let body = dyn(0x4E5968, 0xB0B8C1)        // 본문
-    static let sub = dyn(0x646F7C, 0x8B97A2)         // 설명 (흰·회색 바탕 모두 4.5:1 넘게)
-    static let bg = dyn(0xF2F4F6, 0x0B1320)          // 화면 바탕
-    static let card = dyn(0xFFFFFF, 0x151E2B)        // 카드
-    static let fill = dyn(0xF2F4F6, 0x222D3B)        // 카드 안 회색 단추·입력칸
-    static let line = dyn(0xE5E8EB, 0x24313F)        // 나눔선
-    static let shadow = Color(UIColor { $0.userInterfaceStyle == .dark ? .clear : UIColor(red: 0.07, green: 0.09, blue: 0.15, alpha: 0.05) })
-    static let red = dyn(0xCC2B31, 0xFF7A70)          // 흰 바탕 5.3:1
-    static let redSoft = dyn(0xFFEEEE, 0x3A1F1F)
-    static let yellow = dyn(0xF5A300, 0xF2C14E)
-    static let yellowSoft = dyn(0xFFF5DB, 0x3A300C)
-    static let yellowText = dyn(0x9A6200, 0xF2C14E)  // 옅은 노랑 위 글자 (대비)
-    static let good = dyn(0x15803D, 0x6FD08C)
-    static let goodSoft = dyn(0xE6F6EC, 0x15301D)
-    /// RIDEY 글자: 민트 → 청록 → 남색 (어두운 화면은 민트 → 흰색) — 사이트 --wgrad 와 같음
-    static let wordmark = LinearGradient(colors: [dyn(0x35C7A0, 0x35C7A0), dyn(0x20A68A, 0x7FE0C4), dyn(0x17232E, 0xF5F7F6)], startPoint: .leading, endPoint: .trailing)
-    static func level(_ red: Bool) -> Color { red ? Palette.red : Palette.yellow }
+    static let ink = dyn(0x111317, 0xF3F1EC)         // 제목·숫자
+    static let body = dyn(0x474B53, 0xB3B7BE)        // 본문
+    static let sub = dyn(0x63676F, 0x8A8F98)         // 설명 (모두 4.5:1 넘게)
+    static let bg = dyn(0xF7F5F0, 0x0D0F12)          // 화면 바탕 (종이)
+    static let card = dyn(0xFFFFFF, 0x16191E)        // 카드
+    static let fill = dyn(0xEFECE5, 0x1E2228)        // 카드 안 단추·입력칸
+    static let line = dyn(0xE2DFD7, 0x262A31)        // 카드 테두리·나눔선
+    static let shadow = Color(UIColor { $0.userInterfaceStyle == .dark ? .clear : UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 0.03) })
+    static let accent = dyn(0x111317, 0xF3F1EC)      // 주 단추 (잉크, 어두운 화면은 종이)
+    static let accentSoft = dyn(0xEFECE5, 0x1E2228)
+    static let onAccent = dyn(0xF7F5F0, 0x111317)
+    static let signal = dyn(0xFF4F1F, 0xFF5C2E)      // 경보 점·막대·큰 숫자 (꽉 찬 신호색)
+    static let signalSoft = dyn(0xFFE4D9, 0x3A1C12)
+    static let calm = dyn(0x2D5BFF, 0x7C9BFF)        // 확인함·괜찮음
+    static let red = dyn(0xB82D07, 0xFF7A52)         // 신호색 글자 (흰 바탕 6.2:1)
+    static let redSoft = signalSoft
+    static let yellow = dyn(0xFF9A73, 0xC7653F)      // 연쇄 2명 — 옅은 신호 (지도 점)
+    static let yellowSoft = fill
+    static let yellowText = sub
+    static let good = dyn(0x2149D6, 0x7C9BFF)        // 괜찮음·확인함 (초록 대신 파랑 — 색각 이상에서도 신호색과 갈라짐)
+    static let goodSoft = dyn(0xE4EAFF, 0x17204A)
+    static let mint = signal
+    static func level(_ red: Bool) -> Color { red ? Palette.signal : Palette.yellow }
     static func levelSoft(_ red: Bool) -> Color { red ? Palette.redSoft : Palette.yellowSoft }
     static func levelText(_ red: Bool) -> Color { red ? Palette.red : Palette.yellowText }
 }
 
+/// 큰 숫자 글꼴 — Unbounded(SIL OFL) 굵기 800 일부(숫자·대문자·기호), 앱 자료(Assets 의 UnboundedNumbers)에서 시작할 때 등록 (tools/make_brand.py)
+enum BrandFont {
+    static let name = "UnboundedRIDEY-ExtraBold"
+    static func register() {
+        guard let data = NSDataAsset(name: "UnboundedNumbers")?.data, let provider = CGDataProvider(data: data as CFData),
+              let font = CGFont(provider) else { return }
+        CTFontManagerRegisterGraphicsFont(font, nil)
+    }
+}
+extension Font {
+    /// 칸 너비가 같은 큰 숫자 (등록 못 하면 시스템 글꼴로)
+    static func num(_ size: CGFloat) -> Font { .custom(BrandFont.name, size: size) }
+}
+
 extension View {
-    /// 흰 카드 — 테두리 없이 둥글게, 밝은 화면에선 아주 옅은 그림자. tint 를 주면 위쪽만 그 색으로 번짐
+    /// 카드 — 1px 선 테두리, 그림자 거의 없이(브랜드: 선으로 나눔). tint 를 주면 위쪽만 그 색으로 번짐
     func card(padding: CGFloat = 20, tint: Color? = nil) -> some View {
         let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
         return self.padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(LinearGradient(stops: [.init(color: tint ?? Palette.card, location: 0), .init(color: Palette.card, location: tint == nil ? 0 : 0.45)],
                                        startPoint: .top, endPoint: .bottom), in: shape)
-            .shadow(color: Palette.shadow, radius: 12, y: 6)
+            .overlay(shape.strokeBorder(Palette.line, lineWidth: 1))
+            .shadow(color: Palette.shadow, radius: 10, y: 4)
     }
+    /// 처음 나타날 때 아래에서 살짝 떠오름 (스프링, '동작 줄이기' 면 그냥)
+    func rise(_ delay: Double = 0) -> some View { modifier(Rise(delay: delay)) }
     /// 지도 위에 떠 있는 단추 — iOS 26 리퀴드 글래스, 그 전은 옅은 재질 (CI 의 Xcode 16 도 빌드되게 컴파일러로 나눔)
     @ViewBuilder func floatingGlass() -> some View {
         #if compiler(>=6.2)
@@ -119,25 +139,42 @@ extension View {
     func screenBackground() -> some View { background(Palette.bg.ignoresSafeArea()) }
 }
 
-/// 홈 맨 위 카드 바탕 — 로고 색이 섞인 그라데이션. 밝은 민트는 글자가 없는 오른쪽 위에만(흰 글자 대비). iOS 18+ 는 메시 그라데이션
+/// 홈 맨 위 카드 바탕 — 잉크 위에 점 무늬(서울 대여소 점 지도 느낌)가 오른쪽 위에서 번지고 아주 천천히 흐름
 struct HeroBackground: View {
+    @Environment(\.accessibilityReduceMotion) private var reduce
+    @Environment(\.colorScheme) private var scheme
     var body: some View {
-        let deep = Color(red: 0.071, green: 0.412, blue: 0.353)    // #12695A
-        let teal = Color(red: 0.086, green: 0.478, blue: 0.400)    // #167A66
-        let mid = Color(red: 0.125, green: 0.651, blue: 0.541)     // #20A68A
-        let mint = Color(red: 0.208, green: 0.780, blue: 0.627)    // #35C7A0
-        let navy = Color(red: 0.090, green: 0.137, blue: 0.180)    // #17232E
-        if #available(iOS 18.0, *) {
-            MeshGradient(width: 3, height: 3,
-                         points: [[0, 0], [0.55, 0], [1, 0], [0, 0.5], [0.6, 0.45], [1, 0.5], [0, 1], [0.5, 1], [1, 1]],
-                         colors: [deep, teal, mint, deep, teal, mid, navy, deep, teal])
-        } else {
-            ZStack {
-                deep
-                RadialGradient(colors: [mint, .clear], center: .topTrailing, startRadius: 0, endRadius: 260)
-                RadialGradient(colors: [navy, .clear], center: .bottomLeading, startRadius: 0, endRadius: 300)
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduce)) { tl in
+            let t = reduce ? 0 : tl.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let step: CGFloat = 13, shift = CGFloat((t * 4).truncatingRemainder(dividingBy: Double(step)))
+                var y: CGFloat = -step + shift / 2
+                while y < size.height + step {
+                    var x: CGFloat = -step + shift
+                    while x < size.width + step {
+                        let d = hypot((x - size.width) / size.width, (y - size.height * 0.15) / size.height)   // 오른쪽 위에서 멀수록 옅게
+                        let a = max(0, 0.22 * (1 - d / 0.95))
+                        if a > 0.01 { ctx.fill(Path(ellipseIn: CGRect(x: x - 1.1, y: y - 1.1, width: 2.2, height: 2.2)), with: .color(.white.opacity(a))) }
+                        x += step
+                    }
+                    y += step
+                }
             }
         }
+        .background(scheme == .dark ? Color(red: 0.094, green: 0.106, blue: 0.129) : Color(red: 0.067, green: 0.075, blue: 0.09))
+    }
+}
+
+/// 처음 나타날 때 아래에서 살짝 떠오르는 움직임
+struct Rise: ViewModifier {
+    let delay: Double
+    @Environment(\.accessibilityReduceMotion) private var reduce
+    @State private var shown = false
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || reduce ? 1 : 0)
+            .offset(y: shown || reduce ? 0 : 14)
+            .onAppear { withAnimation(.spring(duration: 0.7, bounce: 0.18).delay(delay)) { shown = true } }
     }
 }
 
@@ -148,12 +185,13 @@ struct Ring: View {
     var body: some View {
         ZStack {
             Circle().stroke(Palette.fill, lineWidth: 10)
-            Circle().trim(from: 0, to: shown).stroke(Palette.accent, style: StrokeStyle(lineWidth: 10, lineCap: .round)).rotationEffect(.degrees(-90))
-            Text("\(Int((100 * value).rounded()))%").font(.system(size: 20, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(Palette.ink)
+            Circle().trim(from: 0, to: shown).stroke(Palette.signal, style: StrokeStyle(lineWidth: 10, lineCap: .round)).rotationEffect(.degrees(-90))
+            Text("\(Int((100 * shown).rounded()))%").font(.num(17)).monospacedDigit().foregroundStyle(Palette.ink)
+                .contentTransition(.numericText(value: shown))
         }
         .frame(width: 84, height: 84)
-        .onAppear { withAnimation(.easeOut(duration: 0.9)) { shown = value } }
-        .onChange(of: value) { withAnimation(.easeOut(duration: 0.6)) { shown = value } }
+        .onAppear { withAnimation(.spring(duration: 1.4, bounce: 0.1).delay(0.15)) { shown = value } }
+        .onChange(of: value) { withAnimation(.spring(duration: 0.8, bounce: 0.1)) { shown = value } }
     }
 }
 
@@ -216,10 +254,10 @@ struct PrimaryButtonStyle: ButtonStyle {
             .font(.headline)
             .foregroundStyle(Palette.onAccent)
             .frame(maxWidth: .infinity, minHeight: 54)
-            .background(Palette.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .background(Palette.accent, in: Capsule())
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(duration: 0.3, bounce: 0.35), value: configuration.isPressed)
     }
 }
 
@@ -231,63 +269,19 @@ struct SoftButtonStyle: ButtonStyle {
             .font(.body.weight(.semibold))
             .foregroundStyle(tint)
             .frame(maxWidth: .infinity, minHeight: 52)
-            .background(Palette.fill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .opacity(configuration.isPressed ? 0.7 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .background(Palette.fill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(duration: 0.3, bounce: 0.35), value: configuration.isPressed)
     }
 }
 
-/// 로고 마크 — 자전거 탄 R (site/img/mark.svg 와 같은 선, 132×92 상자). 바퀴는 남색, 어두운 화면에선 흰색
-struct BrandMark: View {
-    var height: CGFloat = 24
-    var body: some View {
-        Canvas { ctx, size in
-            let k = size.height / 92
-            func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * k, y: y * k) }
-            for cx in [28.0, 102.0] {
-                ctx.stroke(Path(ellipseIn: CGRect(x: (cx - 21) * k, y: 43 * k, width: 42 * k, height: 42 * k)), with: .color(Palette.ink), lineWidth: 12 * k)
-                ctx.fill(Path(ellipseIn: CGRect(x: (cx - 4.5) * k, y: 59.5 * k, width: 9 * k, height: 9 * k)), with: .color(Palette.mint))
-            }
-            var rider = Path()
-            rider.move(to: p(42, 13)); rider.addLine(to: p(74, 13)); rider.addCurve(to: p(70, 40), control1: p(92, 13), control2: p(94, 40)); rider.addLine(to: p(60, 40))
-            rider.move(to: p(52, 15)); rider.addLine(to: p(30, 62))
-            rider.move(to: p(64, 40)); rider.addLine(to: p(100, 62))
-            ctx.stroke(rider, with: .linearGradient(Gradient(colors: [Color(red: 0.208, green: 0.78, blue: 0.627), Color(red: 0.125, green: 0.651, blue: 0.541)]),
-                                                    startPoint: p(34, 8), endPoint: p(100, 64)),
-                       style: StrokeStyle(lineWidth: 14 * k, lineCap: .round, lineJoin: .round))
-            ctx.fill(Path(ellipseIn: CGRect(x: 97 * k, y: 5 * k, width: 16 * k, height: 16 * k)), with: .color(Palette.mint))
-        }
-        .frame(width: height * 132 / 92, height: height)
-        .accessibilityHidden(true)
-    }
-}
-
-/// RIDEY 글자 — RIDE 는 그라데이션, Y 는 남색 줄기 + 민트 체크 (site 의 .ly 와 같은 모양)
-struct Wordmark: View {
-    var size: CGFloat = 22
-    var body: some View {
-        HStack(alignment: .lastTextBaseline, spacing: size * 0.02) {
-            Text("RIDE").font(.system(size: size, weight: .heavy, design: .rounded)).foregroundStyle(Palette.wordmark)
-            Canvas { ctx, s in
-                let k = s.height / 70
-                var stem = Path(); stem.move(to: CGPoint(x: 4 * k, y: 3 * k)); stem.addLine(to: CGPoint(x: 30 * k, y: 38 * k)); stem.addLine(to: CGPoint(x: 30 * k, y: 68 * k))
-                ctx.stroke(stem, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 15 * k, lineJoin: .round))
-                var tick = Path(); tick.move(to: CGPoint(x: 36 * k, y: 34 * k)); tick.addLine(to: CGPoint(x: 50 * k, y: 34 * k))
-                tick.addLine(to: CGPoint(x: 66 * k, y: 3 * k)); tick.addLine(to: CGPoint(x: 52 * k, y: 3 * k)); tick.closeSubpath()
-                ctx.fill(tick, with: .color(Palette.mint))
-            }
-            .frame(width: size * 0.7 * 66 / 70, height: size * 0.7)
-            .alignmentGuide(.lastTextBaseline) { d in d[.bottom] }
-        }
-        .accessibilityElement().accessibilityLabel("RIDEY")
-    }
-}
-
-/// 첫 화면 머리: 마크 + RIDEY
+/// 로고 'RIDEY.' — docs/brand.md (Assets 의 Wordmark: 밝은·어두운 화면 SVG, tools/make_brand.py 가 만듦)
 struct BrandTitle: View {
+    var height: CGFloat = 21
     var body: some View {
-        HStack(spacing: 8) { BrandMark(height: 22); Wordmark(size: 21) }
+        Image("Wordmark").resizable().scaledToFit().frame(height: height)
+            .accessibilityLabel("RIDEY")
     }
 }
 

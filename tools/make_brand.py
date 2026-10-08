@@ -80,6 +80,35 @@ def numbers_font():
     return out
 
 
+def ios_assets(f):
+    """아이폰 앱: 로고(밝은·어두운 화면 SVG, 벡터 그대로) + 큰 숫자 글꼴(굵기 800 고정 TTF — 앱이 시작할 때 등록)."""
+    import json
+    A = ROOT / "ios" / "App" / "Assets.xcassets"
+    if not A.exists():
+        return
+    W = A / "Wordmark.imageset"; W.mkdir(exist_ok=True)
+    for name, ink in (("wordmark.svg", INK), ("wordmark-dark.svg", PAPER)):
+        svg = wordmark(f, ink=ink, label=False).replace(' class="wordmark"', "").replace(' aria-hidden="true"', "").replace(' class="dot"', "")
+        vb = svg.split('viewBox="')[1].split('"')[0].split()
+        (W / name).write_text(svg.replace("<svg ", f'<svg width="{float(vb[2]):.0f}" height="{float(vb[3]):.0f}" ', 1) + "\n")
+    (W / "Contents.json").write_text(json.dumps({"images": [
+        {"filename": "wordmark.svg", "idiom": "universal"},
+        {"appearances": [{"appearance": "luminosity", "value": "dark"}], "filename": "wordmark-dark.svg", "idiom": "universal"}],
+        "info": {"author": "xcode", "version": 1}, "properties": {"preserves-vector-representation": True}}, indent=2) + "\n")
+    from fontTools import subset
+    g = instancer.instantiateVariableFont(TTFont(FONT), {"wght": 800})
+    o = subset.Options(); o.layout_features = ["kern", "tnum", "lnum"]; o.name_IDs = ["*"]
+    sub = subset.Subsetter(o); sub.populate(text="0123456789%+-–~.,:/·×xABCDEFGHIJKLMNOPQRSTUVWXYZ "); sub.subset(g)
+    nm = g["name"]
+    for rec in list(nm.names):
+        if rec.nameID in (1, 4, 16): rec.string = "Unbounded RIDEY" if rec.nameID != 4 else "Unbounded RIDEY ExtraBold"
+        elif rec.nameID in (2, 17): rec.string = "ExtraBold"
+        elif rec.nameID == 6: rec.string = "UnboundedRIDEY-ExtraBold"
+    D = A / "UnboundedNumbers.dataset"; D.mkdir(exist_ok=True)
+    g.recalcTimestamp = False; g.save(D / "unbounded-ridey-800.ttf")
+    (D / "Contents.json").write_text(json.dumps({"data": [{"filename": "unbounded-ridey-800.ttf", "idiom": "universal"}], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
+
+
 def put(path, html):
     """HTML 안의 <!-- brand:wordmark --> … <!-- /brand:wordmark --> 를 새 로고로 (여러 군데면 모두)."""
     p = ROOT / path
@@ -103,6 +132,7 @@ def main():
     (B / "wordmark-mono.svg").write_text(wordmark(f, ink=INK, dot=INK) + "\n")
     (B / "icon.svg").write_text(icon(f) + "\n")
     (B / "icon-light.svg").write_text(icon(f, bg=PAPER, fg=INK) + "\n")
+    ios_assets(f)
     w = wordmark(f, label=False)
     n = put("web/index.html", w) + put("site/index.html", w) + put("site/releases.html", w)
     try:

@@ -110,7 +110,7 @@ struct LookupView: View {
         switch result {
         case .suspect(let b):
             VStack(alignment: .leading, spacing: 16) {
-                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 36)).foregroundStyle(Palette.red)
+                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 36)).foregroundStyle(Palette.signal)
                     .symbolEffect(.bounce, value: b.bike)
                 (Text(b.bike).monospacedDigit() + Text((b.pNext ?? 100) < 30 ? "는\n되도록 피하세요" : "는\n타지 마세요"))   // 모델이 낮게 본 자전거는 누그러뜨림
                     .font(.system(size: 26, weight: .bold)).foregroundStyle(Palette.ink)

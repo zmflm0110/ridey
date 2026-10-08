@@ -43,7 +43,7 @@ struct ReplayView: View {
                     .environment(\.colorScheme, .dark)
                     .frame(height: 340)
                     .overlay(alignment: .topLeading) {
-                        Text(player?.clockText ?? "00:00").font(.system(size: 36, weight: .bold)).monospacedDigit()
+                        Text(player?.clockText ?? "00:00").font(.num(32)).monospacedDigit()
                             .foregroundStyle(.white).shadow(color: .black.opacity(0.5), radius: 6).padding(18)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -51,9 +51,9 @@ struct ReplayView: View {
                     .accessibilityLabel("하루 재생 지도 (아래 숫자·기록과 같은 내용)")
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                         counter(Palette.sub, "헛대여", player?.dudTotal ?? 0)
-                        counter(Palette.red, "경보", player?.counts[.alarm] ?? 0)
-                        counter(Palette.good, "막을 수 있던 헛걸음", player?.counts[.prevented] ?? 0)
-                        counter(Palette.accent, "뒤늦은 고장 신고", player?.counts[.fault] ?? 0)
+                        counter(Palette.signal, "경보", player?.counts[.alarm] ?? 0)
+                        counter(Palette.ink, "막을 수 있던 헛걸음", player?.counts[.prevented] ?? 0)
+                        counter(Palette.calm, "뒤늦은 고장 신고", player?.counts[.fault] ?? 0)
                     }
                     if !feed.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
@@ -130,12 +130,12 @@ struct ReplayView: View {
         default: return "\(e.t) 막을 수 있던 헛걸음 — \(e.bike) (\(name))"
         }
     }
-    private func color(_ k: ReplayEvent.Kind) -> Color { k == .alarm ? Palette.red : k == .prevented ? Palette.good : Palette.accent }
+    private func color(_ k: ReplayEvent.Kind) -> Color { k == .alarm ? Palette.signal : k == .prevented ? Palette.ink : Palette.calm }   // 경보 신호 · 또 헛걸음 잉크 · 신고 파랑 (docs/brand.md)
     private func counter(_ c: Color, _ label: String, _ n: Int) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) { Circle().fill(c).frame(width: 8, height: 8); Text(label).font(.subheadline).foregroundStyle(Palette.sub).lineLimit(1) }
-            Text(n.formatted()).font(.system(size: 30, weight: .heavy, design: .rounded)).monospacedDigit()
-                .foregroundStyle(c == Palette.sub ? Palette.ink : c).contentTransition(.numericText())
+            Text(n.formatted()).font(.num(26)).monospacedDigit()
+                .foregroundStyle(c == Palette.signal ? Palette.red : Palette.ink).contentTransition(.numericText(value: Double(n)))
         }
         .card(padding: 16)
     }

@@ -89,38 +89,48 @@ struct MorningView: View {
         let when = live != nil ? "지금 " : model.isPastData ? "\(AppModel.koDay(model.day)) 아침, " : "오늘 아침, "
         return VStack(alignment: .leading, spacing: 0) {
             dayMenu
-            Text("\(when)\(place)\n고장 의심 따릉이가").font(.system(size: 19, weight: .semibold)).foregroundStyle(.white.opacity(0.92))
+            Text("\(when)\(place)\n고장 의심 따릉이가").font(.system(size: 19, weight: .bold)).foregroundStyle(Color(red: 0.97, green: 0.96, blue: 0.94))
                 .padding(.top, 16)
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text("\(bikes.count)").font(.system(size: 64, weight: .heavy, design: .rounded)).monospacedDigit()
-                    .contentTransition(.numericText()).animation(.snappy, value: bikes.count)
-                Text(model.isPastData ? "대 있었어요" : "대 있어요").font(.system(size: 22, weight: .bold))
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(shownCount)").font(.num(80)).monospacedDigit().foregroundStyle(Color(red: 1, green: 0.36, blue: 0.18))
+                    .contentTransition(.numericText(value: Double(shownCount)))
+                Text(model.isPastData ? "대 있었어요" : "대 있어요").font(.system(size: 20, weight: .heavy)).foregroundStyle(Color(red: 0.97, green: 0.96, blue: 0.94))
             }
-            .foregroundStyle(.white)
-            Text("빨강 \(red) · 노랑 \(bikes.count - red)\(live?.todayAlarms.map { " · 오늘 경보 \($0)번" } ?? "")")
-                .font(.subheadline).foregroundStyle(.white.opacity(0.82)).padding(.top, 6)
+            .padding(.top, 4)
+            .onAppear { animateCount(to: bikes.count) }
+            .onChange(of: bikes.count) { animateCount(to: bikes.count) }
+            Text("연쇄 3명+ \(red) · 2명 \(bikes.count - red)\(live?.todayAlarms.map { " · 오늘 경보 \($0)번" } ?? "")")
+                .font(.subheadline.weight(.semibold)).foregroundStyle(Color(red: 0.70, green: 0.72, blue: 0.75)).padding(.top, 6)
             if bikes.count >= 10, let e = ListExpectation(bikes, q: live?.model?.q) {   // 자체 모델: 이 중 진짜 고장일 수 (90% 하한은 docs/model.md)
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles").font(.caption.weight(.bold))
                     Text("AI 예측: 이 중 약 \(Int(e.expected.rounded()))대가 진짜 고장 · 최소 \(e.atLeast)대(90%)")
                 }
-                .font(.footnote.weight(.semibold)).foregroundStyle(.white)
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .background(.black.opacity(0.22), in: Capsule())
-                .padding(.top, 10)
+                .font(.footnote.weight(.bold)).foregroundStyle(Color(red: 0.97, green: 0.96, blue: 0.94))
+                .padding(.horizontal, 12).padding(.vertical, 7)
+                .background(.white.opacity(0.1), in: Capsule())
+                .padding(.top, 12)
             }
             ForEach(notes, id: \.self) { n in
-                Label(n, systemImage: "hourglass").font(.footnote).foregroundStyle(.white)
-                    .padding(.horizontal, 12).padding(.vertical, 8).background(.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 12)).padding(.top, 10)
+                Label(n, systemImage: "hourglass").font(.footnote.weight(.semibold)).foregroundStyle(Color(red: 0.97, green: 0.96, blue: 0.94))
+                    .padding(.horizontal, 12).padding(.vertical, 8).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 14)).padding(.top, 10)
             }
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(HeroBackground())
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: Color(red: 0.086, green: 0.478, blue: 0.4).opacity(0.28), radius: 18, y: 10)
         .padding(.top, 4)
+        .rise()
     }
+
+    /// 큰 숫자: 앞 값에서 새 값으로 한 자리씩 굴러감 (처음엔 0 에서)
+    @State private var shownCount = 0
+    private func animateCount(to n: Int) {
+        if reduceMotion { shownCount = n; return }
+        withAnimation(.spring(duration: 1.1, bounce: 0.12).delay(shownCount == 0 ? 0.25 : 0)) { shownCount = n }
+    }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// 기준일 — 작은 회색 글씨 단추 (지금 · 5분 전 ▾)
     private var dayMenu: some View {
@@ -197,15 +207,19 @@ struct MorningView: View {
     struct DayBars: View {
         let days: [AlarmDay]
         private let height: CGFloat = 72, top = 50.0
+        @State private var grown = false
+        @Environment(\.accessibilityReduceMotion) private var reduce
         var body: some View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .bottom, spacing: 3) {
-                    ForEach(days, id: \.day) { d in
+                    ForEach(Array(days.enumerated()), id: \.element.day) { i, d in
                         VStack(spacing: 2) {
-                            Text("\(Int(d.percent.rounded()))").font(.system(size: 11).monospacedDigit()).foregroundStyle(Palette.sub)
+                            Text("\(Int(d.percent.rounded()))").font(.num(10)).monospacedDigit().foregroundStyle(Palette.sub)
+                                .opacity(grown ? 1 : 0).animation(reduce ? nil : .easeOut(duration: 0.4).delay(Double(i) * 0.045 + 0.6), value: grown)
                                 .lineLimit(1).minimumScaleFactor(0.7)
-                            UnevenRoundedRectangle(topLeadingRadius: 3, topTrailingRadius: 3).fill(Palette.red)
-                                .frame(height: height * min(1, d.percent / top))
+                            UnevenRoundedRectangle(topLeadingRadius: 4, topTrailingRadius: 4).fill(Palette.signal)
+                                .frame(height: grown ? height * min(1, d.percent / top) : 0)
+                                .animation(reduce ? nil : .spring(duration: 0.9, bounce: 0.25).delay(Double(i) * 0.045 + 0.15), value: grown)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -220,6 +234,7 @@ struct MorningView: View {
                 (Text("날마다 — ") + Text(AlarmDay.headline(days) ?? "").bold().foregroundColor(Palette.ink) + Text(" · 점선은 평소 자전거(2.5%)"))
                     .font(.subheadline).foregroundStyle(Palette.sub).fixedSize(horizontal: false, vertical: true)
             }
+            .onAppear { grown = true }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("날마다 경보 뒤 다음 사람도 바로 반납한 비율: " + days.map { "\($0.short) \(Int($0.percent.rounded()))%" }.joined(separator: ", ") + ", 평소 2.5%")
         }
@@ -251,7 +266,7 @@ struct MorningView: View {
         return Button { picked = g } label: {
             HStack(spacing: 14) {
                 Text("\(i + 1)").font(.headline).monospacedDigit()
-                    .foregroundStyle(i < 3 ? Palette.accent : Palette.sub)
+                    .foregroundStyle(i < 3 ? Palette.red : Palette.sub)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(s?.name ?? g.id).font(.body.weight(.semibold)).foregroundStyle(Palette.ink).lineLimit(1)
@@ -337,7 +352,7 @@ struct RouteSheet: View {
                     }
                     .pickerStyle(.segmented)
                     if let route {
-                        (Text("\(route.stops.count)곳을 돌면 헛걸음을\n") + Text("약 \(String(format: "%.1f", route.total))명").foregroundColor(Palette.accent) + Text(" 막아요"))
+                        (Text("\(route.stops.count)곳을 돌면 헛걸음을\n") + Text("약 \(String(format: "%.1f", route.total))명").foregroundColor(Palette.red) + Text(" 막아요"))
                             .font(.system(size: 24, weight: .bold)).foregroundStyle(Palette.ink)
                             .padding(.horizontal, 4).padding(.top, 8)
                         Text("약 \(Int(route.used.rounded()))분\(route.total > route.rankTotal + 0.05 ? " · 순위대로 돌 때보다 \(String(format: "%.1f", route.total - route.rankTotal))명 더" : "")")
@@ -406,10 +421,7 @@ struct StationMap: View {
             ForEach(placed, id: \.0.id) { g, s in
                 Annotation(s.name, coordinate: s.point.coordinate, anchor: .center) {
                     let size = CGFloat(10 + 4 * g.bikes.count)
-                    Circle()
-                        .fill(Palette.level(g.hasRed).opacity(0.6))
-                        .overlay(Circle().strokeBorder(Palette.level(g.hasRed), lineWidth: 1))
-                        .frame(width: size, height: size)
+                    StationDot(size: size, strong: g.hasRed)
                         .onTapGesture { picked = g }
                 }
                 .annotationTitles(.hidden)
@@ -418,8 +430,9 @@ struct StationMap: View {
                 .stroke(Palette.accent, style: StrokeStyle(lineWidth: 3, dash: [6, 6]))
             ForEach(Array(route.enumerated()), id: \.element.id) { i, s in
                 Annotation("", coordinate: s.point.coordinate, anchor: .center) {
-                    Text("\(i + 1)").font(.caption2.bold()).foregroundStyle(.white)
+                    Text("\(i + 1)").font(.num(10)).foregroundStyle(Palette.onAccent)
                         .frame(width: 20, height: 20).background(Palette.accent, in: Circle())
+                        .overlay(Circle().strokeBorder(.white, lineWidth: 1.5))
                 }
             }
             ForEach(here.map { [$0] } ?? [], id: \.self) { p in
@@ -480,3 +493,25 @@ struct CSVFile: Transferable {
         }
     }
 }
+
+/// 지도 위 경보 대여소 점 — 진한 경보(연쇄 3명+)는 고리가 숨 쉬듯 퍼짐 ('동작 줄이기' 면 가만히)
+struct StationDot: View {
+    let size: CGFloat
+    let strong: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduce
+    @State private var breathe = false
+    var body: some View {
+        ZStack {
+            if strong && !reduce {
+                Circle().stroke(Palette.signal.opacity(breathe ? 0 : 0.55), lineWidth: 2)
+                    .frame(width: size, height: size).scaleEffect(breathe ? 2.1 : 1)
+                    .animation(.easeOut(duration: 2.2).repeatForever(autoreverses: false), value: breathe)
+            }
+            Circle().fill(Palette.level(strong).opacity(0.62))
+                .overlay(Circle().strokeBorder(Palette.level(strong), lineWidth: 1.2))
+                .frame(width: size, height: size)
+        }
+        .onAppear { breathe = true }
+    }
+}
+
