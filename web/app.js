@@ -198,6 +198,7 @@ function renderLists() {
   more.hidden = list.length <= 10;
   more.textContent = state.allBikes ? "접기" : `${Math.min(list.length, 80)}대 모두 보기`;
   more.setAttribute("aria-expanded", String(!!state.allBikes));
+  renderMine();
 }
 $("#bike-more").addEventListener("click", () => { state.allBikes = !state.allBikes; renderLists(); });
 
@@ -661,6 +662,50 @@ $("#survey-photo").addEventListener("change", async (e) => {
   if (!f) return;
   try { setSurveyPhoto(await shrink(f)); } catch { setSurveyPhoto(null); toast("사진을 읽지 못했어요. 다른 사진으로 해 주세요."); }
   e.target.value = "";
+});
+
+// 내 대여소 — 자주 가는 대여소(5곳까지)를 이 폰에만 저장해 두고, 지금 그곳에 서 있는 의심 자전거 번호를 바로 보여 준다(가기 전에 피할 번호).
+// 지난(시연) 자료를 보고 있으면 그 날 아침 목록 기준. 번호를 누르면 위에서 바로 조회.
+const MY_KEY = "my_stations", MY_MAX = 5;
+let mine = (() => { try { return (JSON.parse(localStorage.getItem(MY_KEY) || "[]") || []).filter((x) => typeof x === "string").slice(0, MY_MAX); } catch { return []; } })();
+const saveMine = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(mine)); } catch {} };
+function renderMine() {
+  const bikes = (state.morning && state.morning.bikes) || [];
+  $("#my-when").textContent = state.day === "live" ? "지금 피할 번호" : isPast() ? `${koDay(state.day)} 아침 목록 기준` : "오늘 아침 목록 기준";
+  $("#my-list").innerHTML = mine.length ? mine.map((id) => {
+    const st = state.stations[id] || {}, bad = bikes.filter((b) => b.station === id).sort((a, b) => (b.p_next ?? b.chain) - (a.p_next ?? a.chain));
+    const red = bad.some((b) => b.level === "빨강");
+    return `<li class="my-row"><span class="ico ${bad.length ? (red ? "빨강" : "노랑") : "ok"}">${BIKE_SVG}</span>` +
+      `<div><b>${esc(st.name || id)}</b><span class="s">${esc(st.gu || "")}${here && st.lat ? ` · ${Math.round(meters(here, st))}m` : ""}</span></div>` +
+      `<span class="n ${bad.length ? (red ? "빨강" : "노랑") : "ok"}">${bad.length ? `${bad.length}대 피하기` : "괜찮아요"}</span>` +
+      `<button type="button" class="link my-x" data-unpin="${esc(id)}" aria-label="${esc(st.name || id)} 내 대여소에서 빼기">×</button>` +
+      (bad.length ? `<div class="my-bikes">${bad.map((b) => `<button type="button" class="chip ${b.level}" data-bike="${esc(b.bike)}" aria-label="${esc(b.bike)} 피하기, 자세히">${esc(b.bike)}</button>`).join("")}</div>` : "") + `</li>`;
+  }).join("") : `<li class="my-empty">자주 가는 대여소를 넣어 두면, 가기 전에 그곳의 고장 의심 자전거 번호를 바로 보여 줘요.</li>`;
+}
+function myAdd(id) {
+  if (!state.stations[id]) return;
+  if (!mine.includes(id)) { if (mine.length >= MY_MAX) mine.shift(); mine.push(id); saveMine(); }
+  $("#my-q").value = ""; $("#my-sugg").innerHTML = ""; renderMine();
+  toast(`${state.stations[id].name.trim()} — 내 대여소에 넣었어요.`);
+}
+function mySuggest(list) {
+  $("#my-sugg").innerHTML = list.map((st) => `<li><div><b>${esc(st.name)}</b><span class="s">${esc(st.gu || "")}${here && st.lat ? ` · ${Math.round(meters(here, st))}m` : ""}</span></div>` +
+    `<button type="button" class="soft sm" data-add="${esc(st.id)}" aria-label="${esc(st.name)} 내 대여소에 넣기">넣기</button></li>`).join("");
+}
+$("#my-q").addEventListener("input", (e) => {
+  const q = e.target.value.trim().replace(/\s+/g, "");
+  mySuggest(q ? Object.values(state.stations).filter((st) => st.name && st.name.replace(/\s+/g, "").includes(q) && !mine.includes(st.id)).slice(0, 6) : []);
+});
+$("#my-near").addEventListener("click", async () => {
+  try { await locate(); } catch { toast("위치를 쓸 수 없어요 — 이름으로 찾아 주세요."); return; }
+  mySuggest(Object.values(state.stations).filter((st) => st.lat && !mine.includes(st.id)).sort((a, b) => meters(here, a) - meters(here, b)).slice(0, 5));
+});
+$("#my-sugg").addEventListener("click", (e) => { const id = e.target.closest("[data-add]")?.dataset.add; if (id) myAdd(id); });
+$("#my-list").addEventListener("click", (e) => {
+  const x = e.target.closest("[data-unpin]");
+  if (x) { mine = mine.filter((id) => id !== x.dataset.unpin); saveMine(); renderMine(); return; }
+  const b = e.target.closest("[data-bike]");
+  if (b) { $("#bike-input").value = b.dataset.bike; lookup(b.dataset.bike); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
 
 // 오늘 갈 곳 — 눈 가리고(docs/field_protocol.md): 경보 대여소 3곳 + 그 근처(1.5km 안) 경보 없는 대여소 2곳을 섞어 이름만.

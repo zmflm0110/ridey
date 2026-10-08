@@ -101,6 +101,22 @@ const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if
     await page.press("#bike-input", "Enter");
     check((await page.$$("#lookup-result img")).length === 0 && (await page.textContent("#lookup-result")).includes("<img"), "QR·입력 속 HTML 은 글자로만");
 
+    // 내 대여소: 이름으로 찾아 넣기 → 그 대여소 의심 자전거 번호(칩) → 누르면 조회, × 로 빼기, 다시 열어도 남음
+    const firstSt = await page.evaluate((bk) => { const b = state.morning.bikes.find((x) => x.bike === bk); return { id: b.station, name: state.stations[b.station].name.trim(), n: state.morning.bikes.filter((x) => x.station === b.station).length }; }, first);
+    check((await page.textContent("#my-list")).includes("자주 가는 대여소"), "내 대여소: 처음엔 안내 한 줄");
+    await page.fill("#my-q", firstSt.name.slice(0, 6));
+    await page.click(`#my-sugg [data-add="${firstSt.id}"]`);
+    const myRow = await page.textContent("#my-list");
+    check(myRow.includes(firstSt.name) && myRow.includes(`${firstSt.n}대 피하기`) && myRow.includes(first) && (await page.$$("#my-list .chip")).length === firstSt.n,
+      `내 대여소: ${firstSt.name} — ${firstSt.n}대 피하기, 번호 칩`);
+    await page.click("#bike-input"); await page.fill("#bike-input", "");
+    await page.click(`#my-list .chip[data-bike="${first}"]`);
+    check((await page.inputValue("#bike-input")) === first && (await page.textContent("#lookup-result")).includes(first), "내 대여소: 번호를 누르면 위에서 조회");
+    await page.reload({ waitUntil: "networkidle" }); await tab("lookup");
+    check((await page.textContent("#my-list")).includes(firstSt.name), "내 대여소: 다시 열어도 남음(이 폰에만)");
+    await page.click(`#my-list [data-unpin="${firstSt.id}"]`);
+    check(!(await page.textContent("#my-list")).includes(firstSt.name), "내 대여소: × 로 빼기");
+
     console.log("구조대");
     await tab("rescue");
     await page.click("#rescue-near");

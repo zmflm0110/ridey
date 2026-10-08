@@ -56,6 +56,15 @@
       <canvas id="cam-canvas" hidden></canvas>
     </div>
     <div id="lookup-result" aria-live="polite"></div>
+    <h2>내 대여소 <span class="muted" id="my-when">가기 전에 피할 번호</span></h2>
+    <div class="card list">
+      <ul id="my-list" class="rows"></ul>
+      <div class="my-add">
+        <input id="my-q" type="search" placeholder="대여소 이름 (예: 망원역)" aria-label="내 대여소 추가 — 대여소 이름으로 찾기" autocomplete="off" enterkeyhint="search">
+        <button id="my-near" class="secondary" type="button">가까운 곳</button>
+      </div>
+      <ul id="my-sugg" class="rows" aria-label="찾은 대여소"></ul>
+    </div>
   </section>
 
   <section id="rescue" class="tab" role="tabpanel">
