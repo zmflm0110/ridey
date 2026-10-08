@@ -1,6 +1,6 @@
 # 발표 대본 — RIDEY (본심, 약 6분)
 
-> 발표 자료 `docs/slides.html`(12장, ←/→ 로 넘김, F 전체 화면) · PDF `docs/slides.pdf` · 시연 영상 `docs/demo/demo.mp4`(2분 10초 — SPB-69683 의 12일로 시작).
+> 발표 자료 `docs/slides.html`(12장, ←/→ 로 넘김, F 전체 화면) · PDF `docs/slides.pdf` · 시연 영상 `docs/demo/demo.mp4`(2분 16초 — SPB-69683 의 12일로 시작, 운영 성적표 장면 포함).
 > 괄호 속 [ ] 는 하는 동작. 숫자는 모두 문서에 근거가 있다(각 장 아래 '근거'). 외우기보다, 장마다 **굵은 한 문장**만 꼭 말하면 된다.
 
 ---

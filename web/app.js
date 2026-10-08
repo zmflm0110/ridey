@@ -169,7 +169,7 @@ function renderRetro(bikes) {
   const show = (html) => { box.hidden = !html; box.innerHTML = html || ""; };
   if (state.day === "live") {
     const sc = state.morning.score || {};   // 몇 건으로 낸 % 는 오해를 부른다 — 20건부터
-    if (state.alarmDays === undefined && sbOn()) {   // 날짜별 막대는 한 번만, 첫 화면 뒤에
+    if (state.alarmDays === undefined && CLOUD.key) {   // 날짜별 막대는 한 번만, 첫 화면 뒤에 (공개 읽기라 검사·녹화의 HZ_CLOUD_OFF 와 상관없이)
       state.alarmDays = null;
       sbAlarmDays().then((d) => { state.alarmDays = d; if (state.day === "live") renderRetro(bikes); }).catch(() => {});
     }

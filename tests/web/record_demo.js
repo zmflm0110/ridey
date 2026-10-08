@@ -1,4 +1,4 @@
-// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
+// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 운영 성적표(날짜별 채점) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
 // 지금 목록은 진짜 클라우드(Supabase 가 5분마다 만든 것)에서 받는다(인터넷 필요). 확인·조사 기록은 임시 서버 DB 로만(클라우드 DB 에 안 씀).
 //   node tests/web/record_demo.js [나갈 폴더=docs/demo]   → demo.mp4 (ffmpeg 필요)
 // 화질: Playwright 녹화는 폰 크기(390) 그대로라 2배 틀의 왼쪽 위에만 찍혔다(나머지 회색) → 2배 화면(780×1688)을 계속 캡처해 시각대로 잇는다.
@@ -109,6 +109,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   if (ai) {   // 자체 AI — 목록 자전거마다 확률, '최소 몇 대는 진짜' 보장
     await cap("자체 AI 가 자전거마다 '다음 사람도 반납할 확률' 을 계산해 순서를 매겨요.", ai + " — 실시간 결과로 스스로 다시 배워요.");
     await wait(4200);
+  }
+  if (live && await page.waitForSelector("#morning-retro .days", { timeout: 8000 }).catch(() => null)) {   // 운영 성적표 — 실제로 맞았나
+    const pct = await page.textContent("#morning-retro .ring b"), head = await page.textContent("#morning-retro .days .detail b");
+    await show("#morning-retro");
+    await cap("정말 맞았을까? 9월 27일부터 실제로 운영하며 스스로 채점해요.", `경보 뒤 다음 사람 ${pct} 가 또 바로 반납 — ${head}.`);
+    await wait(5200);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" })); await wait(700);
   }
   const gu = await page.$eval("#stories .story:nth-child(2)", (b) => b.dataset.gu);
   await tap("#stories .story:nth-child(2)");
