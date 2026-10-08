@@ -433,6 +433,14 @@ footer p { margin: 0; font-size: 13.5px; color: var(--muted); }
 .livescore .big > b { font-family: var(--font-brand); font-size: 52px; font-weight: 800; line-height: 1; background: var(--wgrad); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
 .livescore .big span { color: var(--muted); font-size: 15.5px; }
 .livescore .big span b { color: var(--ink); }
+.days { margin: 22px 0 0; }
+.daybars { position: relative; display: flex; align-items: flex-end; gap: 4px; height: 96px; margin-top: 18px; border-bottom: 1px solid var(--line); }
+.daybars .db { flex: 1; min-width: 0; height: var(--h); background: var(--red); border-radius: 4px 4px 0 0; position: relative; }
+.daybars .db i { position: absolute; bottom: 100%; white-space: nowrap; left: 50%; transform: translateX(-50%); padding-bottom: 2px; font-style: normal; font-size: 11.5px; line-height: 1; color: var(--muted); font-variant-numeric: tabular-nums; }
+.daybars .base { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--ink); }
+.dayaxis { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
+.days figcaption { margin-top: 8px; }
+.days figcaption b { color: var(--ink); }
 
 /* 실제 자전거 한 대의 12일 (SPB-69683) — 점 = 빌리자마자 반납한 서로 다른 사람, 막대 = 그냥 타고 감. 색은 밝은·어두운 화면 모두 검증한 값 */
 :root { --tl-dud: #c2460d; --tl-ride: #008f7a; }

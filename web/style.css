@@ -227,3 +227,12 @@ nav#tabs .tablist { display: contents; }
 .rowbtn { all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
 .rowbtn > div { flex: 1; min-width: 0; }
 .rowbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
+/* 운영 성적표: 날짜별 막대 (0~50%, 점선 = 평소 2.5%) */
+#morning-retro .days { padding-top: 4px; }
+#morning-retro .days .detail { font-size: 14px; color: var(--sub); margin-top: 8px; line-height: 1.5; }
+.daybars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 72px; margin-top: 16px; border-bottom: 1px solid var(--line); }
+.daybars .db { flex: 1; min-width: 0; height: var(--h); background: var(--red); border-radius: 3px 3px 0 0; position: relative; }
+.daybars .db i { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 2px; white-space: nowrap; font-style: normal; font-size: 11px; line-height: 1; color: var(--sub); font-variant-numeric: tabular-nums; }
+.daybars .base { position: absolute; left: 0; right: 0; bottom: 5%; border-top: 2px dashed var(--ink); }
+.dayaxis { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); margin-top: 4px; font-variant-numeric: tabular-nums; }
+#morning-retro .days .detail b { color: var(--ink); }

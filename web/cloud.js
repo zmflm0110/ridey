@@ -59,6 +59,8 @@ async function sbScores() {
   for (const x of await sbGet("ops_scores?select=day,listed,rode,first_dud")) out[x.day] = { listed: x.listed, rode: x.rode, first_dud: x.first_dud };
   return out;
 }
+// 운영 성적표 — 경보가 울린 날마다 [날, 결과가 정해진 경보, 다음 다른 사람도 바로 반납] (public.ops_alarm_days)
+const sbAlarmDays = async () => (await sbGet("ops_alarm_days?select=day,scored,hit&order=day")).map((x) => [x.day, x.scored, x.hit]);
 // 사진(data:image/jpeg;base64,…) → 비공개 저장소, 이름(16자 hex.jpg) 돌려줌
 async function sbPhoto(dataUrl) {
   const bin = atob(dataUrl.split(",")[1]);

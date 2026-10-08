@@ -125,6 +125,13 @@ def test_score_matches_python(loaded):
             scored += 1; hit += bool(nxt["dud"].iloc[0])
     assert len(A) >= 5 and scored >= 1
     assert (hit, scored) == (sc["next_rider_dud"], sc["scored"])
+    # 운영 성적표 뷰(날짜별): 결과를 적어 둔(settle) 뒤엔 합이 채점과 같다. 가짜 기록은 경보를 한 시점에 몰아 적으므로 '바로 본 경보' 로 잠깐 바꿔서
+    psql(f"select live.settle('{NOW}'::timestamp + interval '8 hours')")
+    out = psql("begin; update live.alarms set seen_at = at;"
+               "select coalesce(sum(scored), 0) || ',' || coalesce(sum(hit), 0) || ',' || count(*) from public.ops_alarm_days;"
+               "select count(next_dud) || ',' || count(*) filter (where next_dud) from live.alarms; rollback;").split("\n")
+    days, settled = out[0].rsplit(",", 1)[0], out[1]
+    assert days == settled and days != "0,0" and int(out[0].rsplit(",", 1)[1]) >= 2, out
 
 
 def test_tick_runs(loaded):

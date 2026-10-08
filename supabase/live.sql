@@ -496,7 +496,11 @@ end $$;
 create or replace view public.live_snapshot as select at, body from live.snapshot;
 create or replace view public.ops_lists as select day, body from live.lists;
 create or replace view public.ops_scores as select day, listed, rode, first_dud from live.scores;
-grant select on public.live_snapshot, public.ops_lists, public.ops_scores to anon, authenticated;
+-- 운영 성적표: 경보가 울린 날마다, 결과가 정해진 실시간 경보(15분 안에 본 것) 중 다음 다른 사람도 바로 반납한 수 (사이트·앱의 날짜별 막대, 2026-10-08)
+create or replace view public.ops_alarm_days as
+  select at::date as day, count(*) filter (where next_dud is not null)::int as scored, count(*) filter (where next_dud)::int as hit
+  from live.alarms where seen_at - at <= interval '15 minutes' group by 1;
+grant select on public.live_snapshot, public.ops_lists, public.ops_scores, public.ops_alarm_days to anon, authenticated;
 revoke all on all tables in schema live from anon, authenticated;
 
 -- 예약 (5분마다). 다시 적용해도 하나만

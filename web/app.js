@@ -153,12 +153,27 @@ function scoreCard(title, hit, n, what) {
   return `<div class="tile ring-tile"><div class="ring" style="--p:${p}"><b>${p}%</b></div>` +
     `<div><div class="title">${title}</div><div class="detail">${what} ${n.toLocaleString("ko-KR")}명 중 ${hit.toLocaleString("ko-KR")}명(${p}%)이 또 바로 반납 · 평소 자전거는 2.5%</div></div></div>`;
 }
+// 운영 성적표 — 결과가 100건 넘게 정해진 날마다 막대 하나, 점선은 평소 자전거 2.5% (사이트 #livescore 와 같은 모양)
+function dayBars(rows) {
+  const d = (rows || []).filter(([, n]) => n >= 100);
+  if (d.length < 3) return "";
+  const pct = d.map(([, n, k]) => (100 * k) / n), md = (s) => s.slice(5).split("-").map(Number).join("/");
+  const lo = Math.min(...pct), hi = Math.max(...pct);
+  return `<div class="tile days"><div class="daybars" role="img" aria-label="날마다 경보 뒤 다음 사람도 바로 반납한 비율: ${d.map(([day], i) => `${md(day)} ${Math.round(pct[i])}%`).join(", ")} (평소 2.5%)">` +
+    d.map((x, i) => `<div class="db" style="--h:${Math.min(100, pct[i] * 2).toFixed(1)}%"><i>${Math.round(pct[i])}</i></div>`).join("") + `<div class="base"></div></div>` +
+    `<div class="dayaxis" aria-hidden="true"><span>${md(d[0][0])}</span><span>${md(d[d.length - 1][0])}</span></div>` +
+    `<div class="detail">날마다 — <b>${d.length}일 하루도 빠짐없이 평소의 ${Math.floor(lo / 2.5)}배 이상</b> (${Math.round(lo)}~${Math.round(hi)}%) · 점선은 평소 자전거(2.5%)</div></div>`;
+}
 function renderRetro(bikes) {
   const box = $("#morning-retro");
   const show = (html) => { box.hidden = !html; box.innerHTML = html || ""; };
   if (state.day === "live") {
     const sc = state.morning.score || {};   // 몇 건으로 낸 % 는 오해를 부른다 — 20건부터
-    return show(sc.scored >= 20 ? scoreCard("실시간 경보, 얼마나 맞았을까요?", sc.next_rider_dud, sc.scored, "경보 뒤 처음 빌린 다른 사람")
+    if (state.alarmDays === undefined && sbOn()) {   // 날짜별 막대는 한 번만, 첫 화면 뒤에
+      state.alarmDays = null;
+      sbAlarmDays().then((d) => { state.alarmDays = d; if (state.day === "live") renderRetro(bikes); }).catch(() => {});
+    }
+    return show(sc.scored >= 20 ? scoreCard("실시간 경보, 얼마나 맞았을까요?", sc.next_rider_dud, sc.scored, "경보 뒤 처음 빌린 다른 사람") + dayBars(state.alarmDays)
       : sc.scored ? `<div class="detail">실시간 경보 채점을 모으는 중이에요 (${sc.scored}건 — 20건부터 보여 줘요)</div>` : "");
   }
   const known = bikes.filter((b) => typeof b.truth_first_rider_dud === "boolean");
