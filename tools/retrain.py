@@ -7,6 +7,8 @@
   - 실시간 표본을 시간순으로 앞 70% / 뒤 30% 로 나눠, 새 모델은 '지난 석 달 + 앞 70%' 로 배우고 '뒤 30%' 로만 비교한다.
   - 비교 지표는 로그 손실(확률이 얼마나 맞나). 새 모델이 지금 모델보다 2% 넘게 좋고, 기대 수가 실제와 더 가까울 때만 바꾼다.
   - 정답이 있는 실시간 표본이 500개 미만이면 점검만 하고 바꾸지 않는다.
+  - 후보 둘: ① 다시 배운 모델 ② 지금 모델 위의 얇은 보정 층 logit(q) = a + b·logit(p) + c·[연쇄 3명+] (실시간 정답만으로 — 계절이 바뀌어
+    지난 석 달이 대부분인 ①이 잘 안 움직일 때). 같은 기준으로 시험하고, ①이 바뀌면 보정은 그대로(항등)로 되돌린다. 보정 식은 supabase/calib.sql.
 DB 비밀번호는 키체인 'supabase-db'.
 """
 import argparse, datetime as dt, io, pathlib, subprocess, sys, os
@@ -20,6 +22,24 @@ from analysis.snapshot_model import samples, FEATS6
 from analysis.train_model import model, to_sql, eval_trees
 
 MIN_LIVE = 500
+CALIB = ROOT / "supabase" / "calib.sql"
+
+
+def calib_sql(abc=None, note=""):
+    """live.p_cal — abc=(a, b, c) 면 보정 식, 없으면 그대로(p)."""
+    head = ("-- 실시간 보정 층 (자동 생성: tools/retrain.py --deploy). supabase/live.sql 다음에 적용.\n"
+            "-- logit(q) = a + b·logit(p) + c·[연쇄 3명+], 화면의 확률·순서에만 (최소 M대 90% 보장은 원래 확률로). " + note + "\n")
+    if abc is None:
+        return head + "create or replace function live.p_cal(p float8, chain float8) returns float8 language sql immutable as 'select p';\n"
+    a, b, c = abc
+    x = "greatest(least(p, 0.9999), 0.0001)"
+    return head + (f"create or replace function live.p_cal(p float8, chain float8) returns float8 language sql immutable as $$\n"
+                   f"  select 1 / (1 + exp(-({a!r} + {b!r} * ln({x} / (1 - {x})) + {c!r} * (chain >= 3)::int)))\n$$;\n")
+
+
+def cal_x(d):
+    p = np.clip(d["p"].to_numpy(), 1e-4, 1 - 1e-4)
+    return np.column_stack([np.log(p / (1 - p)), (d["chain"].to_numpy() >= 3).astype(float)])
 
 
 def live_samples():
@@ -64,10 +84,19 @@ def main():
         ll_cur, ll_new = logloss(y, new["p"].to_numpy()), logloss(y, p_new)
         gap_cur = abs(new["p"].sum() - y.sum()); gap_new = abs(p_new.sum() - y.sum())
         better = ll_new < ll_cur * 0.98 and gap_new <= gap_cur
+        from sklearn.linear_model import LogisticRegression
+        cm = LogisticRegression(C=1e3).fit(cal_x(old), old["y"])
+        q_new = cm.predict_proba(cal_x(new))[:, 1]
+        ll_cal, gap_cal = logloss(y, q_new), abs(q_new.sum() - y.sum())
+        cal_better = ll_cal < ll_cur * 0.98 and gap_cal <= gap_cur
         lines += ["", f"## 다시 배우기 비교 (뒤 30% = {len(new):,}개, {new['at'].min():%m-%d} 부터)", "",
                   "| | 로그 손실 | 기대 합 | 실제 합 |", "|---|---:|---:|---:|",
                   f"| 지금 모델 | {ll_cur:.4f} | {new['p'].sum():.1f} | {y.sum():.0f} |",
-                  f"| 새 모델(지난 기록 + 실시간 앞 70%) | {ll_new:.4f} | {p_new.sum():.1f} | {y.sum():.0f} |"]
+                  f"| ① 새 모델(지난 기록 + 실시간 앞 70%) | {ll_new:.4f} ({(ll_new / ll_cur - 1) * 100:+.1f}%) | {p_new.sum():.1f} | {y.sum():.0f} |",
+                  f"| ② 보정 층(실시간 앞 70% 로 맞춤) | {ll_cal:.4f} ({(ll_cal / ll_cur - 1) * 100:+.1f}%) | {q_new.sum():.1f} | {y.sum():.0f} |",
+                  "", "연쇄 길이별 (지금 확률 / ② 보정 / 실제): " + "; ".join(
+                      f"{int(c)}{'+' if c == 5 else ''}명 {g['p'].mean():.0%}/{g['q'].mean():.0%}/{g['y'].mean():.0%}"
+                      for c, g in pd.DataFrame({"c": np.minimum(new["chain"], 5), "p": new["p"], "q": q_new, "y": y}).groupby("c"))]
         if better:
             decision = "새 모델이 더 나음"
             if a.deploy:   # 실시간 전부 더해 다시 배워 배포
@@ -78,9 +107,20 @@ def main():
                 old_sql = (ROOT / "supabase" / "model.sql").read_text()
                 q_line = old_sql[old_sql.index("\n-- 목록 90% 하한"):]
                 (ROOT / "supabase" / "model.sql").write_text(to_sql(m, FEATS6, f"목록 표본 + 실시간 {len(S):,}개({dt.date.today()} 다시 배움)") + q_line)
+                CALIB.write_text(calib_sql(note=f"{dt.date.today()} 모델을 바꿔 보정은 그대로로 되돌림"))
                 env = {**os.environ, "PGPASSWORD": key("supabase-db")}
-                subprocess.run(["psql", DSN, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-f", str(ROOT / "supabase" / "model.sql")], env=env, check=True)
-                decision = "새 모델로 바꿈 (supabase/model.sql, DB 적용)"
+                for f in ("model.sql", "calib.sql"):
+                    subprocess.run(["psql", DSN, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-f", str(ROOT / "supabase" / f)], env=env, check=True)
+                decision = "새 모델로 바꿈 (supabase/model.sql, DB 적용, 보정은 그대로로)"
+        elif cal_better:
+            decision = "② 보정 층이 더 나음"
+            if a.deploy:   # 실시간 전부로 맞춰 배포
+                cm = LogisticRegression(C=1e3).fit(cal_x(S), S["y"])
+                abc = (float(cm.intercept_[0]), float(cm.coef_[0][0]), float(cm.coef_[0][1]))
+                CALIB.write_text(calib_sql(abc, f"{dt.date.today()} 실시간 {len(S):,}개로 맞춤"))
+                env = {**os.environ, "PGPASSWORD": key("supabase-db")}
+                subprocess.run(["psql", DSN, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-f", str(CALIB)], env=env, check=True)
+                decision = f"보정 층을 바꿔 끼움 (a={abc[0]:.3f}, b={abc[1]:.3f}, c={abc[2]:.3f} — supabase/calib.sql, DB 적용)"
     else:
         lines += ["", f"실시간 표본이 {MIN_LIVE}개 이상 모이면 다시 배우기를 비교한다(지금 {len(S)}개)."]
     lines += ["", f"**결정: {decision}**"]

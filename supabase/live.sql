@@ -304,6 +304,16 @@ begin
   return n;
 end $$;
 
+-- 실시간 보정 층 (2026-10-08): 학습 모델(지난 석 달) 위에 실시간 정답으로 맞춘 얇은 식 — logit(q) = a + b·logit(p) + c·[연쇄 3명+].
+-- 10월 실시간에선 연쇄 2명은 높게, 3명+ 는 낮게 잡았다(예측 27% vs 실제 24%, 5명+ 51% vs 60%). tools/retrain.py 가 매번 시험해
+-- 미리 정한 기준(뒤 30% 에서 로그 손실 2% 넘게 나음 + 기대 합이 실제에 더 가까움)을 넘을 때만 이 함수를 바꿔 끼운다. 그 전엔 그대로(p).
+-- 화면의 확률·순서에만 쓴다 — '최소 M대' 90% 보장은 검증한 원래 확률로.
+do $$ begin
+  if to_regprocedure('live.p_cal(double precision, double precision)') is null then
+    create function live.p_cal(p float8, chain float8) returns float8 language sql immutable as 'select p';
+  end if;
+end $$;
+
 -- AI 가 본 이유 (설명 가능한 AI, 2026-10-02): 특징 하나씩을 '목록의 보통 자전거' 값(목록 표본 중앙값)으로 바꿨을 때 확률이 얼마나 변하나.
 -- 가장 크게 움직인 셋을 사람 말로 — 앱의 조회 화면에 '왜 이 확률?' 로. (중앙값: 연쇄 2, 지난 7일 헛대여 4·대여 21, 이전 경보 0, 대여 34초, 경과 6.8시간, 외면 log1p 2.2)
 create or replace function live.p_why(chain float8, duds float8, rentals float8, prior float8, dur float8, age float8, shun float8)
@@ -343,11 +353,12 @@ with m as (
   select l.*, s.name from last l left join live.stations s on s.id = l.st1
   where l.chain >= 2 and l.t1 >= now_ - interval '24 hours'
 ), pf as (   -- 자체 모델: 다음에 빌린 다른 사람도 바로 반납할 확률
-  select f.bike, live.p_next_dud(f.chain, f.hist7_duds, f.hist7_rentals, f.prior_alarms7, f.dur_sec, f.age_h, f.shun) p,
+  select f.bike, b.p0, live.p_cal(b.p0, f.chain) p,
          live.p_why(f.chain, f.hist7_duds, f.hist7_rentals, f.prior_alarms7, f.dur_sec, f.age_h, f.shun) why
   from live.p_features(now_, (select coalesce(array_agg(bike), '{}') from fresh)) f
+  cross join lateral (select live.p_next_dud(f.chain, f.hist7_duds, f.hist7_rentals, f.prior_alarms7, f.dur_sec, f.age_h, f.shun) p0) b
 ), fp as (
-  select fresh.*, pf.p, pf.why from fresh left join pf using (bike)
+  select fresh.*, pf.p0, pf.p, pf.why from fresh left join pf using (bike)
 )
 select jsonb_build_object(
   'date', 'live', 'source', 'supabase', 'at', to_char(now_, 'YYYY-MM-DD"T"HH24:MI:SS'),
@@ -358,8 +369,8 @@ select jsonb_build_object(
       'last_dud', to_char(t1, 'MM-DD HH24:MI'), 'minutes_ago', floor(extract(epoch from now_ - t1) / 60)::int, 'reported', null,
       'p_next', round(100 * p)::int, 'why', why)
       order by p desc nulls last, chain desc, t1 desc) from fp), '[]'::jsonb),   -- 모델 확률 순 (목록 위 20대 정밀도가 세 달 모두 올라감, docs/model.md)
-  'model', jsonb_build_object('q', live.list_q(), 'expected', round(coalesce((select sum(p) from fp), 0)::numeric, 1),
-    'at_least', greatest(0, floor(coalesce((select sum(p) + live.list_q() * sqrt(sum(p * (1 - p))) from fp), 0)))::int),
+  'model', jsonb_build_object('q', live.list_q(), 'expected', round(coalesce((select sum(p0) from fp), 0)::numeric, 1),   -- 검증한 원래 확률로
+    'at_least', greatest(0, floor(coalesce((select sum(p0) + live.list_q() * sqrt(sum(p0 * (1 - p0))) from fp), 0)))::int),
   'today_alarms', (select count(*) from m where dud and not retry and streak = 1 and t1 >= date_trunc('day', now_)),
   'rentals_in_window', (select sum(total) from live.hours where hour > to_char(now_ - interval '7 days', 'YYYY-MM-DD/HH24') and hour <= to_char(now_, 'YYYY-MM-DD/HH24')),   -- API 시간별 합계(110만 행을 매번 세지 않게)
   'latest_return', (select to_char(max(t1), 'YYYY-MM-DD"T"HH24:MI:SS') from live.rentals where t1 <= now_ + interval '5 minutes'))
@@ -376,7 +387,7 @@ begin
   on conflict (bike, at) do nothing;
   get diagnostics n = row_count;
   if n > 0 then   -- 방금 울린 경보에 그 순간 모델 확률을 적어 둠
-    update live.alarms a set p_next = live.p_next_dud(f.chain, f.hist7_duds, f.hist7_rentals, f.prior_alarms7, f.dur_sec, f.age_h, f.shun)
+    update live.alarms a set p_next = live.p_cal(live.p_next_dud(f.chain, f.hist7_duds, f.hist7_rentals, f.prior_alarms7, f.dur_sec, f.age_h, f.shun), f.chain)
     from live.p_features(now_, (select coalesce(array_agg(bike), '{}') from live.alarms where seen_at = now_ and p_next is null)) f
     where a.bike = f.bike and a.seen_at = now_ and a.p_next is null;
   end if;
