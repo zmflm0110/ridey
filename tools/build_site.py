@@ -17,11 +17,12 @@ rp = json.load(open(W / "replay_2026-06-15.json"))
 json.dump({"date": rp["date"], "events": [[e["s"], code[e["type"]], e.get("station") or "", e["bike"], e.get("chain", 0)] for e in rp["events"]]},
           open(S / "data" / "replay.json", "w"), ensure_ascii=False, separators=(",", ":"))
 m = json.load(open(W / "morning" / "2026-06-15.json"))
-json.dump({"date": m["date"], "bikes": [[b["bike"], b["station_name"].strip(), b["chain"], b["level"], b["last_dud"]] for b in m["bikes"]]},
+json.dump({"date": m["date"], "bikes": [[b["bike"], b["station"], b["station_name"].strip(), b["chain"], b["level"], b["last_dud"]] for b in m["bikes"]]},
           open(S / "data" / "morning.json", "w"), ensure_ascii=False, separators=(",", ":"))
 for n in ("1_morning", "2_lookup", "3_rescue", "4_replay"):   # 가벼운 WebP(tools/make_webp.py 가 만듦 — 여기선 표준 라이브러리만)
     shutil.copy(ROOT / "docs" / "shots" / f"{n}.webp", S / "img" / f"{n}.webp")
     (S / "img" / f"{n}.png").unlink(missing_ok=True)
+shutil.copytree(ROOT / "web" / "fonts", S / "fonts", dirs_exist_ok=True)   # 큰 숫자 글꼴(Unbounded 일부, OFL) — tools/make_brand.py 가 만듦
 for p in sorted((S / "data").iterdir()) + sorted((S / "img").iterdir()):
     print(f"{p.relative_to(ROOT)}  {p.stat().st_size / 1024:.0f}KB")
 
@@ -55,17 +56,10 @@ def releases():
         body.append("</ul>")
     idx = (S / "index.html").read_text()
     head = re.sub(r"<title>.*?</title>", "<title>진행 기록 — RIDEY</title>", idx[:idx.index("</head>")], count=1)   # 제목이 바뀌어도 늘 맞게
-    header = idx[idx.index('<header class="top"'):idx.index("</header>") + len("</header>")].replace('href="#results"', 'href="./#results"').replace('href="#start"', 'href="./#start"')
-    footer = idx[idx.index("<footer>"):idx.index("</footer>") + len("</footer>")]
-    theme = """<script>
-(() => { const r = document.documentElement;
-  try { const t = localStorage.getItem("hz-theme"); if (t) r.dataset.theme = t; } catch {}
-  document.getElementById("theme").addEventListener("click", () => {
-    const dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-    r.dataset.theme = dark ? "light" : "dark"; try { localStorage.setItem("hz-theme", r.dataset.theme); } catch {} });
-  addEventListener("scroll", () => document.getElementById("top").classList.toggle("scrolled", scrollY > 8), { passive: true });
-})();
-</script>"""
+    header = idx[idx.index('<header class="nav"'):idx.index("</header>") + len("</header>")]
+    header = header.replace('class="nav"', 'class="nav solid"').replace('href="#', 'href="./#')
+    footer = idx[idx.index('<footer'):idx.index("</footer>") + len("</footer>")].replace('href="#', 'href="./#')
+    theme = '<script src="main.js" defer></script>'
     page = f"""{head}</head>
 <body>
 {header}
