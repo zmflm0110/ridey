@@ -1,4 +1,4 @@
-// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 운영 성적표(날짜별 채점) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 내 대여소 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
+// 시연 영상 자동 녹화 (대회 제출·발표용) — 사이트 첫 화면(서울 점 지도·지금 경보 수) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 운영 성적표(날짜별 채점) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 내 대여소 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
 // 지금 목록은 진짜 클라우드(Supabase 가 5분마다 만든 것)에서 받는다(인터넷 필요). 확인·조사 기록은 임시 서버 DB 로만(클라우드 DB 에 안 씀).
 //   node tests/web/record_demo.js [나갈 폴더=docs/demo]   → demo.mp4 (ffmpeg 필요)
 // 화질: Playwright 녹화는 폰 크기(390) 그대로라 2배 틀의 왼쪽 위에만 찍혔다(나머지 회색) → 2배 화면(780×1688)을 계속 캡처해 시각대로 잇는다.
@@ -22,12 +22,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const browser = await launch();
   const ctx = await browser.newContext({ viewport: { width: W * 2, height: H * 2 }, deviceScaleFactor: 1, locale: "ko-KR", serviceWorkers: "block" });
   await ctx.addInitScript(() => { window.HZ_CLOUD_OFF = true; });   // 시연 기록은 임시 DB 로
-  const SLOW = 5;   // 로고 장면만: 애니메이션·타이머를 5배 느리게
+  const SLOW = 3;   // 사이트 첫 화면만: 애니메이션·타이머·rAF 시계를 3배 느리게 찍고 다시 빠르게 붙임(부드럽게). 끝나면 window.__setSlow(1)
   await ctx.addInitScript((slow) => {
     if (!location.search.includes("site")) return;
-    const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, (ms || 0) * slow, ...a);
+    const pn = performance.now.bind(performance); let base = pn(), virt = base, k = slow;
+    const now = () => virt + (pn() - base) / k;
+    window.__setSlow = (nk) => { virt = now(); base = pn(); k = nk; };
+    performance.now = now;
+    const raf = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (cb) => raf(() => cb(now()));
+    const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, (ms || 0) * k, ...a);
   }, SLOW);
-  // 로고 — 사이트 첫 화면(자전거가 달려와 RIDEY). 글꼴을 먼저 받아 두려고 한 번 열었다 닫음(같은 context 라 캐시 공유)
+  // 첫 장면 — 사이트 첫 화면(서울이 레이더처럼 퍼지고 경보 점이 켜지고 숫자가 올라감). 글꼴을 먼저 받아 두려고 한 번 열었다 닫음(같은 context 라 캐시 공유)
   // 사이트는 만든 그대로(tools/build_site.py) 임시 폴더에서 띄움 — 파일로 열면 자료를 못 받음
   const siteDir = fs.mkdtempSync(path.join(os.tmpdir(), "hz-site-"));
   execFileSync(process.env.PYTHON || "python3", [path.join(ROOT, "tools/build_site.py"), "--out", siteDir], { stdio: "ignore" });
@@ -54,30 +59,34 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await cdp.send("Animation.enable"); await cdp.send("Animation.setPlaybackRate", { playbackRate: 1 / SLOW });
   slowNow = SLOW;
   await page.goto(SITE, { waitUntil: "domcontentloaded" });
-  await wait(7200 * SLOW);   // 길 → 자전거 → R·I·D·E·Y → 체크 → 'Ready before you ride.' 타자
+  await wait(4300 * SLOW);   // 머리 → 제목 줄 → 글 → 단추 → 큰 숫자, 서울 점 지도가 퍼지고 경보 점이 차례로 켜짐
+  await page.evaluate(() => window.__setSlow && window.__setSlow(1));
   await cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
   slowNow = 1;
   // 자막 상자 (사이트·앱 모두)
-  const capStyle = () => page.addStyleTag({ content: `#cap{position:fixed;left:10px;right:10px;bottom:18px;z-index:9999;background:rgba(11,19,32,.9);color:#fff;
-    font:600 16px/1.45 -apple-system,"Apple SD Gothic Neo","Noto Sans CJK KR",sans-serif;padding:12px 14px;border-radius:14px;transition:opacity .3s;pointer-events:none}
+  const capStyle = () => page.addStyleTag({ content: `#cap{position:fixed;left:10px;right:10px;bottom:18px;z-index:9999;background:rgba(17,19,23,.93);color:#F7F5F0;
+    font:700 16px/1.45 -apple-system,"Apple SD Gothic Neo","Noto Sans CJK KR",sans-serif;padding:12px 16px 12px 18px;border-radius:16px;box-shadow:inset 3px 0 0 #FF4F1F;transition:opacity .3s;pointer-events:none}
     #cap small{display:block;font-weight:400;opacity:.8;font-size:13px} #cap.top{top:10px;bottom:auto}` });
   // top: 시연 화면에서는 아래 숫자판을 가리지 않게 위(머리글 자리)에
   const cap = async (t, sub = "", top = false) => { await page.evaluate(([t, s, top]) => {
     let c = document.querySelector("#cap"); if (!c) { c = document.createElement("div"); c.id = "cap"; document.body.appendChild(c); }
     c.className = top ? "top" : ""; c.innerHTML = t + (s ? `<small>${s}</small>` : ""); }, [t, sub, top]); };
-  // 이야기 — 실제 자전거 한 대의 12일 (사이트의 시간 축 그림을 왼쪽에서 오른쪽으로 밀며)
   await capStyle();
-  await page.evaluate(() => { const r = document.querySelector("#spb .tl").getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 150, behavior: "instant" }); });
+  const liveN = ((await page.textContent("#live-n").catch(() => "")) || "").trim(), liveK = ((await page.textContent("#live-k").catch(() => "")) || "").trim();
+  await cap("RIDEY. — 점 하나가 신호다.", liveN ? `${liveK} ${liveN}대 — 클라우드가 5분마다 다시 셉니다.` : "앞사람들이 빌리자마자 반납한 흔적으로, 고장 난 따릉이를 먼저.", true);
+  await wait(3800);
+  // 이야기 — 실제 자전거 한 대의 12일 (사이트의 시간 축 그림을 왼쪽에서 오른쪽으로 밀며)
+  await page.evaluate(() => { const r = document.querySelector("#story .tl").getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 150, behavior: "instant" }); });
   await wait(1200);
   await cap("서울 강서구 따릉이 SPB-69683, 2026년 6월 실제 기록.", "6월 12일 오후 3시 43분 — 서로 다른 두 번째 사람도 빌리자마자 반납.", true);
   await wait(4200);
   // 가로 밀기는 여기(node)서 조금씩 — 캡처가 쉬지 않고 돌면 페이지 안 애니메이션 시계가 흔들려 한 번에 끝까지 갔다가 되돌아왔다
   const slide = async (to, ms) => {
-    const [from, max] = await page.evaluate(() => { const e = document.querySelector("#spb .tl"); return [e.scrollLeft, e.scrollWidth - e.clientWidth]; });
+    const [from, max] = await page.evaluate(() => { const e = document.querySelector("#story .tl-scroll"); return [e.scrollLeft, e.scrollWidth - e.clientWidth]; });
     const end = to * max, n = Math.max(1, Math.round(ms / 50));
     for (let i = 1; i <= n; i++) {
       const k = i / n;
-      await page.evaluate((v) => { document.querySelector("#spb .tl").scrollLeft = v; }, from + (end - from) * k * k * (3 - 2 * k));
+      await page.evaluate((v) => { document.querySelector("#story .tl-scroll").scrollLeft = v; }, from + (end - from) * k * k * (3 - 2 * k));
       await wait(50);
     }
   };
@@ -177,18 +186,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(4200);
 
   await tab("replay");
-  await cap("2026년 6월 15일, 서울 따릉이 실제 기록을 하루 재생합니다.", "빨강 = 경보 · 초록 = 막을 수 있던 헛걸음 · 청록 = 한참 뒤에 들어온 고장 신고", true);
+  await cap("2026년 6월 15일, 서울 따릉이 실제 기록을 하루 재생합니다.", "주황 = 경보 · 흰 점 = 경보 뒤 또 헛걸음 · 파랑 = 한참 뒤에 들어온 고장 신고", true);
   await page.selectOption("#speed", "1800");
   await wait(2500);
   await tap("#play");
   await page.waitForFunction(() => document.querySelector("#clock").textContent >= "08:00", null, { timeout: 60000 });
-  await cap("출근 시간 — 경보가 켜진 자전거를 또 빌려 헛걸음한 사람들(초록).", "경보만 보여 줬어도 막을 수 있었던 헛걸음이에요.", true);
+  await cap("출근 시간 — 경보가 켜진 자전거를 또 빌려 헛걸음한 사람들(흰 점).", "경보만 보여 줬어도 막을 수 있었던 헛걸음이에요.", true);
   await page.waitForFunction(() => document.querySelector("#clock").textContent >= "15:00", null, { timeout: 60000 });
   await page.selectOption("#speed", "3600");
   await cap("고장 신고는 경보보다 중앙값 20시간 늦게 들어와요.", "그 사이 한 자전거에서 평균 3.5~4.6명이 헛걸음.", true);
   await page.waitForFunction(() => document.querySelector("#clock").textContent.startsWith("다음 날"), null, { timeout: 60000 });
   await page.evaluate(() => { const s = document.querySelector("#speed"); s.insertAdjacentHTML("beforeend", '<option value="14400">4시간/초</option>'); s.value = "14400"; });
-  await cap("다음 날 — 뒤늦은 고장 신고만 드문드문(청록).", "우리 경보는 이미 전날 울렸던 자전거들이에요.", true);
+  await cap("다음 날 — 뒤늦은 고장 신고만 드문드문(파랑).", "우리 경보는 이미 전날 울렸던 자전거들이에요.", true);
   await page.waitForFunction(() => document.querySelector("#play").textContent.includes("다시"), null, { timeout: 90000 });
   const n = await page.evaluate(() => ["#c-alarm", "#c-prev", "#c-fault"].map((s) => document.querySelector(s).textContent));
   await cap(`하루 동안 경보 ${n[0]} · 막을 수 있던 헛걸음 ${n[1]}명`, "서울 3개월·대전 2개월, 약 1천만 건으로 검증 · 경보는 고장 신고보다 20~25시간 먼저", true);
