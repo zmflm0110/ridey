@@ -3,8 +3,8 @@
  "short_name": "RIDEY",
  "start_url": "./",
  "display": "standalone",
- "background_color": "#ffffff",
- "theme_color": "#ffffff",
+ "background_color": "#F7F5F0",
+ "theme_color": "#111317",
  "lang": "ko",
  "icons": [
   {

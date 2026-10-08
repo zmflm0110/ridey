@@ -72,7 +72,7 @@ def numbers_font():
     f = instancer.instantiateVariableFont(TTFont(FONT), {"wght": (500, 900)})
     o = subset.Options(); o.flavor = "woff2"; o.layout_features = ["kern", "tnum", "lnum"]; o.name_IDs = ["*"]
     s = subset.Subsetter(o); s.populate(text="0123456789%+-–~.,:/·×xABCDEFGHIJKLMNOPQRSTUVWXYZ "); s.subset(f)
-    f.flavor = "woff2"
+    f.flavor = "woff2"; f.recalcTimestamp = False   # 다시 만들어도 같은 파일(쓸데없는 바뀜 없게)
     out = ROOT / "web" / "fonts" / "unbounded-ridey.woff2"; out.parent.mkdir(exist_ok=True); f.save(out)
     lic = ROOT / "web" / "fonts" / "OFL-Unbounded.txt"
     if not lic.exists():

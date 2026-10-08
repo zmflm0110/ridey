@@ -111,7 +111,7 @@ function renderMorning() {
   $("#morning-summary").innerHTML = status +
     `<p class="big">${when}${place}<br>고장 의심 따릉이가</p>` +
     `<p class="num"><b>${bikes.length}</b>대 ${isPast() ? "있었어요" : "있어요"}</p>` +
-    `<div class="sub">빨강 ${red} · 노랑 ${bikes.length - red}${live && state.morning.today_alarms != null ? ` · 오늘 경보 ${state.morning.today_alarms}번` : ""}</div>`
+    `<div class="sub">연쇄 3명+ ${red} · 2명 ${bikes.length - red}${live && state.morning.today_alarms != null ? ` · 오늘 경보 ${state.morning.today_alarms}번` : ""}</div>`
   const ex = live && bikes.length >= 10 ? listExpect(bikes, (state.morning.model || {}).q) : null;
   if (ex) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="ai">✦ AI 예측: 이 중 약 ${Math.round(ex.mu)}대가 진짜 고장 · 최소 ${ex.atLeast}대(90%)</div>`);
   const notes = (live ? feedNote() : pastNote()) + (live && minsAgo(state.morning.at) > 30
@@ -237,12 +237,14 @@ function renderRoute(bikes) {
   $("#route-list").innerHTML = stops.map((s, i) =>
     `<li><div><b>${esc(s.name)}</b><span class="s">${hhmm(sim.arr[i])} 도착 · 의심 ${s.arr.length}대</span></div>` +
     `<span class="n accent">${people(stationValue(s, sim.arr[i]))}</span></li>`).join("") +
-    `<li class="total"><span>${here ? "내 위치에서 " : ""}${stops.length}곳 · 약 ${Math.round(sim.used)}분 · 막을 헛걸음 예상 <b style="display:inline;color:var(--accent)">${people(sim.value)}</b>` +
+    `<li class="total"><span>${here ? "내 위치에서 " : ""}${stops.length}곳 · 약 ${Math.round(sim.used)}분 · 막을 헛걸음 예상 <b style="display:inline;color:var(--signal-ink)">${people(sim.value)}</b>` +
     `${sim.value > rankValue + 0.05 ? ` (순위대로 돌 때보다 ${(sim.value - rankValue).toFixed(1)}명 더)` : ""}</span></li>`;
   if (typeof L === "undefined" || !state.map) return;
   if (state.routeLayer) state.routeLayer.remove();
   state.routeLayer = L.layerGroup().addTo(state.map);
-  L.polyline([start, ...stops].map((p) => [p.lat, p.lon]), { color: "#167A66", weight: 3, opacity: 0.8, dashArray: "6 6" }).addTo(state.routeLayer);
+  const path = [start, ...stops].map((p) => [p.lat, p.lon]);   // 흰 밑줄 위 잉크 점선 — 흑백 지도 위에서도 보임
+  L.polyline(path, { color: "#FFFFFF", weight: 7, opacity: 0.9 }).addTo(state.routeLayer);
+  L.polyline(path, { color: "#111317", weight: 3, opacity: 1, dashArray: "6 6" }).addTo(state.routeLayer);
   stops.forEach((s, i) => L.marker([s.lat, s.lon], { icon: L.divIcon({ className: "route-num", html: String(i + 1), iconSize: [20, 20] }) }).addTo(state.routeLayer));
 }
 
@@ -351,7 +353,7 @@ function baseMap(id, opts = {}) {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, crossOrigin: true, attribution: "© OpenStreetMap" }).addTo(map);
   const r = L.canvas({ padding: 0.5 });
   Object.values(state.stations).forEach((s) =>
-    L.circleMarker([s.lat, s.lon], { renderer: r, radius: 1.5, stroke: false, fillColor: "#64748b", fillOpacity: 0.35, interactive: false }).addTo(map));
+    L.circleMarker([s.lat, s.lon], { renderer: r, radius: 1.5, stroke: false, fillColor: "#8A8F98", fillOpacity: 0.45, interactive: false }).addTo(map));
   return map;
 }
 
@@ -364,7 +366,7 @@ function renderMap(bikes) {
     const s = state.stations[id];
     if (!s) return;
     const red = arr.some((b) => b.level === "빨강");
-    L.circleMarker([s.lat, s.lon], { radius: 5 + 2 * arr.length, color: red ? "#d9480f" : "#e0a100", weight: 1.5, fillOpacity: 0.5 })
+    L.circleMarker([s.lat, s.lon], { radius: 5 + 2 * arr.length, color: red ? "#FF4F1F" : "#FF9A73", weight: 1.5, fillOpacity: 0.55 })
       .bindPopup(`<b>${s.name}</b><br>${arr.map((b) => `${b.bike} · ${b.chain}명 연속`).join("<br>")}`)
       .addTo(state.layer);
   });
@@ -475,7 +477,7 @@ function renderRescue() {
   const next = todo[0];
   const away = (b) => (far(b) == null ? "" : far(b) < 1000 ? ` · ${Math.round(far(b))}m` : ` · ${(far(b) / 1000).toFixed(1)}km`);
   $("#rescue-card").innerHTML = next
-    ? `<div class="result warn"><span class="tag ${next.level}">${next.level}</span><h2 style="margin-top:12px">${esc(next.bike)}<span class="dist">${away(next)}</span></h2>` +
+    ? `<div class="result warn"><span class="tag ${next.level}">연쇄 ${next.chain}명</span><h2 style="margin-top:12px">${esc(next.bike)}<span class="dist">${away(next)}</span></h2>` +
       `<p class="station">${esc(next.station_name)} · 서로 다른 ${next.chain}명이 바로 반납</p>${VERDICTS(next.bike)}</div>`
     : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>오늘 목록을 다 확인했어요!</h2></div>`;
   if (next && todo.length > 1)
@@ -491,7 +493,7 @@ function renderRescue() {
 
 // ── 시연
 let replay = null, timer = null, rmap = null, rlayer = null;
-const COLORS = { "경보": "#d9480f", "막을 수 있던 헛걸음": "#2b8a3e", "고장 신고": "#0f766e" };
+const COLORS = { "경보": "#FF5C2E", "막을 수 있던 헛걸음": "#F3F1EC", "고장 신고": "#7C9BFF" };   // 어두운 재생 판 위: 신호 · 흰 점 · 파랑 (docs/brand.md)
 function flash(e) {
   if (!rmap) return;
   const s = state.stations[e.station] || (e.type === "고장 신고" && lastStation[e.bike] && state.stations[lastStation[e.bike]]);
