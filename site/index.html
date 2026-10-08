@@ -17,6 +17,7 @@
 </head>
 <body>
 <a class="skip" href="#story">본문으로 건너뛰기</a>
+<div class="progress" aria-hidden="true"></div>
 
 <header class="nav" id="top">
   <div class="wrap">
@@ -38,6 +39,7 @@
   <!-- 첫 화면: 지금 서울의 경보 대여소가 점 지도 위에 켜진다 -->
   <section class="hero dark" id="hero">
     <canvas id="livemap" aria-hidden="true"></canvas>
+    <div class="blips" id="blips" aria-hidden="true"></div>
     <div class="wrap">
       <p class="eyebrow"><i class="ping" aria-hidden="true"></i><span id="hero-src">서울 따릉이 · 5분마다 실시간</span></p>
       <h1>타기 전에,<br>고장 난 따릉이를<br><em>먼저.</em></h1>
@@ -71,7 +73,7 @@
         <div class="tl-scroll" tabindex="0" role="region" aria-label="SPB-69683 의 12일 그림 — 좁은 화면에서는 옆으로 밀 수 있어요"><svg id="tl" class="tl-svg" viewBox="0 0 1000 250" role="img" aria-labelledby="tl-t"><title id="tl-t">SPB-69683 의 12일: 서로 다른 73명이 빌리자마자 반납(점), 정상처럼 탄 30번(선). 6월 12일 15시 43분 RIDEY 경보, 13일 07시 58분 첫 고장 신고, 24일 17시 18분 두 번째 신고 뒤 사라짐.</title></svg></div>
         <figcaption class="legend"><span><i class="k-dot"></i>빌리자마자 반납 — 서로 다른 73명</span><span><i class="k-dash"></i>그냥 타고 감 30번</span><span><i class="k-alarm"></i>RIDEY 신호</span><span><i class="k-rep"></i>고장 신고</span></figcaption>
       </figure>
-      <ol class="moments reveal">
+      <ol class="moments reveal stagger">
         <li><b>6월 12일 15:20</b><span>첫 사람이 빌리자마자 같은 곳에 반납</span></li>
         <li class="hot"><b>15:43 · RIDEY 경보</b><span>두 번째 사람도 — 서로 다른 두 사람이면 자전거 탓</span></li>
         <li><b>6월 13일 07:58</b><span>첫 고장 신고. 그 뒤에도 54번 더 빌렸다가 반납</span></li>
@@ -89,7 +91,7 @@
         <p class="label"><span class="no">02</span>왜 아무도 몰랐을까</p>
         <h2>신고는 귀찮고,<br>눈으로는 안 보입니다.</h2>
       </header>
-      <div class="facts reveal">
+      <div class="facts reveal stagger">
         <div class="fact"><b class="num">16<small>만 건</small></b><h3>따릉이 고장 접수 (2024년)</h3><p>운영 적자는 127억 원. 그런데 고장 난 자전거를 만난 사람 대부분은 신고하지 않고, 조용히 반납하고 옆 자전거를 빌립니다.</p></div>
         <div class="fact"><b class="num">49~61<small>%</small></b><h3>7일이 지나도 신고가 없다</h3><p>서로 다른 사람이 연달아 포기한 자전거 중 이만큼은 일주일이 지나도 아무도 신고하지 않았습니다.</p></div>
         <div class="fact"><b class="num">82~91<small>%</small></b><h3>하루 안에 또 빌려진다</h3><p>공단은 하루 한 번 넘게 대여소를 돌지만, 체인·브레이크처럼 타 봐야 아는 고장은 눈으로 걸러지지 않습니다.</p></div>
@@ -116,7 +118,7 @@
         </ol>
         <button class="btn sm line" id="morse-again" type="button">다시 보기</button>
       </div>
-      <dl class="rules reveal">
+      <dl class="rules reveal stagger">
         <div><dt>점 (헛대여)</dt><dd>같은 대여소에 <kbd>3분</kbd> 안에, <kbd>300m</kbd>도 안 가고 반납한 대여.</dd></div>
         <div><dt>서로 다른 사람</dt><dd>한 사람이 여러 번 해 본 건 한 번으로. 생년·성별로 거르고, 그 자료가 없으면 <kbd>2분</kbd> 안에 다시 빌린 사람을 같은 사람으로 봅니다(차이 0.2%p).</dd></div>
         <div><dt>경보</dt><dd>서로 다른 사람의 점이 <kbd>2명</kbd> 이어지면 켜지고, <kbd>3명</kbd>부터는 더 강하게.</dd></div>
@@ -172,7 +174,7 @@
         <div class="card score" id="livescore">
           <p class="k">실시간 경보는 맞았을까?</p>
           <p class="big"><b class="num" id="ls-pct">30%</b><span>경보 뒤 처음 빌린 다른 사람 <b id="ls-n">3,478</b>명 중 <b id="ls-k">1,035</b>명이 또 바로 반납</span></p>
-          <figure class="days">
+          <figure class="days" id="days">
             <div class="daybars" id="ls-bars" role="img" aria-label="날마다 경보 뒤 다음 사람도 바로 반납한 비율"></div>
             <div class="dayaxis" aria-hidden="true"><span id="ls-d0">9/27</span><span id="ls-d1">10/7</span></div>
             <figcaption><b id="ls-days-head">11일 하루도 빠짐없이 평소의 9배 이상</b> (<span id="ls-range">24~39%</span>) · 점선은 평소 자전거 2.5%</figcaption>
@@ -205,7 +207,7 @@
         <h2>셋이 같이 씁니다.</h2>
         <p class="sub">웹앱 하나로 안드로이드·아이폰 어디서든. 인터넷이 끊겨도 목록과 시연이 보입니다.</p>
       </header>
-      <div class="phones reveal">
+      <div class="phones reveal stagger">
         <figure><img src="img/1_morning.webp" alt="정비 화면: 지도와 먼저 볼 대여소 순위" width="600" height="1298" loading="lazy"><figcaption><b>정비 기사</b><span>구를 고르면 먼저 볼 대여소 순위와, 근무 시간 안에 헛걸음을 가장 많이 막는 동선(순위대로보다 12~17% 더).</span></figcaption></figure>
         <figure><img src="img/2_lookup.webp" alt="조회 화면: 번호를 넣으면 피하라는 경고" width="600" height="1298" loading="lazy"><figcaption><b>이용자</b><span>빌리기 전에 번호·QR 로 확인. 자주 가는 대여소를 넣어 두면 가기 전에 '피할 번호'.</span></figcaption></figure>
         <figure><img src="img/3_rescue.webp" alt="현장 확인 화면: 가까운 의심 자전거와 확인 단추" width="600" height="1298" loading="lazy"><figcaption><b>현장 확인</b><span>순회 중 의심 자전거 앞에서 탭 한 번 — 체인·타이어·안장·브레이크·멀쩡함. 모든 폰의 순위가 같이 바뀝니다.</span></figcaption></figure>
@@ -265,7 +267,7 @@
         <p class="label"><span class="no">08</span>넓히기</p>
         <h2>같은 방법,<br>다른 곳.</h2>
       </header>
-      <div class="grid3 reveal">
+      <div class="grid3 reveal stagger">
         <div class="card"><b class="num">41.6~43.6<small>%</small></b><h3>대전 타슈 — 이미 검증</h3><p>서울 기준을 그대로 적용했는데 다음 사람도 이만큼 포기. 대여기록만 있으면 세종 어울링·창원 누비자도 됩니다.</p></div>
         <div class="card"><b class="num">36.5<small>%</small></b><h3>전기차 충전기 — 신호 확인</h3><p>연달아 두 번 바로 끊긴 충전기 252대 중 다음 충전도 끊긴 비율(평소 2.7%, 약 13배). 2026년 8월 권익위 '전기차 충전' 민원주의보.</p></div>
         <div class="card"><b class="num">0<small>개</small></b><h3>새로 달 장비 — 서울시설공단</h3><p>센서·단말기·앱 가입 없이, 이미 가진 대여기록만으로 신고에 기대지 않는 고장 현황판.</p></div>

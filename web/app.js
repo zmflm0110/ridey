@@ -14,7 +14,9 @@ async function getJSON(path) {
 // ── 탭
 document.querySelectorAll("#tabs button").forEach((b) =>
   b.addEventListener("click", () => {
-    document.querySelectorAll("#tabs button").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+    const all = [...document.querySelectorAll("#tabs button")];
+    all.forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+    document.querySelector("#tabs").style.setProperty("--tab", all.indexOf(b));   // 아래 신호 점이 미끄러져 따라감
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.id === b.dataset.tab));
     if (b.dataset.tab === "morning" && state.map) setTimeout(() => state.map.invalidateSize(), 50);
     if (b.dataset.tab === "rescue") renderRescue();
@@ -100,6 +102,13 @@ function setGu(g) {
   renderMorning();
   if (state.map && state.layer) { const b = state.layer.getLayers().map((m) => m.getLatLng()); if (b.length) state.map.fitBounds(L.latLngBounds(b).pad(0.2), { maxZoom: 14 }); }
 }
+// 숫자가 앞 값에서 새 값으로 올라감 (칸 너비가 같은 글꼴이라 흔들리지 않음) — '움직임 줄이기' 면 바로
+function tick(el, from, to, dur = 900) {
+  if (!el || from === to || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const t0 = performance.now(), ease = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+  const step = (now) => { const k = Math.min(1, (now - t0) / dur); el.textContent = Math.round(from + (to - from) * ease(k)); if (k < 1) requestAnimationFrame(step); };
+  el.textContent = from; requestAnimationFrame(step);
+}
 function renderMorning() {
   const bikes = shown();
   const red = bikes.filter((b) => b.level === "빨강").length;
@@ -114,6 +123,7 @@ function renderMorning() {
     `<div class="sub">연쇄 3명+ ${red} · 2명 ${bikes.length - red}${live && state.morning.today_alarms != null ? ` · 오늘 경보 ${state.morning.today_alarms}번` : ""}</div>`
   const ex = live && bikes.length >= 10 ? listExpect(bikes, (state.morning.model || {}).q) : null;
   if (ex) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="ai">✦ AI 예측: 이 중 약 ${Math.round(ex.mu)}대가 진짜 고장 · 최소 ${ex.atLeast}대(90%)</div>`);
+  tick($("#morning-summary .num b"), state.shownCount ?? 0, bikes.length); state.shownCount = bikes.length;
   const notes = (live ? feedNote() : pastNote()) + (live && minsAgo(state.morning.at) > 30
     ? `<p class="past-note">⏳ 목록 갱신이 늦어지고 있어요(마지막 ${minsAgo(state.morning.at)}분 전). 그사이 새로 생긴 경보는 아직 안 보일 수 있어요.</p>` : "");
   if (notes) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="notes">${notes}</div>`);
@@ -160,7 +170,7 @@ function dayBars(rows) {
   const pct = d.map(([, n, k]) => (100 * k) / n), md = (s) => s.slice(5).split("-").map(Number).join("/");
   const lo = Math.min(...pct), hi = Math.max(...pct);
   return `<div class="tile days"><div class="daybars" role="img" aria-label="날마다 경보 뒤 다음 사람도 바로 반납한 비율: ${d.map(([day], i) => `${md(day)} ${Math.round(pct[i])}%`).join(", ")} (평소 2.5%)">` +
-    d.map((x, i) => `<div class="db" style="--h:${Math.min(100, pct[i] * 2).toFixed(1)}%"><i>${Math.round(pct[i])}</i></div>`).join("") + `<div class="base"></div></div>` +
+    d.map((x, i) => `<div class="db" style="--h:${Math.min(100, pct[i] * 2).toFixed(1)}%;--i:${i}"><i>${Math.round(pct[i])}</i></div>`).join("") + `<div class="base"></div></div>` +
     `<div class="dayaxis" aria-hidden="true"><span>${md(d[0][0])}</span><span>${md(d[d.length - 1][0])}</span></div>` +
     `<div class="detail">날마다 — <b>${d.length}일 하루도 빠짐없이 평소의 ${Math.floor(lo / 2.5)}배 이상</b> (${Math.round(lo)}~${Math.round(hi)}%) · 점선은 평소 자전거(2.5%)</div></div>`;
 }
@@ -194,6 +204,11 @@ function renderLists() {
   const list = [...bikes].sort((a, b) => sure(a) - sure(b));
   const lim = state.allBikes ? 80 : 10;
   $("#bike-list").innerHTML = list.slice(0, lim).map(bikeRow).join("");
+  const sig = `${state.day}|${state.gu}|${state.allBikes ? 1 : 0}`;
+  if (sig !== state.listSig) {   // 날짜·구가 바뀔 때만 줄이 차례로 들어옴 (1분마다 새로 받을 땐 그대로)
+    state.listSig = sig;
+    for (const ul of [$("#bike-list"), $("#station-rank")]) { [...ul.children].forEach((li, i) => li.style.setProperty("--i", Math.min(i, 12))); ul.classList.remove("enter"); void ul.offsetWidth; ul.classList.add("enter"); }
+  }
   const more = $("#bike-more");
   more.hidden = list.length <= 10;
   more.textContent = state.allBikes ? "접기" : `${Math.min(list.length, 80)}대 모두 보기`;
@@ -366,7 +381,7 @@ function renderMap(bikes) {
     const s = state.stations[id];
     if (!s) return;
     const red = arr.some((b) => b.level === "빨강");
-    L.circleMarker([s.lat, s.lon], { radius: 5 + 2 * arr.length, color: red ? "#FF4F1F" : "#FF9A73", weight: 1.5, fillOpacity: 0.55 })
+    L.circleMarker([s.lat, s.lon], { radius: 5 + 2 * arr.length, color: red ? "#FF4F1F" : "#FF9A73", weight: 1.5, fillOpacity: 0.55, className: red ? "m-strong" : "" })
       .bindPopup(`<b>${s.name}</b><br>${arr.map((b) => `${b.bike} · ${b.chain}명 연속`).join("<br>")}`)
       .addTo(state.layer);
   });
@@ -460,7 +475,7 @@ function toast(msg) {
   const t = document.createElement("div");
   t.className = "toast"; t.textContent = msg; t.setAttribute("role", "status");   // 화면 읽기 프로그램이 읽어 줌
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+  setTimeout(() => t.classList.add("out"), 2900); setTimeout(() => t.remove(), 3250);
 }
 function renderRescue() {
   if (!state.morning) return;

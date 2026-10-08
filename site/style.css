@@ -10,7 +10,9 @@
   --d-text: #F3F1EC; --d-text-2: #B3B7BE; --d-text-3: #8A8F98; --d-signal: #FF5C2E; --d-signal-ink: #FF7A52; --d-signal-soft: #3A1C12; --d-calm: #7C9BFF; --d-calm-soft: #17204A;
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
   --num: "Unbounded", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
-  --r-sm: 12px; --r: 20px; --r-lg: 28px; --ease: cubic-bezier(.2, .7, .2, 1);
+  --r-sm: 12px; --r: 20px; --r-lg: 28px; --ease: cubic-bezier(.16, 1, .3, 1);
+  /* 스프링(살짝 넘쳤다 돌아옴) — 점이 튀어나오고 막대가 자랄 때 */
+  --spring: linear(0, .009, .035 2.1%, .141, .281 6.7%, .723 12.9%, .938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, .991, .977 51%, .974 53.8%, .975 57.1%, .997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
   /* 구역마다 바꿔 끼우는 이름들 (밝은 구역이 기본) */
   --bg: var(--paper); --fg: var(--ink); --fg2: var(--ink-2); --fg3: var(--ink-3); --card: var(--surface); --cline: var(--line); --cline2: var(--line-2);
   --sig: var(--signal); --sigt: var(--signal-ink); --sigsoft: var(--signal-soft); --calmt: var(--calm-ink); --calmsoft: var(--calm-soft); --chip: var(--paper-2);
@@ -127,8 +129,7 @@ h3 { font-size: 21px; letter-spacing: -.03em; line-height: 1.3; }
 .thesis b { color: var(--fg); } .thesis em { font-style: normal; color: var(--sig); }
 .src { margin-top: 28px; font-size: 13.5px; color: var(--fg3); }
 .split { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(24px, 4vw, 56px); align-items: start; }
-.js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
-.js .reveal.in { opacity: 1; transform: none; }
+/* 움직임은 아래 '움직임' 묶음에 */
 
 /* 01 한 대의 12일 — 선(탄 대여)과 점(바로 반납) */
 .tl { margin: 0; padding: clamp(18px, 2.5vw, 30px) clamp(14px, 2.5vw, 30px) 22px; }
@@ -380,3 +381,132 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
   .ping, .m.signal i::after { animation: none; }
   .bar .col { transition: none; }
 }
+
+/* ───────── 움직임 (docs/brand.md 5) — 빠르게 출발해 부드럽게 앉는 곡선 + 점·막대만 스프링. '움직임 줄이기' 면 모두 끔 */
+.progress { position: fixed; inset: 0 0 auto; height: 2px; z-index: 40; background: var(--signal); transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; }
+@supports (animation-timeline: scroll()) { .progress { animation: progress linear both; animation-timeline: scroll(root); } }
+@keyframes progress { to { transform: scaleX(1); } }
+
+/* 나타나기: 아래에서 흐림을 걷으며 */
+.js .reveal { opacity: 0; transform: translateY(34px); filter: blur(10px); transition: opacity 1s var(--ease), transform 1.2s var(--ease), filter 1s var(--ease); }
+.js .reveal.in { opacity: 1; transform: none; filter: none; }
+.js .stagger > * { opacity: 0; transform: translateY(26px); transition: opacity .9s var(--ease), transform 1.1s var(--ease); transition-delay: calc(var(--i, 0) * 90ms + 120ms); }
+.js .stagger.in > * { opacity: 1; transform: none; }
+.js .reveal.stagger { opacity: 1; transform: none; filter: none; }   /* 묶음은 아이들이 차례로 */
+
+/* 제목: 줄마다 가림막 뒤에서 올라옴 */
+.js .ln { display: block; overflow: hidden; padding: .09em 0 .1em; margin: -.09em 0 -.1em; }
+.js .ln > span { display: inline-block; transform: translateY(112%) rotate(2deg); transform-origin: 0 100%; transition: transform 1.15s var(--ease); transition-delay: calc(var(--i, 0) * 95ms + var(--d0, 0ms)); }
+.js .lines-in .ln > span { transform: none; }
+.js .head .label { opacity: 0; transform: translateX(-12px); transition: opacity .8s var(--ease), transform .9s var(--ease); }
+.js .head.lines-in .label { opacity: 1; transform: none; }
+.js .head .sub { opacity: 0; transform: translateY(14px); transition: opacity .9s var(--ease) .35s, transform 1s var(--ease) .35s; }
+.js .head.lines-in .sub { opacity: 1; transform: none; }
+
+/* 첫 화면: 머리 → 제목 줄 → 글 → 단추 → 숫자 차례로, 로고 점은 떨어져 앉음 */
+.js .nav { opacity: 0; transform: translateY(-14px); }
+.js .ready .nav, .js body.ready .nav { opacity: 1; transform: none; transition: opacity .9s var(--ease) .1s, transform 1s var(--ease) .1s, background-color .3s, color .3s, box-shadow .3s; }
+.wordmark .dot { transform-box: fill-box; transform-origin: 50% 100%; }
+.js body.ready .nav .wordmark .dot { animation: drop 1.1s var(--spring) .55s both; }
+.js .foot.in .wordmark .dot { animation: drop 1.2s var(--spring) .2s both; }
+@keyframes drop { 0% { transform: translateY(-420%) scaleY(1.25); opacity: 0; } 30% { opacity: 1; } 100% { transform: none; opacity: 1; } }
+.logo:hover .wordmark .dot { animation: nudge .7s var(--spring); }
+@keyframes nudge { 40% { transform: translateY(-60%) scale(1.15); } }
+.js .hero .eyebrow, .js .hero .lede, .js .hero .cta, .js .hero .counter, .js .proof-strip { opacity: 0; transform: translateY(18px); filter: blur(8px); }
+.js body.ready .hero .eyebrow { opacity: 1; transform: none; filter: none; transition: all 1s var(--ease) .15s; }
+.js body.ready .hero .lede { opacity: 1; transform: none; filter: none; transition: all 1.1s var(--ease) .7s; }
+.js body.ready .hero .cta { opacity: 1; transform: none; filter: none; transition: all 1.1s var(--ease) .85s; }
+.js body.ready .hero .counter { opacity: 1; transform: none; filter: none; transition: all 1.2s var(--ease) 1.05s; }
+.js body.ready .proof-strip { opacity: 1; transform: none; filter: none; transition: all 1.2s var(--ease) 1.25s; }
+.hero h1 .ln:nth-child(3) { --d0: 120ms; }
+
+/* 지도 위 실시간 꼬리표: 경보 점 옆에 잠깐 */
+.blips { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.blip { position: absolute; display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 10px; border-radius: 999px; white-space: nowrap;
+  background: rgba(13, 15, 18, .78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255, 92, 46, .45);
+  color: #F3F1EC; font-size: 12.5px; font-weight: 700; opacity: 0; transform: translate(14px, -50%) scale(.92); transform-origin: 0 50%;
+  transition: opacity .5s var(--ease), transform .7s var(--spring); }
+.blip.on { opacity: 1; transform: translate(18px, -50%); }
+.blip b { font: 800 11.5px var(--num); color: #FF7A52; letter-spacing: -.02em; }
+.blip::before { content: ""; position: absolute; left: -14px; top: 50%; width: 12px; height: 1.5px; background: rgba(255, 92, 46, .7); }
+
+/* 머리: 지금 보는 구역 아래에 신호 점이 따라감 */
+.nav nav > a:not(.btn) { position: relative; }
+.nav nav > a:not(.btn)::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--signal);
+  opacity: 0; transform: scale(0); transition: opacity .3s, transform .5s var(--spring); }
+.nav nav > a.on:not(.btn) { opacity: 1; }
+.nav nav > a.on:not(.btn)::after { opacity: 1; transform: none; }
+
+/* 단추: 지나갈 때 빛 한 줄, 화살표는 앞으로 */
+.btn.solid { position: relative; overflow: hidden; isolation: isolate; }
+.btn.solid::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 30%, color-mix(in srgb, var(--bg) 35%, transparent) 50%, transparent 70%); transform: translateX(-120%); }
+@media (hover: hover) {
+  .btn.solid:hover::after { transform: translateX(120%); transition: transform 1s var(--ease); }
+  .btn:hover { transform: translateY(-1px); }
+  .fact, .grid3 .card, .tl, .chart, .why-card, .qr-card, .try { transition: transform .6s var(--ease), box-shadow .6s var(--ease), border-color .3s; }
+  .fact:hover, .grid3 .card:hover, .why-card:hover, .qr-card:hover { transform: translateY(-5px); box-shadow: 0 28px 50px -30px rgba(17, 19, 23, .35); border-color: var(--cline2); }
+  .phones img { transition: transform .8s var(--ease), box-shadow .8s var(--ease); }
+  .phones figure:hover img { transform: translateY(-8px) rotate(-.6deg); box-shadow: 0 46px 70px -36px rgba(17, 19, 23, .5); }
+}
+
+/* 한 대의 12일: 축이 그어지고, 선이 펴지고, 점이 튀어나오고, 경보 선이 내려옴 */
+.js .tl-svg .ax { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.3s var(--ease); }
+.tl.in .tl-svg .ax { stroke-dashoffset: 0; }
+.js .tl-svg .grid, .js .tl-svg .day { opacity: 0; transition: opacity .8s var(--ease) .3s; }
+.tl.in .tl-svg .grid, .tl.in .tl-svg .day { opacity: 1; }
+.js .tl-svg .dash { transform-box: fill-box; transform-origin: center; transform: scaleX(0); transition: transform .6s var(--ease); transition-delay: calc(var(--i, 0) * 25ms + 400ms); }
+.tl.in .tl-svg .dash { transform: none; }
+.tl.in .tl-svg .dot { animation: pop .7s var(--spring) both; animation-delay: calc(var(--i) * 16ms + 500ms); }
+.js .tl-svg :is(.alarm, .rep) { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.js .tl-svg .rep { stroke-dasharray: none; stroke-dashoffset: 0; opacity: 0; transition: opacity .8s var(--ease) 1.6s; }
+.js .tl-svg .alarm { transition: stroke-dashoffset 1s var(--ease) 1.2s; }
+.tl.in .tl-svg .alarm { stroke-dashoffset: 0; }
+.tl.in .tl-svg .rep { opacity: 1; }
+.js .tl-svg :is(.alarm-t, .rep-t) { opacity: 0; transition: opacity .8s var(--ease) 1.9s; }
+.tl.in .tl-svg :is(.alarm-t, .rep-t) { opacity: 1; }
+
+/* 원리 띠: 길이 그어지는 동안 점·선이 차례로 튀어나옴, 두 번째 점에서 카드가 한 번 빛남 */
+.mtrack::before { transform: scaleX(0); transform-origin: 0 50%; }
+.morse.go .mtrack::before { transform: scaleX(1); transition: transform 4.4s cubic-bezier(.45, .05, .35, 1); }
+.js .morse .m { opacity: 1; }
+.js .morse .m i::before { transform: scale(.2); opacity: 0; transition: transform .7s var(--spring), opacity .3s; }
+.js .morse .m :is(b, span, em) { opacity: 0; transform: translateY(10px); transition: opacity .6s var(--ease), transform .8s var(--ease); }
+.js .morse .m span { transition-delay: .08s; } .js .morse .m em { transition-delay: .16s; }
+.js .morse .m.on i::before { transform: none; opacity: 1; }
+.js .morse .m.on :is(b, span, em) { opacity: 1; transform: none; }
+.js .morse .m.signal i::after { opacity: 0; }
+.js .morse .m.signal.on i::after { opacity: 1; }
+.morse { transition: box-shadow .9s var(--ease); }
+.morse.flash { box-shadow: 0 0 0 1px rgba(255, 92, 46, .7), 0 30px 80px -30px rgba(255, 92, 46, .55); transition: box-shadow .25s; }
+
+/* 막대: 스프링으로 자람 (검증 · 날짜별) */
+.bar .col { transition: height 1.2s var(--spring); transition-delay: calc(var(--i, 0) * 70ms); }
+.js .daybars .db { transform: scaleY(0); transform-origin: 50% 100%; transition: transform .9s var(--spring); transition-delay: calc(var(--i, 0) * 45ms + 150ms); }
+.js .daybars .db i { opacity: 0; transition: opacity .5s var(--ease); transition-delay: calc(var(--i, 0) * 45ms + 700ms); }
+.days.in .daybars .db { transform: none; } .days.in .daybars .db i { opacity: 1; }
+.js .daybars .base { transform: scaleX(0); transform-origin: 0 50%; transition: transform 1.2s var(--ease) .3s; }
+.days.in .daybars .base { transform: none; }
+
+/* 앱 폰 사진: 스크롤에 따라 조금씩 다른 속도로 (지원하는 브라우저만) */
+@supports (animation-timeline: view()) {
+  .phones figure:nth-child(1) img { animation: drift-a linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+  .phones figure:nth-child(2) img { animation: drift-b linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+  .phones figure:nth-child(3) img { animation: drift-a linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+  @keyframes drift-a { from { translate: 0 40px; } to { translate: 0 -20px; } }
+  @keyframes drift-b { from { translate: 0 90px; } to { translate: 0 -50px; } }
+}
+
+/* 밝은·어두운 화면 바꿀 때: 단추에서 원이 퍼지며 (View Transitions) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal, .js .stagger > *, .js .ln > span, .js .head .label, .js .head .sub, .js .nav, .js .hero :is(.eyebrow, .lede, .cta, .counter), .js .proof-strip,
+  .js .tl-svg *, .js .morse .m *, .js .daybars *, .bar .col { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; animation: none !important; stroke-dashoffset: 0 !important; }
+  .js .morse .m i::before { opacity: 1 !important; transform: none !important; }
+  .mtrack::before { transform: none; }
+  .progress, .blips { display: none; }
+  .phones img { animation: none !important; translate: none !important; }
+}
+.result.pop { animation: result-in .7s var(--spring) both; }
+@keyframes result-in { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .result.pop { animation: none; } }
