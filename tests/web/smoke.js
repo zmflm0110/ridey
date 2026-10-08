@@ -225,6 +225,13 @@ const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if
       check((await mp.textContent("#lookup-result")).includes("다음 사람도 반납할 확률 (모델)30%"), "조회에 그 자전거의 모델 확률");
       const why = await mp.textContent("#lookup-result .why");
       check(why.includes("서로 다른 5명이 연달아 반납+12%p") && why.includes("<b>9.0시간째 그대로</b>-6%p") && !(await mp.$("#lookup-result .why b")), "AI 가 본 이유 (글자는 그대로, HTML 아님)");
+      // 현장 조사 — 오늘 갈 곳(눈 가리고): 경보 대여소와 근처 경보 없는 대여소가 섞여 이름만, 자전거 번호는 안 보임
+      await mp.click('#tabs button[data-tab="survey"]'); await mp.click("#plan-btn");
+      await mp.waitForSelector("#plan-list li");
+      const plan = await mp.$$eval("#plan-list li b", (b) => b.map((x) => x.textContent));
+      const planText = await mp.textContent("#plan-list");
+      check(plan.includes(st.name.trim()) && plan.length >= 2 && plan.length <= 5 && !/SPB-/.test(planText), `오늘 갈 곳(눈 가리고) ${plan.length}곳, 번호 없음`);
+      await mp.click("#plan-list button"); check(!!(await mp.$eval("#survey-station", (e) => e.value)), "갈 곳을 누르면 조사 대여소로");
       await mctx.close();
     }
     console.log("클라우드 DB (Supabase 흉내) — 밖에서 현장 조사");

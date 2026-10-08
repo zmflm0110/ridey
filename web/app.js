@@ -649,6 +649,34 @@ $("#survey-photo").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 
+// 오늘 갈 곳 — 눈 가리고(docs/field_protocol.md): 경보 대여소 3곳 + 그 근처(1.5km 안) 경보 없는 대여소 2곳을 섞어 이름만.
+// 어느 곳이 경보인지 숨겨야 '고장일 거야' 하는 선입견 없이 본다. 고른 목록은 이 폰에만 남김(분석 땐 조사 시각의 실시간 기록으로 맞춤).
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function renderPlan(ids) {
+  $("#plan-list").innerHTML = ids.map((id, i) => { const st = state.stations[id] || {};
+    return `<li><span class="n accent">${i + 1}</span><div><b>${esc(st.name || id)}</b><span class="s">${st.gu || ""}${here && st.lat ? ` · ${Math.round(meters(here, st))}m` : ""}</span></div>` +
+      `<button class="soft sm" type="button" data-plan="${id}">여기 조사</button></li>`; }).join("");
+}
+$("#plan-btn").addEventListener("click", async () => {
+  if (!state.morning || state.day !== "live") { toast("'지금 (실시간)' 목록이 있을 때 골라요."); return; }
+  await locate().catch(() => {});
+  const st = (id) => state.stations[id];
+  const alarm = groupByStation(state.morning.bikes).map(([id]) => id).filter((id) => st(id) && st(id).lat);
+  if (!alarm.length) { toast("지금은 경보 대여소가 없어요."); return; }
+  const from = here || st(alarm[0]);
+  const pickA = alarm.map((id) => [id, meters(from, st(id))]).sort((a, b) => a[1] - b[1]).slice(0, 3).map((x) => x[0]);
+  const isAlarm = new Set(alarm);
+  const near = Object.values(state.stations).filter((s) => s.lat && !isAlarm.has(s.id) && pickA.some((a) => meters(s, st(a)) < 1500));
+  const pick = shuffle([...pickA, ...shuffle(near).slice(0, 2).map((s) => s.id)]);
+  try { localStorage.setItem("survey_plan", JSON.stringify({ at: Date.now(), ids: pick })); } catch {}
+  renderPlan(pick);
+});
+$("#plan-list").addEventListener("click", (e) => {
+  const id = e.target.closest("[data-plan]")?.dataset.plan; if (!id) return;
+  stationOptions(null); $("#survey-station").value = id; $("#survey-bike").focus();
+  toast(`${(state.stations[id] || {}).name || id} — 서 있는 자전거를 모두 하나씩 남겨 주세요.`);
+});
+try { const pl = JSON.parse(localStorage.getItem("survey_plan") || "null"); if (pl && Date.now() - pl.at < 12 * 3600e3) setTimeout(() => renderPlan(pl.ids), 0); } catch {}
 $("#survey-choices").innerHTML = SURVEY_STATUS.map((st) => `<button class="${st === "멀쩡함" ? "fine" : "bad"}" data-st="${st}">${st}</button>`).join("");
 $("#survey-form").addEventListener("submit", (e) => e.preventDefault());
 $("#survey-choices").addEventListener("click", async (e) => {

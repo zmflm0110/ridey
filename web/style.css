@@ -214,3 +214,10 @@ footer { color: var(--sub); font-size: 12px; padding: 18px 20px 12px; text-align
 /* ── 지도 위 동선 번호 */
 .route-num { background: var(--accent); color: var(--on-accent); border-radius: 50%; font: 700 11px/20px sans-serif; text-align: center; box-shadow: 0 0 0 2px var(--card); }
 @media (min-width: 700px) { main { padding-top: 6px; } }
+
+/* 현장 조사 — 오늘 갈 곳(눈 가리고) */
+.plan-h { margin: 0 0 6px; font-size: 17px; }
+.plan-p { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
+#plan-list:empty { display: none; }
+#plan-list li .n { font-weight: 700; min-width: 18px; }
+#plan-list button { width: auto; min-height: 36px; padding: 0 14px; border-radius: 10px; background: var(--fill); color: var(--accent); font-weight: 600; }
