@@ -84,6 +84,11 @@
 | 5분 작업 | 하루 288번 모두 성공, 한 번 평균 **19초** |
 | 최신 숫자 | [웹사이트](https://zmflm0110.github.io/ridey/#live)가 5분마다 DB 에서 직접 |
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/ops-days-dark.svg">
+  <img src="docs/img/ops-days.svg" alt="운영 성적표 — 9월 27일부터 10월 7일까지 날마다 실시간 경보 뒤 다음 다른 사람도 바로 반납한 비율 24~39%, 평소 자전거 2.5% 의 9배 이상 (analysis/ops_days.py)" width="900">
+</picture>
+
 <p align="center"><img src="docs/img/architecture.svg" alt="RIDEY 구조 — 서울 API 를 클라우드 DB 가 5분마다 받아 SQL 엔진·자체 AI 로 계산하고, 앱이 읽고, 결과로 AI 가 다시 배운다" width="900"></p>
 
 ## 자체 AI — 이길 때만 쓴다
