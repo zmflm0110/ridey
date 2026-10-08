@@ -29,6 +29,9 @@
 - **맥**: 실시간 서비스는 꺼 둠(사용자 결정 2026-09-26). 안드로이드 APK 는 `cd android-app && npm run release`(자바 = Homebrew openjdk@21).
 - **실시간 채점 (업데이트형)**: 9/27 10:20 시작(그 전 경보는 늦게 채운 것이라 live_only 에서 빠짐). 18:15 첫 100건 — 108명 중 49명(45%), 19:20 140명 중 54명(39%). 정해진 결과는 `live.alarms.next_dud` 에 적음(`live.settle`, 다음 대여가 7시간 지난 뒤). 주 1회 숫자 갱신(README·보고서; 사이트는 자동).
 - **규칙 vs 머신러닝 (2026-09-27)**: `analysis/ml_compare.py` → `docs/ml_compare.md`. 부스팅이 실시간 목록 +4.0%p(6월)·+3.2%p(3월), 아침·정비 순서는 들쭉날쭉 → 규칙 유지. 연쇄 재시도 버그(재시도면 연쇄 −1)도 이때 찾아 고침 — 6/15 목록 79→81대.
+- **브랜드 새로(2026-10-08 밤, 사용자 "디자인 전부 다시·로고도 새로·애니메이션 고급지게")**: 콘셉트 '점 하나가 신호다', 로고 `RIDEY.`(Unbounded 760 도형 + 신호 점), 아이콘 `R.`, 색 잉크 #111317·종이 #F7F5F0·신호 #FF4F1F(글자 #B82D07)·파랑 #2D5BFF. 규칙은 docs/brand.md.
+  다시 만들기: `python tools/make_brand.py`(스크래치 venv 에 fonttools·brotli — 로고 SVG·web/icon.svg·숫자 woff2·아이폰 Wordmark/UnboundedNumbers, HTML 의 `<!-- brand:wordmark -->` 자리) → `node tools/make_icons.js` → `node tools/make_android_assets.js`.
+  사이트는 site/index.html·style.css·main.js(첫 화면 실시간 점 지도), 진행 기록 쪽도 main.js 를 씀. 녹화(tests/web/record_demo.js)는 사이트 첫 장면만 시계를 3배 느리게.
 - **운영 성적표(2026-10-08)**: 공개 뷰 `ops_alarm_days`(경보가 울린 날마다 결과가 정해진 15분 안 경보·그중 다음 다른 사람도 반납). 사이트 #livescore·웹앱·아이폰 지금 화면·발표 7장·README(`analysis/ops_days.py` → docs/img/ops-days*.svg)·시연 영상.
   9/27\~10/7 11일 모두 24\~39%. 숫자 갱신 때 사이트 기본값(LS_DAYS)·발표 7장·README 그림은 손으로(사이트·앱은 뷰에서 자동).
 - **실시간 경보 순간 확률 점검(10-08, 경보 1,905건)**: 모델 평균 35.4% vs 실제 28.9%. 낮은 칸이 높게(모델 25% → 실제 16%, 34% → 27%), 45% 이상은 맞음 — 목록 시점 점검의 '연쇄 2명 높게·3명+ 낮게' 와 같은 방향.
