@@ -104,8 +104,8 @@ const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if
     console.log("구조대");
     await tab("rescue");
     await page.click("#rescue-near");
-    await page.waitForFunction(() => /\d+(m|\.\dkm)$/.test(document.querySelector("#rescue-card h3").textContent));
-    const near = await page.textContent("#rescue-card h3");
+    await page.waitForFunction(() => /\d+(m|\.\dkm)$/.test(document.querySelector("#rescue-card .result h2").textContent));
+    const near = await page.textContent("#rescue-card .result h2");
     check(/(\d+m|\d\.\dkm)$/.test(near), "가까운 의심 자전거부터: " + near);
     const target = near.split("의 ").pop().split(" · ")[0];
     await page.click("#rescue-card button:has-text('타이어')");

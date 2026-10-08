@@ -104,7 +104,7 @@
         <h2>이 자전거는 12일 동안<br><span class="hl">73명</span>을 돌려보냈습니다.</h2>
         <p class="lede">서울 강서구 · SPB-69683 · 2026년 6월 실제 대여 기록과 고장 신고</p>
       </div>
-      <figure class="tl reveal">
+      <figure class="tl reveal" tabindex="0" aria-label="SPB-69683 의 12일 그림 — 좁은 화면에서는 옆으로 밀 수 있어요">
         <svg class="tl-svg" viewBox="0 0 1000 232" role="img" aria-labelledby="tl-t tl-d">
 <title id="tl-t">SPB-69683 의 12일</title>
 <desc id="tl-d">2026년 6월 12일 오후부터 24일까지, 서로 다른 73명이 빌리자마자 반납한 시각을 점으로, 정상처럼 탄 30번을 막대로 찍은 그림. 6월 12일 15시 43분 두 번째 사람에서 RIDEY 경보, 13일 07시 58분 첫 고장 신고, 24일 17시 18분 두 번째 신고 뒤 사라짐.</desc>
@@ -384,7 +384,7 @@
           <h3 style="margin-top:16px">실시간 자료가 검증한 자료와 같은가?</h3>
           <p class="muted small" style="margin:6px 0 0">6월 15일 하루를 API 와 월별 공개 파일로 둘 다 받아 맞춰 봤습니다.</p>
           <table class="parity">
-            <thead><tr><th></th><th>월별 파일</th><th>실시간 API</th></tr></thead>
+            <thead><tr><th scope="col">항목</th><th scope="col">월별 파일</th><th scope="col">실시간 API</th></tr></thead>
             <tbody>
               <tr><td>대여</td><td>150,827</td><td>150,830</td></tr>
               <tr><td>헛대여</td><td>4,085</td><td>4,087</td></tr>
@@ -439,11 +439,11 @@
       </div>
       <div class="who-grid reveal">
         <ul class="who-list" role="tablist" id="who">
-          <li><button role="tab" aria-selected="true" data-img="img/1_morning.webp" data-alt="아침 목록 화면: 지도와 정비 먼저 볼 곳 순위"><span class="t"><span>1</span><h3>정비 기사 — 먼저 볼 곳</h3></span>
+          <li role="presentation"><button role="tab" aria-selected="true" data-img="img/1_morning.webp" data-alt="아침 목록 화면: 지도와 정비 먼저 볼 곳 순위"><span class="t"><span>1</span><h3>정비 기사 — 먼저 볼 곳</h3></span>
             <p>구를 고르면 의심 자전거가 있는 대여소 순위와 엑셀용 목록이 나오고, 근무 시간(1시간·1시간 반·3시간)을 고르면 그 안에 헛걸음을 가장 많이 막는 동선을 짜 줍니다. 붐비는 대여소를 먼저, 한산한 곳은 나중에.</p></button></li>
-          <li><button role="tab" aria-selected="false" data-img="img/2_lookup.webp" data-alt="자전거 조회 화면: 번호를 넣으면 피하라는 경고"><span class="t"><span>2</span><h3>이용자 — 빌리기 전 확인</h3></span>
+          <li role="presentation"><button role="tab" aria-selected="false" data-img="img/2_lookup.webp" data-alt="자전거 조회 화면: 번호를 넣으면 피하라는 경고"><span class="t"><span>2</span><h3>이용자 — 빌리기 전 확인</h3></span>
             <p>번호를 넣거나 QR 을 비추면 "서로 다른 N명이 바로 반납했어요" 를 보여 줍니다. 옆 자전거를 고르면 끝.</p></button></li>
-          <li><button role="tab" aria-selected="false" data-img="img/3_rescue.webp" data-alt="현장 확인 화면: 가까운 의심 자전거와 확인 단추"><span class="t"><span>3</span><h3>현장 확인 — 의심 자전거 앞에서 탭 한 번</h3></span>
+          <li role="presentation"><button role="tab" aria-selected="false" data-img="img/3_rescue.webp" data-alt="현장 확인 화면: 가까운 의심 자전거와 확인 단추"><span class="t"><span>3</span><h3>현장 확인 — 의심 자전거 앞에서 탭 한 번</h3></span>
             <p>가까운 의심 자전거를 보고 "체인·타이어·안장·브레이크·멀쩡함" 중 하나만 누릅니다. 확인된 곳이 정비 순위 맨 위로 올라갑니다.</p></button></li>
         </ul>
         <div class="phone"><img id="shot" src="img/1_morning.webp" alt="아침 목록 화면: 지도와 정비 먼저 볼 곳 순위" width="600" height="1298" loading="lazy"></div>
@@ -495,9 +495,9 @@
       <div class="reveal">
         <p class="small muted" style="margin:0">써 보는 방법 — 설치 없이, 세 단계면 끝.</p>
         <ol class="step-list" role="tablist" id="steplist">
-          <li><button role="tab" aria-selected="true" data-step="0"><h3>휴대폰으로 열기</h3><p>사파리나 크롬에서 웹앱 주소를 엽니다. 따로 받을 앱은 없어요.</p></button></li>
-          <li><button role="tab" aria-selected="false" data-step="1"><h3>홈 화면에 추가</h3><p>공유 → 홈 화면에 추가. 다음부터는 아이콘 하나로 열리고, 인터넷이 끊겨도 목록과 시연이 보입니다.</p></button></li>
-          <li><button role="tab" aria-selected="false" data-step="2"><h3>빌리기 전에 번호 확인</h3><p>자전거 번호를 넣거나 QR 을 비추면, 앞사람들이 바로 반납했는지 알려 줍니다.</p></button></li>
+          <li role="presentation"><button role="tab" aria-selected="true" data-step="0"><h3>휴대폰으로 열기</h3><p>사파리나 크롬에서 웹앱 주소를 엽니다. 따로 받을 앱은 없어요.</p></button></li>
+          <li role="presentation"><button role="tab" aria-selected="false" data-step="1"><h3>홈 화면에 추가</h3><p>공유 → 홈 화면에 추가. 다음부터는 아이콘 하나로 열리고, 인터넷이 끊겨도 목록과 시연이 보입니다.</p></button></li>
+          <li role="presentation"><button role="tab" aria-selected="false" data-step="2"><h3>빌리기 전에 번호 확인</h3><p>자전거 번호를 넣거나 QR 을 비추면, 앞사람들이 바로 반납했는지 알려 줍니다.</p></button></li>
         </ol>
         <div style="margin-top:34px"><a class="btn soft sm" href="app/">웹앱 열기</a></div>
       </div>

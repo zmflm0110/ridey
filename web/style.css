@@ -152,8 +152,8 @@ video { width: 100%; margin: 10px 0 0; border-radius: 18px; }
 /* ── 결과 (조회·확인) */
 .result { margin-top: 12px; background: var(--card); border-radius: 22px; padding: 22px; line-height: 1.6; color: var(--body); }
 .result .icon { font-size: 34px; line-height: 1; display: block; margin-bottom: 12px; }
-.result h3 { margin: 0 0 10px; font-size: 25px; line-height: 1.35; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
-.result h3 .dist { font-size: 16px; font-weight: 600; color: var(--accent); }
+.result h2, .result h3 { display: block; margin: 0 0 10px; font-size: 25px; line-height: 1.35; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+.result h2 .dist, .result h3 .dist { font-size: 16px; font-weight: 600; color: var(--accent); }
 .result { box-shadow: var(--lift); }
 .result.warn { background: linear-gradient(180deg, var(--red-soft) 0, var(--card) 150px); }
 .result.ok { background: linear-gradient(180deg, var(--good-soft) 0, var(--card) 150px); }
@@ -216,8 +216,14 @@ footer { color: var(--sub); font-size: 12px; padding: 18px 20px 12px; text-align
 @media (min-width: 700px) { main { padding-top: 6px; } }
 
 /* 현장 조사 — 오늘 갈 곳(눈 가리고) */
-.plan-h { margin: 0 0 6px; font-size: 17px; }
+.plan-h { display: block; margin: 0 0 6px; font-size: 17px; }
 .plan-p { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
 #plan-list:empty { display: none; }
 #plan-list li .n { font-weight: 700; min-width: 18px; }
 #plan-list button { width: auto; min-height: 36px; padding: 0 14px; border-radius: 10px; background: var(--fill); color: var(--accent); font-weight: 600; }
+
+/* 접근성(axe 점검 2026-10-08): 의심 자전거 줄은 li 안의 진짜 단추, 탭 줄은 nav 랜드마크 안의 tablist */
+nav#tabs .tablist { display: contents; }
+.rowbtn { all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
+.rowbtn > div { flex: 1; min-width: 0; }
+.rowbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 12px; }

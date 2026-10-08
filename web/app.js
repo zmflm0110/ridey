@@ -264,10 +264,10 @@ const BIKE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" c
 function bikeRow(b) {
   const tail = [b.reported === true ? "신고됨" : b.reported === false ? "미신고" : "",
     b.truth_first_rider_dud === true ? "다음 사람도 반납" : b.truth_first_rider_dud === false ? "다음 사람은 탐" : ""].filter(Boolean).join(" · ");
-  return `<li data-bike="${esc(b.bike)}" tabindex="0" role="button" aria-label="${esc(b.bike)} 서로 다른 ${b.chain}명 반납, 자세히">` +
+  return `<li><button type="button" class="rowbtn" data-bike="${esc(b.bike)}" aria-label="${esc(b.bike)} 서로 다른 ${b.chain}명 반납, 자세히">` +
     `<span class="ico ${b.level}">${BIKE_SVG}</span>` +
     `<div><b>${esc(b.bike)}</b><span class="s">${esc(b.station_name)}${b.p_next != null ? ` · ${b.chain}명 연속` : ""} · ${ago(b)}${tail ? " · " + tail : ""}${checkedBadge(b.bike)}</span></div>` +
-    `<span class="n ${b.level}">${b.p_next != null ? b.p_next + "%" : b.chain + "명"}</span></li>`;
+    `<span class="n ${b.level}">${b.p_next != null ? b.p_next + "%" : b.chain + "명"}</span></button></li>`;
 }
 function showTab(t) {
   const btn = document.querySelector(`#tabs button[data-tab="${t}"]`);
@@ -280,12 +280,11 @@ if (capApp) capApp.addListener("backButton", () => {
   if (on && on.dataset.tab !== "morning") showTab("morning"); else capApp.exitApp();
 });
 const openBike = (e) => {   // 한 줄을 누르면 조회 탭에서 자세히 (판정 단추도 거기)
-  const li = e.target.closest("li[data-bike]");
-  if (!li || (e.type === "keydown" && e.key !== "Enter")) return;
-  showTab("lookup"); $("#bike-input").value = li.dataset.bike; lookup(li.dataset.bike);
+  const row = e.target.closest("[data-bike]");   // 줄마다 진짜 단추 — Enter·Space 는 단추가 알아서 누름으로 바꿈
+  if (!row) return;
+  showTab("lookup"); $("#bike-input").value = row.dataset.bike; lookup(row.dataset.bike);
 };
 $("#bike-list").addEventListener("click", openBike);
-$("#bike-list").addEventListener("keydown", openBike);
 
 // 스토리 = 구 고르기: 의심 자전거가 많은 구부터, 고른 구는 테두리로
 function renderStories() {
@@ -367,7 +366,7 @@ function lookup(raw) {
   const until = state.day === "live" ? "최근" : isPast() ? `${koDay(state.day)} 아침 목록에서` : "어제까지";
   if (hit) {
     const soft = hit.p_next != null && hit.p_next < 30;   // 모델이 낮게 본 자전거는 말을 누그러뜨림 (그래도 평소의 몇 배)
-    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">⚠︎</span><h3>${id}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h3>` +
+    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">⚠︎</span><h2>${id}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h2>` +
       `${until} <b>서로 다른 ${hit.chain}명</b>이 빌리자마자 반납했어요. 옆 자전거를 골라 주세요.` +
       `<div class="facts"><div><span>다음 사람도 반납할 확률${hit.p_next != null ? " (모델)" : ""}</span><b class="red">${hit.p_next != null ? hit.p_next + "%" : hit.level === "빨강" ? "55% 이상" : "약 35~44%"}</b></div>` +
       `<div><span>평소 자전거</span><b>2.5%</b></div><div><span>마지막 반납</span><b>${esc(hit.last_dud)}</b></div><div><span>대여소</span><b>${esc(hit.station_name)}</b></div></div>` +
@@ -376,9 +375,9 @@ function lookup(raw) {
       `<p class="ask">가까이 있다면, 어디가 이상했나요?</p>${VERDICTS(id)}${pastNote()}</div>`;
   } else {
     out.innerHTML = m ? (isPast()   // 지난 자료에 없다는 건 '괜찮다' 가 아니다 — 초록 체크 대신 모른다고
-      ? `<div class="result"><span class="icon" aria-hidden="true">?</span><h3>${esc(id)}는<br>${koDay(state.day)} 자료에 없어요</h3>${pastNote()}</div>`
-      : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h3>${esc(id)}는<br>타도 괜찮아요</h3>${until} 기록에 빌리자마자 반납한 연쇄가 없어요.${feedNote()}</div>`)
-      : `<div class="result"><h3>따릉이 번호를 못 찾았어요</h3>SPB-00000 모양으로 넣어 주세요. 읽은 글자: <code>${esc(String(raw).slice(0, 60))}</code></div>`;
+      ? `<div class="result"><span class="icon" aria-hidden="true">?</span><h2>${esc(id)}는<br>${koDay(state.day)} 자료에 없어요</h2>${pastNote()}</div>`
+      : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>${esc(id)}는<br>타도 괜찮아요</h2>${until} 기록에 빌리자마자 반납한 연쇄가 없어요.${feedNote()}</div>`)
+      : `<div class="result"><h2>따릉이 번호를 못 찾았어요</h2>SPB-00000 모양으로 넣어 주세요. 읽은 글자: <code>${esc(String(raw).slice(0, 60))}</code></div>`;
   }
 }
 $("#lookup-form").addEventListener("submit", (e) => { e.preventDefault(); lookup($("#bike-input").value); });
@@ -460,9 +459,9 @@ function renderRescue() {
   const next = todo[0];
   const away = (b) => (far(b) == null ? "" : far(b) < 1000 ? ` · ${Math.round(far(b))}m` : ` · ${(far(b) / 1000).toFixed(1)}km`);
   $("#rescue-card").innerHTML = next
-    ? `<div class="result warn"><span class="tag ${next.level}">${next.level}</span><h3 style="margin-top:12px">${esc(next.bike)}<span class="dist">${away(next)}</span></h3>` +
+    ? `<div class="result warn"><span class="tag ${next.level}">${next.level}</span><h2 style="margin-top:12px">${esc(next.bike)}<span class="dist">${away(next)}</span></h2>` +
       `<p class="station">${esc(next.station_name)} · 서로 다른 ${next.chain}명이 바로 반납</p>${VERDICTS(next.bike)}</div>`
-    : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h3>오늘 목록을 다 확인했어요!</h3></div>`;
+    : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>오늘 목록을 다 확인했어요!</h2></div>`;
   if (next && todo.length > 1)
     $("#rescue-card").insertAdjacentHTML("beforeend", `<h2>그다음</h2><div class="card list"><ul class="rows">` +
       todo.slice(1, 4).map((b) => `<li><span class="ico ${b.level}">${BIKE_SVG}</span><div><b>${esc(b.bike)}</b><span class="s">${esc(b.station_name)}</span></div>` +
