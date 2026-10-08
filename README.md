@@ -1,11 +1,13 @@
-<p align="center"><img src="web/icon-192.png" width="88" alt="RIDEY 아이콘"></p>
-<h1 align="center">RIDEY</h1>
+<h1 align="center"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/wordmark-dark.svg">
+  <img src="docs/brand/wordmark.svg" alt="RIDEY." width="320">
+</picture></h1>
 
-<p align="center"><b><i>Ready before you ride.</i></b><br>타기 전에, 고장 난 따릉이를 먼저 알려 줄게요.</p>
+<p align="center"><b>점 하나가 신호다.</b> 타기 전에, 고장 난 따릉이를 먼저.<br><i>Ready before you ride.</i></p>
 
 <p align="center">
-  <a href="https://zmflm0110.github.io/ridey/"><img alt="웹사이트" src="https://img.shields.io/badge/웹사이트-zmflm0110.github.io-167A66"></a>
-  <a href="https://zmflm0110.github.io/ridey/app/"><img alt="웹앱" src="https://img.shields.io/badge/웹앱-써_보기-237032"></a>
+  <a href="https://zmflm0110.github.io/ridey/"><img alt="웹사이트" src="https://img.shields.io/badge/웹사이트-zmflm0110.github.io-111317"></a>
+  <a href="https://zmflm0110.github.io/ridey/app/"><img alt="웹앱" src="https://img.shields.io/badge/웹앱-써_보기-FF4F1F"></a>
   <a href="https://github.com/zmflm0110/ridey/actions/workflows/test.yml"><img alt="검사" src="https://github.com/zmflm0110/ridey/actions/workflows/test.yml/badge.svg"></a>
   <a href="https://github.com/zmflm0110/ridey/actions/workflows/ios.yml"><img alt="아이폰 앱 빌드" src="https://github.com/zmflm0110/ridey/actions/workflows/ios.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="라이선스 MIT" src="https://img.shields.io/badge/라이선스-MIT-555"></a>
@@ -21,7 +23,7 @@
 </p>
 
 <p align="center">
-  <a href="https://zmflm0110.github.io/ridey/"><img src="docs/img/site.png" alt="RIDEY 웹사이트 — 2026년 6월 15일 서울 따릉이 하루를 재생하는 지도" width="820"></a>
+  <a href="https://zmflm0110.github.io/ridey/"><img src="docs/img/site.png" alt="RIDEY 웹사이트 첫 화면 — 지금 서울의 경보 대여소가 점 지도 위에 켜지고, 고장 의심 따릉이 수" width="820"></a>
 </p>
 
 > **사람들은 고장 신고는 안 하지만, '빌리자마자 반납' 으로 이미 신고하고 있었다.**
@@ -114,6 +116,13 @@
 </table>
 
 웹앱(홈 화면에 추가) · 아이폰 앱(SwiftUI, 카메라로 번호판 읽기) · 안드로이드 앱(APK) — 같은 화면, 같은 자료.
+
+## 브랜드 — 점 하나가 신호다
+
+제대로 탄 대여는 선(—), 빌리자마자 반납은 점(•). 서로 다른 두 사람의 점이 이어지면 경보 — 로고 `RIDEY.` 의 마침표가 그 신호다.
+색은 잉크·종이(바탕), **신호 주황**(경보에만), 차분한 파랑(확인함). '괜찮음' 을 초록 대신 파랑으로 한 까닭은 색각 이상에서 주황과 초록이 갈라지지 않아서(ΔE 16). 숫자는 Unbounded, 글은 Pretendard. 자세히: [docs/brand.md](docs/brand.md)
+
+<p align="center"><img src="docs/brand/board.png" alt="RIDEY 브랜드 보드 — 로고, 앱 아이콘, 색, 글꼴, 선과 점, 구성요소" width="860"></p>
 
 ## 넓히기
 

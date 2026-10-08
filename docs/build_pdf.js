@@ -9,16 +9,16 @@ const DOCS = __dirname;
 const CSS = `
   @page { size: A4; margin: 18mm 16mm; }
   body { font-family: -apple-system, "Apple SD Gothic Neo", "Pretendard", "Noto Sans CJK KR", "Noto Sans KR", sans-serif;
-         color: #17201f; font-size: 10.5pt; line-height: 1.6; max-width: 820px; margin: 0 auto; }
-  h1 { font-size: 22pt; margin: 0 0 4px; letter-spacing: -0.5px; } h1 + h3 { margin-top: 0; color: #5d6b69; font-weight: 500; }
-  h2 { font-size: 15pt; border-bottom: 2px solid #0f766e; padding-bottom: 4px; margin-top: 26px; break-after: avoid; }
+         color: #111317; font-size: 10.5pt; line-height: 1.6; max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 22pt; margin: 0 0 4px; letter-spacing: -0.5px; } h1 + h3 { margin-top: 0; color: #555A62; font-weight: 500; }
+  h2 { font-size: 15pt; border-bottom: 2px solid #111317; padding-bottom: 4px; margin-top: 26px; break-after: avoid; }
   h3 { font-size: 12pt; margin-top: 18px; break-after: avoid; }
-  blockquote { margin: 12px 0; padding: 10px 14px; background: #eef7f5; border-left: 4px solid #0f766e; }
+  blockquote { margin: 12px 0; padding: 10px 14px; background: #F7F5F0; border-left: 4px solid #FF4F1F; }
   table { border-collapse: collapse; margin: 8px 0; font-size: 9.5pt; break-inside: avoid; }
-  th, td { border: 1px solid #dfe5e3; padding: 4px 8px; } th { background: #f1f4f3; }
+  th, td { border: 1px solid #E2DFD7; padding: 4px 8px; } th { background: #F7F5F0; }
   img { max-width: 100%; break-inside: avoid; }
-  code { font-size: 9pt; background: #f1f4f3; padding: 1px 4px; border-radius: 4px; }
-  .foot { margin-top: 30px; color: #5d6b69; font-size: 8.5pt; }`;
+  code { font-size: 9pt; background: #F7F5F0; padding: 1px 4px; border-radius: 4px; }
+  .foot { margin-top: 30px; color: #555A62; font-size: 8.5pt; }`;
 
 (async () => {
   const browser = await launch();

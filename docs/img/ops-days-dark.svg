@@ -1,52 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" font-family="-apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Pretendard', sans-serif">
-<title>실시간 경보 운영 성적표 — 9/27~10/7 날마다 경보 뒤 다음 사람도 바로 반납한 비율 24~39%, 평소 2.5%</title>
-<line x1="60" y1="236.0" x2="980" y2="236.0" stroke="#24313f" stroke-width="1"/>
-<text x="50" y="240.0" text-anchor="end" font-size="13" fill="#7f8b96">0%</text>
-<line x1="60" y1="198.0" x2="980" y2="198.0" stroke="#24313f" stroke-width="1"/>
-<text x="50" y="202.0" text-anchor="end" font-size="13" fill="#7f8b96">10%</text>
-<line x1="60" y1="160.0" x2="980" y2="160.0" stroke="#24313f" stroke-width="1"/>
-<text x="50" y="164.0" text-anchor="end" font-size="13" fill="#7f8b96">20%</text>
-<line x1="60" y1="122.0" x2="980" y2="122.0" stroke="#24313f" stroke-width="1"/>
-<text x="50" y="126.0" text-anchor="end" font-size="13" fill="#7f8b96">30%</text>
-<line x1="60" y1="84.0" x2="980" y2="84.0" stroke="#24313f" stroke-width="1"/>
-<text x="50" y="88.0" text-anchor="end" font-size="13" fill="#7f8b96">40%</text>
-<line x1="60" y1="46.0" x2="980" y2="46.0" stroke="#24313f" stroke-width="1"/>
-<text x="50" y="50.0" text-anchor="end" font-size="13" fill="#7f8b96">50%</text>
-<rect x="71.7" y="121.3" width="60.2" height="114.7" rx="4" fill="#e06b39"><title>9/27 — 285건 중 86건 (30.2%)</title></rect>
-<text x="101.8" y="114.3" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">30</text>
-<text x="101.8" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">9/27</text>
-<rect x="155.3" y="119.7" width="60.2" height="116.3" rx="4" fill="#e06b39"><title>9/28 — 366건 중 112건 (30.6%)</title></rect>
-<text x="185.5" y="112.7" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">31</text>
-<text x="185.5" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">9/28</text>
-<rect x="239.0" y="115.9" width="60.2" height="120.1" rx="4" fill="#e06b39"><title>9/29 — 345건 중 109건 (31.6%)</title></rect>
-<text x="269.1" y="108.9" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">32</text>
-<text x="269.1" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">9/29</text>
-<rect x="322.6" y="117.0" width="60.2" height="119.0" rx="4" fill="#e06b39"><title>9/30 — 332건 중 104건 (31.3%)</title></rect>
-<text x="352.7" y="110.0" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">31</text>
-<text x="352.7" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">9/30</text>
-<rect x="406.3" y="127.9" width="60.2" height="108.1" rx="4" fill="#e06b39"><title>10/1 — 327건 중 93건 (28.4%)</title></rect>
-<text x="436.4" y="120.9" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">28</text>
-<text x="436.4" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/1</text>
-<rect x="489.9" y="116.6" width="60.2" height="119.4" rx="4" fill="#e06b39"><title>10/2 — 280건 중 88건 (31.4%)</title></rect>
-<text x="520.0" y="109.6" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">31</text>
-<text x="520.0" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/2</text>
-<rect x="573.5" y="123.0" width="60.2" height="113.0" rx="4" fill="#e06b39"><title>10/3 — 259건 중 77건 (29.7%)</title></rect>
-<text x="603.6" y="116.0" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">30</text>
-<text x="603.6" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/3</text>
-<rect x="657.2" y="146.4" width="60.2" height="89.6" rx="4" fill="#e06b39"><title>10/4 — 297건 중 70건 (23.6%)</title></rect>
-<text x="687.3" y="139.4" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">24</text>
-<text x="687.3" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/4</text>
-<rect x="740.8" y="128.2" width="60.2" height="107.8" rx="4" fill="#e06b39"><title>10/5 — 296건 중 84건 (28.4%)</title></rect>
-<text x="770.9" y="121.2" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">28</text>
-<text x="770.9" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/5</text>
-<rect x="824.4" y="88.2" width="60.2" height="147.8" rx="4" fill="#e06b39"><title>10/6 — 306건 중 119건 (38.9%)</title></rect>
-<text x="854.5" y="81.2" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">39</text>
-<text x="854.5" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/6</text>
-<rect x="908.1" y="137.8" width="60.2" height="98.2" rx="4" fill="#e06b39"><title>10/7 — 267건 중 69건 (25.8%)</title></rect>
-<text x="938.2" y="130.8" text-anchor="middle" font-size="14" font-weight="600" fill="#F5F7F6">26</text>
-<text x="938.2" y="258" text-anchor="middle" font-size="13" fill="#7f8b96">10/7</text>
-<line x1="60" y1="226.5" x2="980" y2="226.5" stroke="#F5F7F6" stroke-width="2" stroke-dasharray="6 5"/>
-<text x="60" y="24" font-size="15" font-weight="700" fill="#F5F7F6">실시간 경보 뒤 다음 사람도 바로 반납 — 날마다</text>
-<text x="980" y="24" text-anchor="end" font-size="13" fill="#a6b1bb">점선 = 평소 자전거 2.5% · 11일 하루도 빠짐없이 평소의 9배 이상</text>
-<text x="60" y="290" font-size="12" fill="#7f8b96">클라우드 DB 가 5분마다 스스로 채점 (결과가 100건 넘게 정해진 날, 공개 뷰 ops_alarm_days)</text>
+<title>실시간 경보 운영 성적표 — 9/27~10/7 날마다 경보 뒤 다음 사람도 바로 반납한 비율 23~39%, 평소 2.5%</title>
+<line x1="60" y1="236.0" x2="980" y2="236.0" stroke="#262A31" stroke-width="1"/>
+<text x="50" y="240.0" text-anchor="end" font-size="13" fill="#8A8F98">0%</text>
+<line x1="60" y1="198.0" x2="980" y2="198.0" stroke="#262A31" stroke-width="1"/>
+<text x="50" y="202.0" text-anchor="end" font-size="13" fill="#8A8F98">10%</text>
+<line x1="60" y1="160.0" x2="980" y2="160.0" stroke="#262A31" stroke-width="1"/>
+<text x="50" y="164.0" text-anchor="end" font-size="13" fill="#8A8F98">20%</text>
+<line x1="60" y1="122.0" x2="980" y2="122.0" stroke="#262A31" stroke-width="1"/>
+<text x="50" y="126.0" text-anchor="end" font-size="13" fill="#8A8F98">30%</text>
+<line x1="60" y1="84.0" x2="980" y2="84.0" stroke="#262A31" stroke-width="1"/>
+<text x="50" y="88.0" text-anchor="end" font-size="13" fill="#8A8F98">40%</text>
+<line x1="60" y1="46.0" x2="980" y2="46.0" stroke="#262A31" stroke-width="1"/>
+<text x="50" y="50.0" text-anchor="end" font-size="13" fill="#8A8F98">50%</text>
+<rect x="71.7" y="121.3" width="60.2" height="114.7" rx="4" fill="#FF5C2E"><title>9/27 — 285건 중 86건 (30.2%)</title></rect>
+<text x="101.8" y="114.3" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">30</text>
+<text x="101.8" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">9/27</text>
+<rect x="155.3" y="120.0" width="60.2" height="116.0" rx="4" fill="#FF5C2E"><title>9/28 — 367건 중 112건 (30.5%)</title></rect>
+<text x="185.5" y="113.0" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">31</text>
+<text x="185.5" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">9/28</text>
+<rect x="239.0" y="115.9" width="60.2" height="120.1" rx="4" fill="#FF5C2E"><title>9/29 — 345건 중 109건 (31.6%)</title></rect>
+<text x="269.1" y="108.9" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">32</text>
+<text x="269.1" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">9/29</text>
+<rect x="322.6" y="117.3" width="60.2" height="118.7" rx="4" fill="#FF5C2E"><title>9/30 — 333건 중 104건 (31.2%)</title></rect>
+<text x="352.7" y="110.3" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">31</text>
+<text x="352.7" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">9/30</text>
+<rect x="406.3" y="128.3" width="60.2" height="107.7" rx="4" fill="#FF5C2E"><title>10/1 — 328건 중 93건 (28.4%)</title></rect>
+<text x="436.4" y="121.3" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">28</text>
+<text x="436.4" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/1</text>
+<rect x="489.9" y="116.6" width="60.2" height="119.4" rx="4" fill="#FF5C2E"><title>10/2 — 280건 중 88건 (31.4%)</title></rect>
+<text x="520.0" y="109.6" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">31</text>
+<text x="520.0" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/2</text>
+<rect x="573.5" y="123.0" width="60.2" height="113.0" rx="4" fill="#FF5C2E"><title>10/3 — 259건 중 77건 (29.7%)</title></rect>
+<text x="603.6" y="116.0" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">30</text>
+<text x="603.6" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/3</text>
+<rect x="657.2" y="146.7" width="60.2" height="89.3" rx="4" fill="#FF5C2E"><title>10/4 — 298건 중 70건 (23.5%)</title></rect>
+<text x="687.3" y="139.7" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">23</text>
+<text x="687.3" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/4</text>
+<rect x="740.8" y="128.2" width="60.2" height="107.8" rx="4" fill="#FF5C2E"><title>10/5 — 296건 중 84건 (28.4%)</title></rect>
+<text x="770.9" y="121.2" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">28</text>
+<text x="770.9" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/5</text>
+<rect x="824.4" y="88.7" width="60.2" height="147.3" rx="4" fill="#FF5C2E"><title>10/6 — 307건 중 119건 (38.8%)</title></rect>
+<text x="854.5" y="81.7" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">39</text>
+<text x="854.5" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/6</text>
+<rect x="908.1" y="137.5" width="60.2" height="98.5" rx="4" fill="#FF5C2E"><title>10/7 — 270건 중 70건 (25.9%)</title></rect>
+<text x="938.2" y="130.5" text-anchor="middle" font-size="14" font-weight="600" fill="#F3F1EC">26</text>
+<text x="938.2" y="258" text-anchor="middle" font-size="13" fill="#8A8F98">10/7</text>
+<line x1="60" y1="226.5" x2="980" y2="226.5" stroke="#F3F1EC" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="60" y="24" font-size="15" font-weight="700" fill="#F3F1EC">실시간 경보 뒤 다음 사람도 바로 반납 — 날마다</text>
+<text x="980" y="24" text-anchor="end" font-size="13" fill="#B3B7BE">점선 = 평소 자전거 2.5% · 11일 하루도 빠짐없이 평소의 9배 이상</text>
+<text x="60" y="290" font-size="12" fill="#8A8F98">클라우드 DB 가 5분마다 스스로 채점 (결과가 100건 넘게 정해진 날, 공개 뷰 ops_alarm_days)</text>
 </svg>

@@ -7,38 +7,42 @@
 <!-- 발표: 브라우저로 열고 ←/→ (또는 클릭), F 전체 화면. PDF: node docs/build_pdf.js → docs/slides.pdf
      인터넷 없이 열리도록 글꼴·그림 모두 이 폴더 안 것만 쓴다. 내용·말할 거리는 docs/slides.md -->
 <style>
-  :root { --ink: #17201f; --muted: #5d6b69; --accent: #0f766e; --red: #d9480f; --yellow: #d99a06; --good: #2b8a3e; --bg: #f6f7f6; --line: #dfe5e3; }
+  @font-face { font-family: Unbounded; src: url(../web/fonts/unbounded-ridey.woff2) format("woff2"); font-weight: 500 900; }   /* 큰 숫자 — docs/brand.md */
+  :root { --ink: #111317; --muted: #555A62; --accent: #B82D07; --red: #D63C0E; --signal: #FF4F1F; --yellow: #FF9A73; --good: #2149D6; --bg: #F7F5F0; --line: #E2DFD7; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: #1d2322; }
+  html, body { margin: 0; background: #0D0F12; }
   body { font-family: -apple-system, "Apple SD Gothic Neo", "Pretendard", "Noto Sans CJK KR", "Noto Sans KR", sans-serif; color: var(--ink); }
   .slide { width: 1280px; height: 720px; background: var(--bg); position: relative; overflow: hidden; padding: 64px 80px; display: none; }
   .slide.on { display: block; }
   .deck { position: fixed; left: 50%; top: 50%; transform-origin: 0 0; }
-  h1 { font-size: 64px; margin: 0 0 12px; letter-spacing: -1.5px; }
-  h2 { font-size: 40px; margin: 0 0 28px; letter-spacing: -0.8px; }
+  h1 { font-size: 64px; margin: 0 0 12px; letter-spacing: -2px; font-weight: 800; }
+  h2 { font-size: 42px; margin: 0 0 28px; letter-spacing: -1.6px; font-weight: 800; }
   p, li { font-size: 26px; line-height: 1.5; }
   ul { padding-left: 1.1em; margin: 0; } li { margin: 6px 0; }
-  .kicker { color: var(--accent); font-weight: 700; font-size: 20px; letter-spacing: 1px; margin-bottom: 10px; }
+  .kicker { color: var(--accent); font-weight: 800; font-size: 19px; letter-spacing: .5px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .kicker::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--signal); }
   .muted { color: var(--muted); }
-  .big { font-size: 120px; font-weight: 800; letter-spacing: -4px; line-height: 1; }
+  .big { font-family: Unbounded, sans-serif; font-size: 112px; font-weight: 800; letter-spacing: -5px; line-height: 1; }
   .num { position: absolute; right: 36px; bottom: 26px; font-size: 16px; color: var(--muted); }
   .src { position: absolute; left: 80px; bottom: 26px; font-size: 15px; color: var(--muted); }
   .row { display: flex; gap: 40px; align-items: flex-start; }
-  .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px 26px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 22px 26px; }
   .stat { flex: 1; }
-  .stat b { display: block; font-size: 54px; letter-spacing: -1.5px; }
+  .stat b { display: block; font-family: Unbounded, sans-serif; font-size: 48px; letter-spacing: -2.5px; line-height: 1.1; }
   .stat span { font-size: 20px; color: var(--muted); }
   .red { color: var(--red); } .good { color: var(--good); } .acc { color: var(--accent); }
   .phone { height: 560px; border-radius: 28px; border: 8px solid #111; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
-  .title { background: linear-gradient(135deg, #167A66, #17232E); color: #fff; }
-  .title .kicker, .title .muted { color: #b9f0df; }
+  .title { background: radial-gradient(rgba(243,241,236,.16) 1.3px, transparent 1.6px) 0 0 / 22px 22px, radial-gradient(60% 70% at 85% 25%, rgba(255,79,31,.18), transparent 70%), #111317; color: #F3F1EC; }
+  .title .kicker { color: #FF7A52; } .title .muted { color: #B3B7BE; }
+  .title .wm { width: 640px; height: auto; display: block; }
+  .morse { position: absolute; right: 80px; top: 64px; display: flex; gap: 14px; align-items: center; } .morse i { display: block; height: 16px; border-radius: 99px; background: #8A8F98; } .morse .l { width: 58px; } .morse .d { width: 16px; background: #FF4F1F; }
   .timeline { display: flex; gap: 14px; margin: 26px 0 10px; }
   .timeline div { flex: 1; border-radius: 14px; padding: 16px; font-size: 22px; background: #fff; border: 2px solid var(--line); text-align: center; }
   .timeline .dud { border-color: var(--red); color: var(--red); font-weight: 700; }
   .timeline .alarm { background: var(--red); color: #fff; border-color: var(--red); font-weight: 700; }
   table { border-collapse: collapse; font-size: 22px; }
   td, th { padding: 8px 16px; border-bottom: 1px solid var(--line); text-align: right; } th:first-child, td:first-child { text-align: left; }
-  .bar { height: 26px; background: var(--accent); border-radius: 6px; }
+  .bar { height: 26px; background: var(--signal); border-radius: 6px; }
   .hint { position: fixed; bottom: 10px; right: 14px; color: #8a9896; font-size: 12px; }
   @media print {
     @page { size: 1280px 720px; margin: 0; }
@@ -48,8 +52,8 @@
     .hint { display: none; }
   }
   .dbars { position: relative; display: flex; align-items: flex-end; gap: 5px; height: 100px; border-bottom: 1px solid var(--line); }
-  .dbars div { flex: 1; height: var(--h); background: var(--red); border-radius: 4px 4px 0 0; position: relative; }
-  .dbars i { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 3px; font-style: normal; font-size: 15px; color: var(--muted); white-space: nowrap; }
+  .dbars div { flex: 1; height: var(--h); background: var(--signal); border-radius: 4px 4px 0 0; position: relative; }
+  .dbars i { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 3px; font-style: normal; font-family: Unbounded, sans-serif; font-weight: 800; font-size: 13px; letter-spacing: -.5px; color: var(--muted); white-space: nowrap; }
   .dbars .base { position: absolute; left: 0; right: 0; bottom: 5%; border-top: 2px dashed var(--ink); }
   .dax { display: flex; justify-content: space-between; font-size: 15px; color: var(--muted); margin-top: 6px; }
 </style>
@@ -58,12 +62,13 @@
 <div class="deck" id="deck">
 
 <section class="slide title">
+  <div class="morse" aria-hidden="true"><i class="l"></i><i class="l"></i><i class="d"></i><i class="d"></i></div>
   <div class="kicker">공공자전거 공개 데이터 · 고장 예보</div>
-  <h1 style="font-size:84px;margin-top:120px">RIDEY</h1>
-  <p style="font-size:34px;margin:0">앞사람들의 헛걸음이 고장을 알려 준다</p>
-  <p style="font-size:26px;margin:14px 0 0;font-style:italic;color:#b9f0df">Ready before you ride.</p>
-  <p class="muted" style="margin-top:100px">2026 디지털콘텐츠개발대회 · 생활 부문</p>
-  <div class="num" style="color:#b9f0df">1</div>
+  <div style="margin-top:96px"><svg class="wm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 415.1 75.0" role="img" aria-label="RIDEY"><path fill="#F7F5F0" d="M22.1 32.6H48.7Q53.3 32.6 55.9 30.4Q58.5 28.3 58.5 24.4Q58.5 20.5 55.9 18.3Q53.3 16.2 48.7 16.2H18.9L28.9 5.8V75H6.7V0H52Q60.7 0 67.2 3.1Q73.7 6.1 77.3 11.6Q81 17 81 24.4Q81 31.6 77.3 37.1Q73.7 42.5 67.2 45.6Q60.7 48.6 52 48.6H22.1ZM32.5 39.9H57.4L83.7 75H58ZM91.5 0H113.7V75H91.5ZM164.2 0Q177.7 0 187.7 4.7Q197.8 9.3 203.4 17.7Q209.1 26.2 209.1 37.5Q209.1 48.8 203.4 57.2Q197.8 65.7 187.7 70.3Q177.7 75 164.2 75H126.1V0ZM148.2 65.4 137.8 55.2H165.9Q172.3 55.2 176.9 53Q181.6 50.9 184.1 46.9Q186.6 42.9 186.6 37.5Q186.6 32 184.1 28.1Q181.6 24.1 176.9 22Q172.3 19.8 165.9 19.8H137.8L148.2 9.6ZM283.2 29.6V45.4H227.9V29.6ZM243 37.5 238.2 67 229.4 57.1H286.7V75H216.1L221.7 37.5L216.1 0H286.2V17.9H229.4L238.2 8ZM326.1 75V38.3H348.3V75ZM290.9 0H315.5L342 33.9H332.3L358.7 0H383.3L344.3 49.7L330 49.9Z"/><circle class="dot" cx="401.7" cy="61.6" r="13.4" fill="#FF4F1F"/></svg></div>
+  <p style="font-size:40px;margin:40px 0 0;font-weight:800;letter-spacing:-1.5px">점 하나가 <span style="color:#FF5C2E">신호</span>다.</p>
+  <p style="font-size:28px;margin:8px 0 0;color:#B3B7BE">타기 전에, 고장 난 따릉이를 먼저 · <i>Ready before you ride.</i></p>
+  <p class="muted" style="margin-top:84px">2026 디지털콘텐츠개발대회 · 생활 부문</p>
+  <div class="num" style="color:#8A8F98">1</div>
 </section>
 
 <section class="slide">
@@ -205,7 +210,7 @@
       </ul>
       <p class="card" style="font-size:22px;margin-top:24px">현장 조사 (2주, 150대+): <span class="muted">'눈 가리고' 갈 곳 — 경보·경보 없는 대여소를 섞어 이름만</span></p>
     </div>
-    <img class="phone" style="height:480px" src="shots/3_rescue.png" alt="현장 확인">
+    <img class="phone" style="height:470px" src="shots/3_rescue.png" alt="현장 확인">
   </div>
   <div class="num">11</div>
 </section>
@@ -213,14 +218,14 @@
 <section class="slide title">
   <div class="kicker">넓히기</div>
   <h2 style="color:#fff">같은 엔진, 다른 곳</h2>
-  <ul style="color:#e6f4f1">
+  <ul style="color:#D9DBDF">
     <li>대전 타슈 — 이미 검증 (정밀도 58.5~60.2%)</li>
     <li>전기차 충전기 — 2026년 8월 권익위 '전기차 충전' 민원주의보(3년 새 1.8배). 앱엔 '사용 가능' 인데 안 되는 충전기를 같은 방법으로: 연달아 두 번 바로 끊긴 충전기는 다음도 36.5% 끊김(252대), 세 번이면 76% — 평소 2.7%의 약 13배</li>
     <li>세종 어울링, 창원 누비자 … 대여기록이 공개된 곳 어디든</li>
   </ul>
-  <p style="font-size:26px;margin-top:46px;color:#e6f4f1">RIDEY 라면 6월 12일 오후 3시 43분, SPB-69683 은 정비 목록 맨 위에 있었습니다.<br>그 뒤 71명에게 먼저 알 기회가 있었습니다.</p>
+  <p style="font-size:26px;margin-top:46px;color:#D9DBDF">RIDEY 라면 6월 12일 오후 3시 43분, SPB-69683 은 정비 목록 맨 위에 있었습니다.<br>그 뒤 71명에게 먼저 알 기회가 있었습니다.</p>
   <p style="font-size:46px;font-weight:800;margin-top:28px;letter-spacing:-1px">신고를 기다리지 말고, 흔적을 읽자.</p>
-  <div class="num" style="color:#b7e4dd">12</div>
+  <div class="num" style="color:#8A8F98">12</div>
 </section>
 
 </div>
