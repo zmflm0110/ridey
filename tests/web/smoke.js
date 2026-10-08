@@ -92,6 +92,7 @@ const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if
     await page.fill("#bike-input", first.toLowerCase().replace("-", " "));
     await page.press("#bike-input", "Enter");
     check((await page.textContent("#lookup-result")).includes("타지 마세요"), `의심 자전거 경고 (${first}, 소문자·빈칸 입력)`);
+    if (SHOTS) await page.waitForTimeout(700);   // 경고 아이콘이 튀어나오는 애니메이션(.45초) 뒤에
     await shot("2_lookup");
     await page.fill("#bike-input", "SPB-00001");
     await page.press("#bike-input", "Enter");
