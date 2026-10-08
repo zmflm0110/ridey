@@ -29,4 +29,21 @@ final class FieldOpsTests: XCTestCase {
         XCTAssertEqual(AlarmDay.headline(d), "3일 하루도 빠짐없이 평소의 9배 이상 (24~39%)")
         XCTAssertTrue(AlarmDay.shown(Array(rows.prefix(2))).isEmpty)   // 3일 미만이면 안 그림
     }
+
+    func testMyStations() throws {
+        XCTAssertEqual(MyStations.add("a", to: ["a", "b"]), ["a", "b"])                    // 이미 있으면 그대로
+        XCTAssertEqual(MyStations.add("f", to: ["a", "b", "c", "d", "e"]), ["b", "c", "d", "e", "f"])   // 다섯 곳 넘으면 가장 먼저 넣은 곳을 뺌
+        let bikes = try JSONDecoder().decode([SuspectBike].self, from: Data("""
+        [{"bike":"SPB-00001","station":"101","station_name":"x","chain":2,"level":"노랑","last_dud":"10-08 09:00","p_next":28},
+         {"bike":"SPB-00002","station":"101","station_name":"x","chain":5,"level":"빨강","last_dud":"10-08 09:10","p_next":61},
+         {"bike":"SPB-00003","station":"202","station_name":"y","chain":2,"level":"노랑","last_dud":"10-08 09:20","p_next":30}]
+        """.utf8))
+        XCTAssertEqual(MyStations.suspects(at: "101", in: bikes).map(\.bike), ["SPB-00002", "SPB-00001"])   // 확률 높은 순
+        XCTAssertTrue(MyStations.suspects(at: "303", in: bikes).isEmpty)
+        let st = Dictionary(uniqueKeysWithValues: [Station(id: "1", name: " 망원역 1번출구 앞", gu: "마포구", lat: 37.55, lon: 126.91),
+                                                   Station(id: "2", name: "망원역 2번출구 앞", gu: "마포구", lat: 37.55, lon: 126.91),
+                                                   Station(id: "3", name: "합정역 1번출구", gu: "마포구", lat: 37.55, lon: 126.91)].map { ($0.id, $0) })
+        XCTAssertEqual(MyStations.search("망원 역", stations: st, excluding: ["2"]).map(\.id), ["1"])   // 빈칸 무시, 넣은 곳 빼고
+        XCTAssertTrue(MyStations.search("  ", stations: st, excluding: []).isEmpty)
+    }
 }

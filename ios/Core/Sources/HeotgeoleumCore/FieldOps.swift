@@ -55,3 +55,24 @@ extension SupabaseClient {
         try JSONDecoder().decode([AlarmDay].self, from: try await call("rest/v1/ops_alarm_days", query: "select=day,scored,hit&order=day"))
     }
 }
+
+/// 내 대여소 — 자주 가는 대여소(5곳까지, 이 폰에만)와 지금 그곳에 서 있는 의심 자전거 (웹 app.js renderMine 과 같은 규칙)
+public enum MyStations {
+    public static let limit = 5
+    /// 넣기 — 이미 있으면 그대로, 다섯 곳이 넘으면 가장 먼저 넣은 곳을 뺌
+    public static func add(_ id: String, to list: [String]) -> [String] {
+        guard !list.contains(id) else { return list }
+        return Array((list + [id]).suffix(limit))
+    }
+    /// 그 대여소의 의심 자전거 — 모델 확률(없으면 연쇄) 높은 순
+    public static func suspects(at id: String, in bikes: [SuspectBike]) -> [SuspectBike] {
+        bikes.filter { $0.station == id }.sorted { ($0.pNext ?? $0.chain) > ($1.pNext ?? $1.chain) }
+    }
+    /// 이름으로 찾기 — 빈칸은 무시, 이미 넣은 곳은 빼고, 이름순 몇 곳
+    public static func search(_ q: String, stations: [String: Station], excluding: [String], limit: Int = 6) -> [Station] {
+        let key = q.filter { !$0.isWhitespace }
+        guard !key.isEmpty else { return [] }
+        return stations.values.filter { !excluding.contains($0.id) && $0.name.filter { !$0.isWhitespace }.contains(key) }
+            .sorted { $0.name.compare($1.name, locale: Locale(identifier: "ko_KR")) == .orderedAscending }.prefix(limit).map { $0 }
+    }
+}

@@ -13,11 +13,13 @@ struct LookupView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("타기 전에\n자전거 번호를 확인해 보세요")
                         .font(.system(size: 26, weight: .bold)).foregroundStyle(Palette.ink)
                         .padding(.horizontal, 4).padding(.top, 8)
+                        .id("top")
                     VStack(spacing: 10) {
                         TextField("SPB-00000", text: $input)
                             .textInputAutocapitalization(.characters)
@@ -38,8 +40,10 @@ struct LookupView: View {
                     }
                     .card(padding: 16)
                     resultView
+                    MyStationsCard { id in input = id; lookup(id); withAnimation { proxy.scrollTo("top", anchor: .top) } }
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)
+            }
             }
             .screenBackground()
             .scrollDismissesKeyboard(.interactively)
@@ -269,3 +273,104 @@ final class ScannerController: UIViewController, AVCaptureMetadataOutputObjectsD
         found?(code)
     }
 }
+
+/// 내 대여소 — 자주 가는 대여소(5곳까지, 이 폰에만)에 지금 서 있는 고장 의심 자전거 번호. 번호를 누르면 위에서 조회 (웹 조회 탭과 같음)
+struct MyStationsCard: View {
+    @Environment(AppModel.self) private var model
+    let open: (String) -> Void
+    @State private var mine: [String] = UserDefaults.standard.stringArray(forKey: "my_stations") ?? []
+    @State private var query = ""
+    @State private var found: [Station] = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionTitle(title: "내 대여소", sub: model.day == AppModel.liveDay ? "지금 피할 번호" : model.isPastData ? "\(AppModel.koDay(model.day)) 아침 목록 기준" : "오늘 아침 목록 기준")
+                .padding(.top, 14)
+            VStack(alignment: .leading, spacing: 0) {
+                if mine.isEmpty {
+                    Text("자주 가는 대여소를 넣어 두면, 가기 전에 그곳의 고장 의심 자전거 번호를 바로 보여 줘요.")
+                        .font(.subheadline).foregroundStyle(Palette.sub).padding(.vertical, 8)
+                }
+                ForEach(mine, id: \.self) { id in
+                    row(id)
+                    Divider().overlay(Palette.line)
+                }
+                HStack(spacing: 8) {
+                    TextField("대여소 이름 (예: 망원역)", text: $query)
+                        .padding(.horizontal, 14).padding(.vertical, 12)
+                        .background(Palette.fill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .accessibilityLabel("내 대여소 추가 — 대여소 이름으로 찾기")
+                        .onChange(of: query) { found = MyStations.search(query, stations: model.store?.stations ?? [:], excluding: mine) }
+                    Button("가까운 곳") {
+                        Task {
+                            guard let here = await model.locate() else { model.show("위치를 쓸 수 없어요 — 이름으로 찾아 주세요."); return }
+                            found = Array((model.store?.stations ?? [:]).values.filter { !mine.contains($0.id) }
+                                .sorted { Geo.meters(here, $0.point) < Geo.meters(here, $1.point) }.prefix(5))
+                        }
+                    }
+                    .buttonStyle(SoftButtonStyle(tint: Palette.ink)).fixedSize()
+                }
+                .padding(.top, 12)
+                ForEach(found) { st in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(st.name.trimmingCharacters(in: .whitespaces)).foregroundStyle(Palette.ink)
+                            Text(place(st)).font(.caption).foregroundStyle(Palette.sub)
+                        }
+                        Spacer()
+                        Button("넣기") { add(st) }.font(.subheadline.weight(.semibold)).foregroundStyle(Palette.accent)
+                            .accessibilityLabel("\(st.name) 내 대여소에 넣기")
+                    }
+                    .padding(.vertical, 10)
+                }
+            }
+            .card(padding: 16)
+        }
+    }
+
+    private func place(_ st: Station) -> String { st.gu + (model.here.map { " · \(Int(Geo.meters($0, st.point).rounded()))m" } ?? "") }
+
+    private func row(_ id: String) -> some View {
+        let st = model.station(id)
+        let bad = MyStations.suspects(at: id, in: model.morning?.bikes ?? [])
+        let red = bad.contains { $0.isRed }
+        let color = bad.isEmpty ? Palette.good : Palette.levelText(red)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: "bicycle").font(.subheadline.weight(.semibold)).foregroundStyle(color)
+                    .frame(width: 40, height: 40).background(bad.isEmpty ? Palette.goodSoft : Palette.levelSoft(red), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(st?.name.trimmingCharacters(in: .whitespaces) ?? id).font(.body.weight(.semibold)).foregroundStyle(Palette.ink)
+                    if let st { Text(place(st)).font(.caption).foregroundStyle(Palette.sub) }
+                }
+                Spacer(minLength: 4)
+                Text(bad.isEmpty ? "괜찮아요" : "\(bad.count)대 피하기").font(.subheadline.weight(.bold)).foregroundStyle(color)
+                Button { mine.removeAll { $0 == id }; save() } label: { Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(Palette.sub) }
+                    .buttonStyle(.plain).accessibilityLabel("\(st?.name ?? id) 내 대여소에서 빼기")
+            }
+            if !bad.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(bad) { b in
+                            Button { open(b.bike) } label: {
+                                Text(b.bike).font(.subheadline.weight(.semibold).monospacedDigit()).foregroundStyle(Palette.levelText(b.isRed))
+                                    .padding(.horizontal, 10).padding(.vertical, 5).background(Palette.levelSoft(b.isRed), in: Capsule())
+                            }
+                            .buttonStyle(.plain).accessibilityLabel("\(b.bike) 피하기, 자세히")
+                        }
+                    }
+                }
+                .padding(.leading, 52)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    private func add(_ st: Station) {
+        mine = MyStations.add(st.id, to: mine); save()
+        query = ""; found = []
+        model.show("\(st.name.trimmingCharacters(in: .whitespaces)) — 내 대여소에 넣었어요.")
+    }
+    private func save() { UserDefaults.standard.set(mine, forKey: "my_stations") }
+}
+
