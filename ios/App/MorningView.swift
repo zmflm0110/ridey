@@ -184,11 +184,50 @@ struct MorningView: View {
         let r = Morning.retro(model.shown)
         if model.day == AppModel.liveDay, let sc = model.morning?.score, let n = sc.scored, n >= 20 {   // 몇 건으로 낸 % 는 오해를 부른다 — 20건부터
             scoreCard(title: "실시간 경보, 얼마나 맞았을까요?", hit: sc.nextRiderDud ?? 0, of: n, what: "경보 뒤 처음 빌린 다른 사람")
+            let days = AlarmDay.shown(model.alarmDays)
+            if !days.isEmpty { DayBars(days: days).card(padding: 18) }
         } else if r.known > 0 {
             scoreCard(title: "이 목록, 얼마나 맞았을까요?", hit: r.hit, of: r.known, what: "목록이 나온 뒤 처음 빌린 사람")
         } else if model.gu.isEmpty, let sc = model.store?.scores[model.day], sc.rode > 0 {
             scoreCard(title: "이 목록, 얼마나 맞았을까요?", hit: sc.firstDud, of: sc.rode, what: "다음 날 첫 이용자")
         }
+    }
+
+    /// 운영 성적표 — 날마다 막대 하나 (0~50%), 점선은 평소 자전거 2.5% (웹 dayBars·사이트 #livescore 와 같은 모양)
+    struct DayBars: View {
+        let days: [AlarmDay]
+        private let height: CGFloat = 72, top = 50.0
+        var body: some View {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .bottom, spacing: 3) {
+                    ForEach(days, id: \.day) { d in
+                        VStack(spacing: 2) {
+                            Text("\(Int(d.percent.rounded()))").font(.system(size: 11).monospacedDigit()).foregroundStyle(Palette.sub)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            UnevenRoundedRectangle(topLeadingRadius: 3, topTrailingRadius: 3).fill(Palette.red)
+                                .frame(height: height * min(1, d.percent / top))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(height: height + 16, alignment: .bottom)
+                .overlay(alignment: .bottom) {
+                    HLine().stroke(Palette.ink, style: StrokeStyle(lineWidth: 2, dash: [5, 4])).frame(height: 2)
+                        .offset(y: 1 - height * AlarmDay.usual / top)
+                }
+                .overlay(alignment: .bottom) { Rectangle().fill(Palette.line).frame(height: 1) }
+                HStack { Text(days.first!.short); Spacer(); Text(days.last!.short) }.font(.caption.monospacedDigit()).foregroundStyle(Palette.sub)
+                (Text("날마다 — ") + Text(AlarmDay.headline(days) ?? "").bold().foregroundColor(Palette.ink) + Text(" · 점선은 평소 자전거(2.5%)"))
+                    .font(.subheadline).foregroundStyle(Palette.sub).fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("날마다 경보 뒤 다음 사람도 바로 반납한 비율: " + days.map { "\($0.short) \(Int($0.percent.rounded()))%" }.joined(separator: ", ") + ", 평소 2.5%")
+        }
+    }
+
+    /// 가로 한 줄 (점선 기준선)
+    struct HLine: Shape {
+        func path(in r: CGRect) -> Path { Path { p in p.move(to: CGPoint(x: r.minX, y: r.midY)); p.addLine(to: CGPoint(x: r.maxX, y: r.midY)) } }
     }
 
     private func scoreCard(title: String, hit: Int, of n: Int, what: String) -> some View {

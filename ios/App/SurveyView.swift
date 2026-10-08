@@ -13,10 +13,37 @@ struct SurveyView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var camera = false
     @State private var count = UserDefaults.standard.integer(forKey: "survey_n")
+    @State private var plan: [String] = SurveyView.loadPlan()
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Text("경보 대여소 3곳과 근처 경보 없는 대여소 2곳을 섞어 이름만 보여 줘요. 어느 쪽인지 모르는 채로, 그곳 자전거를 모두 보고 남겨 주세요.")
+                        .font(.subheadline).foregroundStyle(Palette.sub)
+                    Button { Task { await makePlan() } } label: { Label("갈 곳 고르기", systemImage: "shuffle") }
+                    ForEach(Array(plan.enumerated()), id: \.element) { i, id in
+                        Button {
+                            stationID = id; filter = ""
+                            model.show("\(model.station(id)?.name ?? id) — 서 있는 자전거를 모두 하나씩 남겨 주세요.")
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text("\(i + 1)").font(.headline).monospacedDigit().foregroundStyle(Palette.accent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(model.station(id)?.name ?? id).foregroundStyle(Palette.ink)
+                                    if let s = model.station(id) {
+                                        Text(s.gu + (model.here.map { " · \(Int(Geo.meters($0, s.point).rounded()))m" } ?? "")).font(.caption).foregroundStyle(Palette.sub)
+                                    }
+                                }
+                                Spacer()
+                                Text(stationID == id ? "조사 중" : "여기 조사").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.accent)
+                            }
+                        }
+                        .accessibilityLabel("\(i + 1)번 \(model.station(id)?.name ?? id), 여기 조사")
+                    }
+                } header: {
+                    Text("오늘 갈 곳 — 눈 가리고")
+                }
                 Section("대여소") {
                     Button { Task { if await model.locate() != nil { stationID = candidates.first?.id ?? stationID } } } label: {
                         Label("가까운 대여소 찾기", systemImage: "location")
@@ -75,14 +102,32 @@ struct SurveyView: View {
         }
     }
 
-    /// 위치를 알면 가까운 30곳, 아니면 이름순 (이름으로 거름)
+    /// 위치를 알면 가까운 30곳, 아니면 이름순 (이름으로 거름). 고른 대여소(갈 곳 목록에서 누른 곳)는 항상 맨 앞에
     private var candidates: [Station] {
         var list = Array((model.store?.stations ?? [:]).values)
         if !filter.isEmpty { list = list.filter { $0.name.contains(filter) } }
         if let here = model.here {
-            return Array(list.sorted { Geo.meters(here, $0.point) < Geo.meters(here, $1.point) }.prefix(30))
+            list = Array(list.sorted { Geo.meters(here, $0.point) < Geo.meters(here, $1.point) }.prefix(30))
+        } else {
+            list = Array(list.sorted { $0.name.compare($1.name, locale: Locale(identifier: "ko_KR")) == .orderedAscending }.prefix(300))
         }
-        return Array(list.sorted { $0.name.compare($1.name, locale: Locale(identifier: "ko_KR")) == .orderedAscending }.prefix(300))
+        if let s = model.station(stationID), !list.contains(s) { list.insert(s, at: 0) }
+        return list
+    }
+
+    /// 오늘 갈 곳 고르기 — 지금(실시간) 목록의 경보 대여소에서 (Core SurveyPlan, 웹과 같은 규칙). 고른 목록은 이 폰에만 12시간
+    private func makePlan() async {
+        guard let live = model.live else { model.show("'지금 (실시간)' 목록이 있을 때 골라요."); return }
+        _ = await model.locate()
+        let alarm = Morning.groupByStation(live.bikes).map(\.id)
+        guard !alarm.isEmpty else { model.show("지금은 경보 대여소가 없어요."); return }
+        plan = SurveyPlan.pick(alarm: alarm, stations: model.store?.stations ?? [:], from: model.here)
+        UserDefaults.standard.set(["at": Date().timeIntervalSince1970, "ids": plan] as [String: Any], forKey: "survey_plan")
+    }
+    static func loadPlan() -> [String] {
+        guard let d = UserDefaults.standard.dictionary(forKey: "survey_plan"), let at = d["at"] as? Double, let ids = d["ids"] as? [String],
+              Date().timeIntervalSince1970 - at < SurveyPlan.keepHours * 3600 else { return [] }
+        return ids
     }
     private func label(_ s: Station) -> String {
         guard let here = model.here else { return s.name }

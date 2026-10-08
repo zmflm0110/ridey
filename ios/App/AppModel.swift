@@ -25,6 +25,8 @@ final class AppModel {
     var focusBike: String?
     var lookupQuery: String?
     var rescueLog: [RescueEntry] = RescueEntry.load()
+    /// 운영 성적표 — 경보가 울린 날마다 결과 (Supabase 공개 뷰, 첫 화면 뒤 한 번)
+    var alarmDays: [AlarmDay] = []
 
     /// 집 맥 서버 주소 (선택, 예: http://내맥.local:8765) — 같은 와이파이면 1분마다 갱신되는 목록. 없어도 앱은 어디서든 돈다(Cloud).
     var serverURL: String = UserDefaults.standard.string(forKey: "serverURL") ?? ""
@@ -61,6 +63,7 @@ final class AppModel {
         await refreshChecked()
         await refreshCloudDays()
         await refreshLive()
+        if let d = try? await SupabaseClient().alarmDays() { alarmDays = d }
         if UserDefaults.standard.string(forKey: "day") == nil {   // -day 인자로 고정하지 않았으면: 실시간 → 오늘 아침 목록 → 시연 자료
             if live != nil { select(day: Self.liveDay) } else if let d = cloudDays.last, d == Self.today { select(day: d) }
         }
