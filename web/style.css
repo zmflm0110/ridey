@@ -105,7 +105,7 @@ h2 .muted { font-weight: 500; font-size: 14px; }
 #map { height: 260px; margin-top: 12px; border-radius: 24px; overflow: hidden; box-shadow: var(--lift); isolation: isolate; z-index: 0; }
 
 /* ── 목록 한 줄 (먼저 볼 곳·동선·의심 자전거·기록) */
-.rank, .bikes, .feed, .posts { list-style: none; padding: 0; margin: 0; }
+.rank, .bikes, .feed, .posts, .rows { list-style: none; padding: 0; margin: 0; }
 .rows li { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
 .rows li + li { border-top: 1px solid var(--line); }
 .rows li > div { flex: 1; min-width: 0; }

@@ -1,4 +1,4 @@
-// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 운영 성적표(날짜별 채점) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
+// 시연 영상 자동 녹화 (대회 제출·발표용) — 로고(사이트 첫 화면) → 실제 자전거 SPB-69683 의 12일(사이트 그림) → 지금 목록(클라우드) → 운영 성적표(날짜별 채점) → 구 고르기·정비 동선 → 조회 경고·AI 이유 → 내 대여소 → 현장 확인으로 순위 바뀜 → 현장 조사 → 하루 재생, 화면 아래 자막. 순서는 docs/story.md.
 // 지금 목록은 진짜 클라우드(Supabase 가 5분마다 만든 것)에서 받는다(인터넷 필요). 확인·조사 기록은 임시 서버 DB 로만(클라우드 DB 에 안 씀).
 //   node tests/web/record_demo.js [나갈 폴더=docs/demo]   → demo.mp4 (ffmpeg 필요)
 // 화질: Playwright 녹화는 폰 크기(390) 그대로라 2배 틀의 왼쪽 위에만 찍혔다(나머지 회색) → 2배 화면(780×1688)을 계속 캡처해 시각대로 잇는다.
@@ -148,6 +148,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const why = await page.$$eval("#lookup-result .why div span", (s) => s.map((x) => x.textContent).slice(0, 2).join(" · "));
     await cap("AI 가 본 이유도 사람 말로 보여 줘요.", why);
     await wait(4200);
+  }
+  // 내 대여소 — 방금 본 자전거의 대여소 + 의심 자전거가 많은 곳 하나를 넣어 둔 모습 (이 폰에만 저장)
+  const myIds = await page.evaluate((bk) => { const bs = state.morning.bikes, own = (bs.find((b) => b.bike === bk) || {}).station, c = {};
+    for (const b of bs) if (b.station !== own) c[b.station] = (c[b.station] || 0) + 1;
+    const other = Object.entries(c).sort((a, b) => b[1] - a[1])[0]; return [own, other && other[0]].filter(Boolean); }, bike);
+  if (myIds.length) {
+    await page.evaluate((ids) => { mine = ids; saveMine(); renderMine(); }, myIds);
+    await show("#my-list");
+    await cap("자주 가는 대여소를 넣어 두면,", "가기 전에 그곳에 서 있는 '피할 번호' 를 바로 — 누르면 자세히.");
+    await wait(4800);
+    await show("#lookup-result .choices");
+    await wait(700);
   }
   await cap("순회 중 의심 자전거 앞에서 탭 한 번.", "체인·타이어·안장·멀쩡함 → 모든 폰의 정비 순위에 '사람이 확인함' 으로.");
   await wait(2200);
