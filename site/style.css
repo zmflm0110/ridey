@@ -75,6 +75,7 @@ p { margin: 0; }
 .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
 .nav.solid { background: color-mix(in srgb, var(--paper) 86%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px); box-shadow: 0 1px 0 var(--line); }
 .nav.solid { --fg: var(--ink); --bg: var(--paper); --cline2: var(--line-2); color: var(--ink); }
+.nav.scrolled:not(.solid) { background: rgba(13, 15, 18, .62); -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); box-shadow: 0 1px 0 rgba(255, 255, 255, .06); }
 :root[data-theme="dark"] .nav.solid { --fg: var(--d-text); --bg: #121418; color: var(--d-text); box-shadow: 0 1px 0 var(--d-line); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav.solid { --fg: var(--d-text); --bg: #121418; color: var(--d-text); box-shadow: 0 1px 0 var(--d-line); } }
 .logo { display: flex; align-items: center; color: inherit; text-decoration: none; }
@@ -90,7 +91,7 @@ p { margin: 0; }
 /* 첫 화면 */
 .hero { position: relative; min-height: min(100svh, 1000px); display: flex; flex-direction: column; justify-content: center; overflow: hidden; background: var(--bg); color: var(--fg); padding: 120px 0 0; }
 .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
-.hero::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+.hero::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--veil, 1);
   background: linear-gradient(90deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 88%, transparent) 30%, color-mix(in srgb, var(--bg) 20%, transparent) 58%, transparent 75%),
               linear-gradient(0deg, var(--bg) 0%, transparent 18%); }
 .hero .wrap { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0 72px; }
@@ -409,6 +410,17 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .blip.on { opacity: 1; transform: translate(18px, -50%); }
 .blip b { font: 800 11.5px var(--num); color: #FF7A52; letter-spacing: -.02em; }
 .blip::before { content: ""; position: absolute; left: -14px; top: 50%; width: 12px; height: 1.5px; background: rgba(255, 92, 46, .7); }
+.blip.hover { transition-duration: .25s, .45s; }
+/* 첫 화면 WebGL 지도: 씨앗 점(숨 쉬다 움츠렸다 터짐)·터지는 고리·스크롤하면 이야기 대여소 꼬리표 */
+.seed, .shock { position: absolute; left: 0; top: 0; z-index: 1; border-radius: 50%; pointer-events: none; opacity: 0; }
+.seed { width: 18px; height: 18px; margin: -9px 0 0 -9px; background: var(--sig); }
+.shock { width: 20px; height: 20px; margin: -10px 0 0 -10px; box-shadow: 0 0 0 1.5px rgba(255, 120, 80, .8), inset 0 0 18px rgba(255, 92, 46, .35); }
+.dive { position: absolute; left: 0; top: 0; z-index: 1; width: 0; height: 0; margin: 0; pointer-events: none; opacity: 0; }
+.dive i { position: absolute; left: 12px; top: -.75px; width: 16px; height: 1.5px; background: rgba(255, 92, 46, .8); }
+.dive span { position: absolute; left: 30px; top: 0; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; padding: 9px 15px 9px 12px; border-radius: 999px;
+  background: rgba(13, 15, 18, .82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255, 92, 46, .55); color: #F3F1EC; font-size: 13.5px; font-weight: 700; }
+.dive b { font: 800 12.5px/1 var(--num); color: #FF7A52; letter-spacing: -.02em; }
+.dive.below i { left: -.75px; top: 13px; width: 1.5px; height: 14px; } .dive.below span { left: 0; top: 30px; transform: translateX(-50%); }
 
 /* 머리: 점 하나가 지금 보는 구역의 메뉴 아래로 미끄러져 감(스프링). 페이지를 넘어갈 때도 이 점이 옮겨 감 */
 .nav nav { position: relative; }

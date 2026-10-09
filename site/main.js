@@ -39,7 +39,7 @@
     h.innerHTML = html.split(/<br\s*\/?>/i).map((l, i) => `<span class="ln" style="--i:${i}"><span>${l}</span></span>`).join("");
     const pd = h.querySelector(".pd");
     if (pd && !reduce) h.addEventListener("pointerenter", () => pd.animate([{ transform: "none" }, { transform: "translateY(-70%) scale(1.15)", offset: 0.4 }, { transform: "none" }],
-      { duration: 700, easing: getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "ease-out" }));
+      { duration: 700, easing: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() : "cubic-bezier(.34, 1.56, .64, 1)" }));
   }
   $$(".stagger").forEach((g) => [...g.children].forEach((c, i) => c.style.setProperty("--i", i)));
 
@@ -68,6 +68,7 @@
   // ── 머리: 어두운 첫 화면을 지나면 종이색 바탕 · 지금 보는 구역 아래 신호 점
   const nav = $("#top"), hero = $("#hero");
   if (nav && hero) new IntersectionObserver(([e]) => nav.classList.toggle("solid", !e.isIntersecting), { rootMargin: "-90px 0px 0px 0px" }).observe(hero);
+  if (nav) { const sc = () => nav.classList.toggle("scrolled", scrollY > 8); sc(); addEventListener("scroll", sc, { passive: true }); }   // 첫 화면 안에서도 내리면 어두운 유리 바탕
   else { nav?.classList.add("solid"); start(); }
   const links = $$(".nav nav > a[href^='#']"), ndot = $(".navdot");
   const placeDot = () => {
@@ -122,11 +123,37 @@
   }
 
   // ── 첫 화면: 지금 서울의 경보 대여소 (못 받으면 6월 15일 아침 시연 목록)
-  //     레이더처럼 가운데서 서울이 퍼져 나오고, 경보 점이 가까운 곳부터 차례로 켜진다. 몇 초마다 한 곳에 꼬리표.
+  //     점 하나(신호)가 지도 가운데 떠서 숨을 쉬다가 터지며 서울 2,789곳 대여소로 흩어져 앉고, 경보 대여소가 가까운 곳부터 차례로 켜진다(WebGL).
+  //     큰 숫자는 경보 점이 켜질 때마다 그 대여소의 자전거 수만큼 올라간다. 커서를 가져가면 점들이 비켜나고 가장 가까운 경보 점에 꼬리표.
+  //     스크롤하면 도시의 점들이 소용돌이치며 제목 '먼저.' 의 마침표로 빨려 들어간다 — 점 하나 → 서울 → 다시 점 하나.
+  //     WebGL 이 없거나 '움직임 줄이기' 면 2D 로(레이더처럼 퍼짐 · 움직임 줄이기면 멈춘 그림).
   (async () => {
-    const cv = $("#livemap"); if (!cv) return;
-    const ctx = cv.getContext("2d");
+    let cv = $("#livemap"); if (!cv) return;
+    const hero = $("#hero"), blips = $("#blips");
+    const tSeed = performance.now();
+    const intro = !reduce && window.WebGLRenderingContext ? seedIntro() : null;   // 씨앗 점은 대여소 자료를 받기 전에 먼저
     const st = await stationsP, B = box(st);
+    const L = {}; let pts = [];
+    const layout = () => {
+      Object.assign(L, sizeCanvas(cv));
+      const mobile = L.W < 760, a = aspect(B);
+      const mw = mobile ? L.W * 1.08 : Math.min(L.W * 0.62, (L.H * 0.84) * a), mh = mw / a;
+      const ox = mobile ? (L.W - mw) / 2 : Math.min(L.W - mw - 12, L.W * 0.66 - mw / 2), oy = mobile ? L.H - mh - 40 : Math.max(70, (L.H - mh) / 2 - 20);
+      L.mobile = mobile; L.P = fit(B, ox, oy, mw); L.cx = ox + mw / 2; L.cy = oy + mh / 2; L.maxR = Math.hypot(mw, mh) / 2 + 30;
+      pts.forEach((p) => { p.xy = L.P(p.s); p.d = Math.hypot(p.xy[0] - L.cx, p.xy[1] - L.cy); });
+    };
+    layout();
+    const T0 = performance.now();
+    const ptr = { x: -1e4, y: -1e4, on: false };
+    const eng = (intro && glHero()) || canvasHero();
+    if (!eng.tb) intro?.cancel();
+    let running = true;
+    const loop = (t) => { if (running) eng.frame(t); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    new IntersectionObserver(([e]) => (running = e.isIntersecting)).observe(hero);
+    let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { layout(); eng.resize(); }, 150); });
+
+    // 경보 목록 — 지도는 먼저 그려 두고, 받는 대로 켬
     let marks = [], live = false;
     try {
       const [row] = await sb("live_snapshot?select=at,bikes:body->bikes");
@@ -145,66 +172,230 @@
         $("#live-d").textContent = "시연 자료 — 지금은 실시간 목록을 받지 못했어요"; $("#hero-src").textContent = "서울 따릉이 · 2026년 6월 15일 실제 기록";
       } catch {}
     }
-    setTimeout(() => countUp($("#live-n"), 1800), reduce ? 0 : 1100);
+    if (!eng.tb) setTimeout(() => countUp($("#live-n"), 1800), reduce ? 0 : Math.max(0, T0 + 1100 - performance.now()));
     const by = {};
     for (const [id, chain, bike] of marks) { const s = st[id]; if (!s) continue; const p = (by[id] = by[id] || { s, n: 0, top: 0, bike }); p.n++; if (chain > p.top) { p.top = chain; p.bike = bike; } }
-    const pts = Object.values(by);
-    let base, W, H, dpr, cx, cy, maxR, running = true, t0 = null;
-    function layout() {
-      ({ W, H, dpr } = sizeCanvas(cv));
-      const mobile = W < 760, a = aspect(B);
-      const mw = mobile ? W * 1.08 : Math.min(W * 0.62, (H * 0.84) * a), mh = mw / a;
-      const ox = mobile ? (W - mw) / 2 : Math.min(W - mw - 12, W * 0.66 - mw / 2), oy = mobile ? H - mh - 40 : Math.max(70, (H - mh) / 2 - 20);
-      const P = fit(B, ox, oy, mw);
-      cx = ox + mw / 2; cy = oy + mh / 2; maxR = Math.hypot(mw, mh) / 2 + 30;
-      base = document.createElement("canvas"); base.width = cv.width; base.height = cv.height;
-      const b = base.getContext("2d"); b.scale(dpr, dpr); b.fillStyle = "rgba(243, 241, 236, .26)";
-      for (const s of Object.values(st)) { const [x, y] = P(s); b.fillRect(x - .85, y - .85, 1.7, 1.7); }
-      pts.forEach((p) => { p.xy = P(p.s); p.d = Math.hypot(p.xy[0] - cx, p.xy[1] - cy); });
-      [...pts].sort((a, b) => a.d - b.d).forEach((p, i) => (p.on = 650 + i * 26));   // 가운데부터 차례로 켜짐
+    pts = Object.values(by); layout(); eng.alarms(Number($("#live-n").textContent) || 0);
+
+    // 커서: 지도 위 어디서든(글자 위여도) — 점들이 비켜나고, 가장 가까운 경보 점에 꼬리표
+    let tagHover = null, hoverP = null;
+    const tag = (p, cls) => {
+      const el = document.createElement("div"); el.className = "blip" + (cls ? " " + cls : "");
+      el.style.left = p.xy[0] + "px"; el.style.top = p.xy[1] + "px";
+      el.innerHTML = `<b>${p.top}명 연속</b>${esc(p.s.gu)} · ${esc(p.bike || p.s.name)}`;
+      blips.appendChild(el); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
+      return el;
+    };
+    const drop = (el, ms = 800) => { if (!el) return; el.classList.remove("on"); setTimeout(() => el.remove(), ms); };
+    if (!reduce && matchMedia("(hover: hover)").matches) {
+      hero.addEventListener("pointermove", (e) => {
+        const r = cv.getBoundingClientRect(); ptr.x = e.clientX - r.left; ptr.y = e.clientY - r.top; ptr.on = true;
+        if (scrollY > 40 || !pts.length) return;
+        let best = null, bd = 34;
+        for (const p of pts) { const d = Math.hypot(p.xy[0] - ptr.x, p.xy[1] - ptr.y); if (d < bd) { bd = d; best = p; } }
+        if (best !== hoverP) { drop(tagHover); tagHover = best ? tag(best, "hover") : null; hoverP = best; }
+      }, { passive: true });
+      hero.addEventListener("pointerleave", () => { ptr.on = false; drop(tagHover); tagHover = null; hoverP = null; });
     }
-    function draw(t) {
-      if (t0 === null) t0 = t;
-      const since = reduce ? 1e9 : t - t0, rev = expo(Math.min(1, since / 1500));
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (rev < 1) {   // 레이더처럼 퍼지는 원 안만 + 가장자리 고리
-        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, maxR * rev, 0, 7); ctx.clip();
-        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.beginPath(); ctx.arc(cx, cy, maxR * rev, 0, 7); ctx.strokeStyle = `rgba(255, 92, 46, ${0.35 * (1 - rev)})`; ctx.lineWidth = 1.5; ctx.stroke();
-      } else { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
-      for (const p of pts) {
-        const age = since - p.on; if (age < 0) continue;
-        const [x, y] = p.xy, strong = p.top >= 3, r = 2.6 + Math.min(p.n, 4) * 1.1 + (strong ? 1 : 0);
-        const ign = Math.min(1, age / 700), flash = 1 - ign;   // 켜지는 순간 크게 번쩍
-        const ph = reduce ? 0.35 : ((t / 2200) + ((x * 0.37 + y * 0.61) % 1)) % 1;
-        if (flash > 0) { ctx.beginPath(); ctx.arc(x, y, r + 26 * ign, 0, 7); ctx.strokeStyle = `rgba(255, 140, 100, ${flash * .8})`; ctx.lineWidth = 2; ctx.stroke(); }
-        ctx.beginPath(); ctx.arc(x, y, r + ph * 18, 0, 7); ctx.strokeStyle = `rgba(255, 92, 46, ${(1 - ph) * (strong ? .5 : .32) * ign})`; ctx.lineWidth = 1.4; ctx.stroke();
-        ctx.shadowColor = "rgba(255, 92, 46, .9)"; ctx.shadowBlur = (strong ? 14 : 8) + flash * 18;
-        ctx.beginPath(); ctx.arc(x, y, r * (0.6 + 0.4 * expo(ign)) + flash * 2, 0, 7); ctx.fillStyle = flash > .3 ? "#FFB59A" : strong ? "#FF5C2E" : "rgba(255, 128, 92, .85)"; ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-    }
-    const loop = (t) => { if (running) draw(t); requestAnimationFrame(loop); };
-    layout(); requestAnimationFrame(loop);
-    new IntersectionObserver(([e]) => (running = e.isIntersecting)).observe(cv);
-    let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(layout, 150); });
-    // 꼬리표: 몇 초마다 경보 점 하나 옆에 '몇 명 연속 · 어디' (넓은 화면, 글·숫자와 안 겹치는 자리만)
-    const blips = $("#blips");
+    // 내리기 시작하면 꼬리표는 모두 거둠(점들이 마침표로 모이는 중)
+    addEventListener("scroll", () => { if (scrollY > 40 && blips.childElementCount) { [...blips.children].forEach((el) => drop(el, 500)); tagHover = null; hoverP = null; } }, { passive: true });
+    // 꼬리표: 몇 초마다 경보 점 하나 옆에 '몇 명 연속 · 어디' (넓은 화면, 글·숫자와 안 겹치는 자리만, 커서가 지도 위에 없을 때)
     if (blips && !reduce) {
       let last = null;
       setInterval(() => {
-        if (!running || W < 760) return;
-        const ok = pts.filter((p) => p !== last && p.xy[0] > W * 0.47 && p.xy[0] < W - 230 && p.xy[1] > 110 && p.xy[1] < H - 360);
+        if (!running || L.W < 760 || ptr.on || scrollY > 40) return;
+        const ok = pts.filter((p) => p !== last && p.xy[0] > L.W * 0.47 && p.xy[0] < L.W - 230 && p.xy[1] > 110 && p.xy[1] < L.H - 360);
         if (!ok.length) return;
         const p = (last = ok[Math.floor(Math.random() * ok.length)]);
-        const el = document.createElement("div"); el.className = "blip";
-        el.style.left = p.xy[0] + "px"; el.style.top = p.xy[1] + "px";
-        el.innerHTML = `<b>${p.top}명 연속</b>${esc(p.s.gu)} · ${esc(p.bike || "")}`;
-        blips.appendChild(el);
-        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
-        setTimeout(() => el.classList.remove("on"), 2600); setTimeout(() => el.remove(), 3400);
+        const el = tag(p); setTimeout(() => drop(el), 2600);
       }, 3200);
+    }
+
+    // ── WebGL: 점 하나 → 서울
+    function glHero() {
+      let gl = null;
+      try { gl = cv.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: true, depth: false, stencil: false }); } catch {}
+      if (!gl) return null;
+      const VS = `
+        attribute vec2 aT; attribute vec4 aD;
+        uniform vec2 uRes, uO, uM, uF; uniform float uDpr, uT, uI, uMk, uC, uSy;
+        varying vec4 vA; varying vec4 vB; varying float vF;
+        float eo(float x) { return x >= 1.0 ? 1.0 : 1.0 - pow(2.0, -10.0 * x); }
+        void main() {
+          float seed = aD.x, kind = aD.y, ord = aD.z, n = aD.w;
+          float k = clamp((uT - ord * 0.55 - seed * 0.25) / 1.2, 0.0, 1.0), e = eo(k);
+          vec2 d = aT - uO;
+          vec2 p = uO + d * e + vec2(-d.y, d.x) * sin(e * 3.14159) * (seed - 0.5) * 0.5;
+          // 스크롤: 모든 점이 소용돌이치며 제목의 마침표(uF)로 — 가까운 점부터
+          float g = clamp(uC * 1.8 - (ord * 0.45 + seed * 0.35), 0.0, 1.0);
+          float ge = g * g * (3.0 - 2.0 * g);
+          vec2 q = p - uF;
+          p = mix(p, uF, ge) + vec2(-q.y, q.x) * sin(ge * 3.14159) * (seed - 0.5) * 0.6;
+          p.y += uSy;
+          vec2 m = p - uM; float dist = length(m);
+          float f = uMk * (1.0 - smoothstep(0.0, 150.0, dist));
+          p += (dist > 0.5 ? m / dist : vec2(0.0)) * f * f * (kind < 0.5 ? 36.0 : 5.0);
+          vec2 c = p / uRes * 2.0 - 1.0;
+          gl_Position = vec4(c.x, -c.y, 0.0, 1.0);
+          float on = step(0.0001, k), fade = 1.0 - ge * 0.92;
+          if (kind < 0.5) {
+            vA = vec4(0.0, on * (mix(0.9, 0.26, e) + f * 0.6 + ge * 0.6) * fade, 0.95, 6.0); vB = vec4(ge, 0.0, 0.0, 0.0); vF = 0.0;
+          } else {
+            float ign = clamp((uI - ord * 1.2) / 0.6, 0.0, 1.0), strong = step(1.5, kind);
+            float rr = mix(0.95, (2.6 + min(n, 4.0) * 1.1 + strong) * (0.6 + 0.4 * eo(ign)), ign) * (1.0 + f * 0.4);
+            float ph = fract(uT / 2.2 + seed);
+            vA = vec4(1.0 + strong, on * fade, rr, (rr + 30.0) * 2.0);
+            vB = vec4(ign, rr + ph * 18.0, (1.0 - ph) * mix(0.32, 0.5, strong) * ign, rr + 26.0 * ign);
+            vF = (1.0 - ign) * step(0.001, ign) * 0.85;
+          }
+          gl_PointSize = vA.w * uDpr;
+        }`;
+      const FS = `
+        precision mediump float;
+        varying vec4 vA; varying vec4 vB; varying float vF;
+        void main() {
+          float r = length(gl_PointCoord - 0.5) * vA.w, R = vA.z, alpha = vA.y;
+          if (vA.x < 0.5) { float a = (1.0 - smoothstep(R - 0.45, R + 0.55, r)) * alpha; gl_FragColor = vec4(mix(vec3(0.953, 0.945, 0.925), vec3(1.0, 0.42, 0.25), vB.x) * a, a); return; }
+          vec3 sig = vec3(1.0, 0.361, 0.18);
+          float ign = vB.x;
+          float core = 1.0 - smoothstep(R - 0.7, R + 0.7, r);
+          float glow = exp(-(r * r) / (R * R * 4.5)) * 0.55 * ign;
+          float ring = (1.0 - smoothstep(0.0, 1.3, abs(r - vB.y))) * vB.z;
+          float fl = (1.0 - smoothstep(0.0, 1.8, abs(r - vB.w))) * vF;
+          vec3 coreCol = mix(vec3(0.953, 0.945, 0.925), mix(sig, vec3(1.0, 0.71, 0.6), vF), ign);
+          float ca = core * mix(0.3, 1.0, ign);
+          vec3 col = coreCol * ca + sig * (glow + ring) * (1.0 - ca) + vec3(1.0, 0.75, 0.65) * fl;
+          float a = clamp(ca + (glow + ring) * (1.0 - ca) + fl, 0.0, 1.0);
+          gl_FragColor = vec4(col, a) * alpha;
+        }`;
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      let prog;
+      try {
+        prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      } catch (err) { console.warn("WebGL 지도 대신 2D", err); const c = cv.cloneNode(); cv.replaceWith(c); cv = c; return null; }
+      gl.useProgram(prog);
+      const U = {}; for (const n of ["uRes", "uO", "uM", "uF", "uDpr", "uT", "uI", "uMk", "uC", "uSy"]) U[n] = gl.getUniformLocation(prog, n);
+      const aT = gl.getAttribLocation(prog, "aT"), aD = gl.getAttribLocation(prog, "aD");
+      const bT = gl.createBuffer(), bD = gl.createBuffer();
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      const hash = (i) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+      const tb = Math.max(tSeed + 1050, performance.now() + 80);   // 씨앗 점이 터지는 때
+      intro.place(L.cx, L.cy); intro.burst(tb, L.maxR);
+      let N = 0, tIgn = tb + 650;
+      const fill = () => {
+        const alarmIds = new Set(pts.map((p) => p.s.id));
+        const ranked = [...pts].sort((a, b) => a.d - b.d), rank = new Map(ranked.map((p, i) => [p.s.id, i / Math.max(1, ranked.length - 1)]));
+        const list = Object.values(st).filter((s) => !alarmIds.has(s.id)).map((s) => [s, 0, 0]);
+        for (const p of pts) list.push([p.s, p.top >= 3 ? 2 : 1, p.n]);
+        N = list.length;
+        const T = new Float32Array(N * 2), D = new Float32Array(N * 4);
+        list.forEach(([s, kind, n], i) => {
+          const [x, y] = L.P(s); T[i * 2] = x; T[i * 2 + 1] = y;
+          D[i * 4] = hash(i + 1); D[i * 4 + 1] = kind; D[i * 4 + 2] = kind === 1 || kind === 2 ? rank.get(s.id) : Math.min(1, Math.hypot(x - L.cx, y - L.cy) / L.maxR); D[i * 4 + 3] = n;
+        });
+        gl.bindBuffer(gl.ARRAY_BUFFER, bT); gl.bufferData(gl.ARRAY_BUFFER, T, gl.STATIC_DRAW); gl.enableVertexAttribArray(aT); gl.vertexAttribPointer(aT, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bD); gl.bufferData(gl.ARRAY_BUFFER, D, gl.STATIC_DRAW); gl.enableVertexAttribArray(aD); gl.vertexAttribPointer(aD, 4, gl.FLOAT, false, 0, 0);
+      };
+      fill();
+      const pd = $(".hero h1 .pd");   // 스크롤하면 점들이 모일 곳 — 제목 '먼저.' 의 마침표
+      let total = 0, counted = -1;
+      const ign = () => [...pts].sort((a, b) => a.d - b.d);   // 켜지는 차례(가까운 곳부터) — 셰이더의 순서와 같게
+      let mx = -1e4, my = -1e4, mk = 0;
+      return {
+        frame(now) {
+          gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+          if (ptr.on) { if (mk < 0.02) { mx = ptr.x; my = ptr.y; } mx += (ptr.x - mx) * 0.22; my += (ptr.y - my) * 0.22; }
+          mk += ((ptr.on && scrollY < 60 ? 1 : 0) - mk) * 0.07;
+          const c = Math.min(1, Math.max(0, scrollY / (L.H * 0.45))), sy = Math.min(scrollY, L.H) * 0.35;
+          let fx = L.cx, fy = L.cy;
+          if (pd && c > 0) { const a = pd.getBoundingClientRect(), b = cv.getBoundingClientRect(); fx = a.left + a.width / 2 - b.left; fy = a.top + a.height / 2 - b.top; }
+          gl.uniform2f(U.uRes, L.W, L.H); gl.uniform1f(U.uDpr, L.dpr); gl.uniform2f(U.uO, L.cx, L.cy);
+          gl.uniform1f(U.uT, (now - tb) / 1000); gl.uniform1f(U.uI, (now - tIgn) / 1000);
+          gl.uniform2f(U.uM, mx, my); gl.uniform1f(U.uMk, mk);
+          gl.uniform2f(U.uF, fx, fy - sy); gl.uniform1f(U.uC, c); gl.uniform1f(U.uSy, sy);
+          gl.drawArrays(gl.POINTS, 0, N);
+          // 마침표가 빨아들임: 다 모일수록 커지고 빛남
+          if (pd) { const k = Math.max(0, (c - 0.55) / 0.45); pd.style.scale = (1 + k * 0.45).toFixed(3); pd.style.boxShadow = k > 0 ? `0 0 ${(k * 26).toFixed(1)}px ${(k * 5).toFixed(1)}px rgba(255, 92, 46, ${(k * 0.55).toFixed(2)})` : ""; }
+          hero.style.setProperty("--veil", (1 - Math.min(1, c * 1.4) * 0.85).toFixed(3));   // 글 보호 그늘을 걷어 점들이 마침표까지 보이게
+          // 큰 숫자: 켜진 경보 대여소의 자전거 수만 — 다 켜지면 실제 대수
+          if (counted < total && pts.length) {
+            const e = (now - tIgn) / 1000; let n = 0;
+            const order = ign(); order.forEach((p, i) => { if (e >= (i / Math.max(1, order.length - 1)) * 1.2) n += p.n; });
+            n = e >= 1.3 ? total : Math.min(n, total);
+            if (n !== counted) { counted = n; const el = $("#live-n"); if (el) el.textContent = ko(n); }
+          }
+        },
+        resize() { intro.place(L.cx, L.cy); fill(); },
+        alarms(n) { tIgn = Math.max(tb + 650, performance.now() + 120); total = n; counted = -1; const el = $("#live-n"); if (el) { el.dataset.counted = 1; el.textContent = "0"; } fill(); },
+        tb,
+      };
+    }
+
+    // ── 씨앗 점(CSS): 지도 가운데 떠서 숨 쉬다가, 움츠렸다 터짐 + 얇게 퍼지는 고리. 자료 전엔 서울 모양 비율(1.23)로 자리를 어림
+    function seedIntro() {
+      const mk = (c) => { const el = document.createElement("i"); el.className = c; el.setAttribute("aria-hidden", "true"); hero.append(el); return el; };
+      const seed = mk("seed"), shock = mk("shock");
+      const place = (x, y) => { for (const el of [seed, shock]) { el.style.left = x + "px"; el.style.top = y + "px"; } };
+      const r = hero.getBoundingClientRect(), W = r.width, H = r.height, a = 1.23, mobile = W < 760;
+      const mw = mobile ? W * 1.08 : Math.min(W * 0.62, (H * 0.84) * a), mh = mw / a;
+      place((mobile ? (W - mw) / 2 : Math.min(W - mw - 12, W * 0.66 - mw / 2)) + mw / 2, (mobile ? H - mh - 40 : Math.max(70, (H - mh) / 2 - 20)) + mh / 2);
+      const SP = CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() : "cubic-bezier(.34, 1.56, .64, 1)";
+      seed.animate([{ transform: "scale(0)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 750, delay: 120, easing: SP, fill: "both" });
+      seed.animate([{ boxShadow: "0 0 0 0 rgba(255, 92, 46, .7), 0 0 26px 3px rgba(255, 92, 46, .55)" }, { boxShadow: "0 0 0 28px rgba(255, 92, 46, 0), 0 0 26px 3px rgba(255, 92, 46, .55)" }],
+        { duration: 1100, delay: 260, easing: "cubic-bezier(.16, 1, .3, 1)", fill: "forwards" });
+      return {
+        place,
+        burst(tb, maxR) {   // tb 에 터짐: 0.43초 전부터 움츠렸다가 크게 번쩍
+          const d = Math.max(0, tb - performance.now());
+          seed.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(.62)", opacity: 1, offset: .55 }, { transform: "scale(2.6)", opacity: 1, offset: .8 }, { transform: "scale(3.2)", opacity: 0 }],
+            { duration: 640, delay: Math.max(0, d - 430), easing: "cubic-bezier(.3, 0, .2, 1)", fill: "forwards" });
+          const R = Math.round(maxR * 1.05);
+          shock.animate([{ width: "16px", height: "16px", margin: "-8px 0 0 -8px", opacity: 1 }, { width: `${R * 2}px`, height: `${R * 2}px`, margin: `-${R}px 0 0 -${R}px`, opacity: 0 }],
+            { duration: 1600, delay: Math.max(0, d - 30), easing: "cubic-bezier(.16, 1, .3, 1)", fill: "forwards" });
+          setTimeout(() => { seed.remove(); shock.remove(); }, d + 1800);
+        },
+        cancel() { seed.remove(); shock.remove(); },
+      };
+    }
+
+    // ── 2D: WebGL 이 없거나 '움직임 줄이기' 일 때 — 레이더처럼 가운데서 퍼짐(움직임 줄이기면 다 그려진 그림)
+    function canvasHero() {
+      layout();
+      const ctx = cv.getContext("2d");
+      let base, t0 = null;
+      const resize = () => {
+        base = document.createElement("canvas"); base.width = cv.width; base.height = cv.height;
+        const b = base.getContext("2d"); b.scale(L.dpr, L.dpr); b.fillStyle = "rgba(243, 241, 236, .26)";
+        for (const s of Object.values(st)) { const [x, y] = L.P(s); b.fillRect(x - .85, y - .85, 1.7, 1.7); }
+      };
+      resize();
+      return {
+        resize,
+        alarms() { const since = t0 === null ? 0 : performance.now() - t0; [...pts].sort((a, b) => a.d - b.d).forEach((p, i) => (p.on = Math.max(650, since + 150) + i * 26)); },
+        frame(t) {
+          if (t0 === null) t0 = t;
+          const since = reduce ? 1e9 : t - t0, rev = expo(Math.min(1, since / 1500)), { dpr, cx, cy, maxR } = L;
+          ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+          if (rev < 1) {
+            ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.beginPath(); ctx.arc(cx, cy, maxR * rev, 0, 7); ctx.clip();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.beginPath(); ctx.arc(cx, cy, maxR * rev, 0, 7); ctx.strokeStyle = `rgba(255, 92, 46, ${0.35 * (1 - rev)})`; ctx.lineWidth = 1.5; ctx.stroke();
+          } else ctx.drawImage(base, 0, 0);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          for (const p of pts) {
+            const age = since - (p.on ?? 0); if (age < 0) continue;
+            const [x, y] = p.xy, strong = p.top >= 3, r = 2.6 + Math.min(p.n, 4) * 1.1 + (strong ? 1 : 0);
+            const ign = Math.min(1, age / 700), flash = 1 - ign;
+            const ph = reduce ? 0.35 : ((t / 2200) + ((x * 0.37 + y * 0.61) % 1)) % 1;
+            if (flash > 0) { ctx.beginPath(); ctx.arc(x, y, r + 26 * ign, 0, 7); ctx.strokeStyle = `rgba(255, 140, 100, ${flash * .8})`; ctx.lineWidth = 2; ctx.stroke(); }
+            ctx.beginPath(); ctx.arc(x, y, r + ph * 18, 0, 7); ctx.strokeStyle = `rgba(255, 92, 46, ${(1 - ph) * (strong ? .5 : .32) * ign})`; ctx.lineWidth = 1.4; ctx.stroke();
+            ctx.shadowColor = "rgba(255, 92, 46, .9)"; ctx.shadowBlur = (strong ? 14 : 8) + flash * 18;
+            ctx.beginPath(); ctx.arc(x, y, r * (0.6 + 0.4 * expo(ign)) + flash * 2, 0, 7); ctx.fillStyle = flash > .3 ? "#FFB59A" : strong ? "#FF5C2E" : "rgba(255, 128, 92, .85)"; ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        },
+      };
     }
   })();
 
