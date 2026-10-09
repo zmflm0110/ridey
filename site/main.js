@@ -33,9 +33,13 @@
   }
 
   // ── 제목을 줄로 나눠 가림막 뒤에서 올라오게 (스크립트가 없으면 그냥 보임)
+  //    마지막 마침표는 로고 'RIDEY.' 의 점처럼 — 신호색 점이 바닥선에 앉는다(글자 '.' 는 복사·화면 읽기용으로 숨겨 둠). 마지막 낱말과 붙여 혼자 줄바꿈되지 않게
   for (const h of $$(".hero h1, .head h2")) {
-    const lines = h.innerHTML.split(/<br\s*\/?>/i);
-    h.innerHTML = lines.map((l, i) => `<span class="ln" style="--i:${i}"><span>${l}</span></span>`).join("");
+    const html = h.innerHTML.replace(/([^\s>]+)\.((?:\s*<\/[a-z]+>)*)\s*$/i, '<span class="nw">$1<span class="pd"><span class="sr">.</span></span></span>$2');
+    h.innerHTML = html.split(/<br\s*\/?>/i).map((l, i) => `<span class="ln" style="--i:${i}"><span>${l}</span></span>`).join("");
+    const pd = h.querySelector(".pd");
+    if (pd && !reduce) h.addEventListener("pointerenter", () => pd.animate([{ transform: "none" }, { transform: "translateY(-70%) scale(1.15)", offset: 0.4 }, { transform: "none" }],
+      { duration: 700, easing: getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "ease-out" }));
   }
   $$(".stagger").forEach((g) => [...g.children].forEach((c, i) => c.style.setProperty("--i", i)));
 
@@ -54,23 +58,39 @@
     if (!document.startViewTransition || reduce) return go();
     const r = ev.currentTarget.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-    document.startViewTransition(go).ready.then(() => root.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end}px at ${x}px ${y}px)`] },
+    root.classList.add("vt-theme");
+    const vt = document.startViewTransition(go);
+    vt.ready.then(() => root.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end}px at ${x}px ${y}px)`] },
       { duration: 700, easing: "cubic-bezier(.16, 1, .3, 1)", pseudoElement: "::view-transition-new(root)" }));
+    vt.finished.finally(() => root.classList.remove("vt-theme"));
   });
 
   // ── 머리: 어두운 첫 화면을 지나면 종이색 바탕 · 지금 보는 구역 아래 신호 점
   const nav = $("#top"), hero = $("#hero");
   if (nav && hero) new IntersectionObserver(([e]) => nav.classList.toggle("solid", !e.isIntersecting), { rootMargin: "-90px 0px 0px 0px" }).observe(hero);
   else { nav?.classList.add("solid"); start(); }
-  const links = $$(".nav nav > a[href^='#']");
+  const links = $$(".nav nav > a[href^='#']"), ndot = $(".navdot");
+  const placeDot = () => {
+    const a = $(".nav nav > a.on:not(.btn)");
+    if (!ndot) return;
+    if (!a || !a.offsetParent) { ndot.classList.remove("on"); return; }
+    ndot.style.setProperty("--x", `${a.offsetLeft + a.offsetWidth / 2}px`);
+    ndot.style.setProperty("--y", `${a.offsetTop + a.offsetHeight - 3}px`);
+    ndot.classList.add("on");
+  };
   if (links.length) {
-    const sio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) links.forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-45% 0px -50% 0px" });
+    const sio = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      links.forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); placeDot();
+    }), { rootMargin: "-45% 0px -50% 0px" });
     links.forEach((a) => { const s = $(a.getAttribute("href")); if (s) sio.observe(s); });
-  }
+    $("#hero") && new IntersectionObserver(([e]) => { if (e.isIntersecting) { links.forEach((a) => a.classList.remove("on")); placeDot(); } }, { rootMargin: "-45% 0px -50% 0px" }).observe($("#hero"));
+  } else $$(".nav nav > a:not(.btn)").forEach((a) => { if (location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("on"); });
+  placeDot(); addEventListener("resize", placeDot); document.fonts?.ready.then(placeDot);
   // 위쪽 진행 막대 — CSS 스크롤 타임라인이 없는 브라우저만 스크립트로
   const prog = $(".progress");
   if (prog && !CSS.supports("animation-timeline: scroll()")) {
-    let q = 0; addEventListener("scroll", () => { if (q) return; q = requestAnimationFrame(() => { q = 0; const h = document.documentElement.scrollHeight - innerHeight; prog.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`; }); }, { passive: true });
+    let q = 0; addEventListener("scroll", () => { if (q) return; q = requestAnimationFrame(() => { q = 0; const h = document.documentElement.scrollHeight - innerHeight; prog.style.setProperty("--sp", h > 0 ? Math.min(1, scrollY / h) : 0); }); }, { passive: true });
   }
 
   // ── 나타나기 (+ 제목 줄, 숫자)
