@@ -177,9 +177,10 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .bar { height: 100%; display: grid; grid-template-rows: auto 1fr auto; text-align: center; gap: 8px; }
 .bar .v { font: 800 clamp(18px, 2vw, 24px)/1 var(--num); letter-spacing: -.03em; }
 .bar .colw { display: flex; align-items: end; }
-.bar .col { width: 100%; height: 0; border-radius: 14px 14px 6px 6px; background: color-mix(in srgb, var(--fg3) 30%, transparent); transition: height 1s var(--ease); }
-.bar.hot .col { background: var(--sig); }
-.bar.hotter .col { background: var(--sigt); }
+.bar .col { --dc: color-mix(in srgb, var(--fg3) 45%, transparent); width: 100%; height: 0; border-radius: 8px; transition: height 1s var(--ease);
+  background: radial-gradient(circle, var(--dc) 3.4px, transparent 3.9px) 50% 100% / 11px 11px; }   /* 점(LED)이 쌓인 기둥 */
+.bar.hot .col { --dc: var(--sig); }
+.bar.hotter .col { --dc: var(--sigt); }
 .bar .x { font-size: 14px; font-weight: 700; color: var(--fg2); }
 .bar.hot .v, .bar.hotter .v { color: var(--sigt); }
 .chart .cap { margin-top: 18px; font-size: 13.5px; color: var(--fg3); }
@@ -222,6 +223,27 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .flow li:nth-child(2) .n { background: var(--sig); color: #111317; }
 .flow h3 { font-size: 18px; margin-bottom: 4px; }
 .flow p { font-size: 15px; color: var(--fg2); }
+/* 흐름: 단계 동그라미를 잇는 선 위로 신호 점이 지나감 */
+.flow { position: relative; }
+.flow .n { position: relative; z-index: 1; transition: background-color .4s, color .4s, box-shadow .6s var(--ease); }
+.flow.run li:nth-child(2) .n { background: var(--chip); color: var(--fg); }
+.flow.run .n.on { background: var(--sig); color: #111317; box-shadow: 0 0 0 7px color-mix(in srgb, var(--sig) 18%, transparent); }
+.flow-track { position: absolute; width: 2px; background: repeating-linear-gradient(180deg, var(--cline2) 0 4px, transparent 4px 9px); z-index: 0; pointer-events: none; }
+.flow-dot { position: absolute; left: 0; top: 0; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--sig); z-index: 0; pointer-events: none;
+  box-shadow: 0 0 14px 3px color-mix(in srgb, var(--sig) 55%, transparent); transition: transform 1.1s cubic-bezier(.65, 0, .35, 1); }
+/* 실시간 전광판: 정류장 안내판처럼 점(LED)으로 그린 글자 */
+.led { position: relative; margin: 0 0 30px; padding: 14px 16px; border-radius: 18px; background: #050506; overflow: hidden;
+  box-shadow: inset 0 0 0 1px #1E2026, inset 0 3px 24px rgba(0, 0, 0, .85), 0 30px 60px -40px rgba(255, 92, 46, .35); }
+.led canvas { display: block; width: 100%; height: clamp(64px, 7vw, 92px); }
+.led::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(90deg, #050506 0, transparent 7%, transparent 93%, #050506 100%), linear-gradient(180deg, rgba(255, 255, 255, .035), transparent 40%); }
+/* 어두운 구역: 커서 둘레에만 점 격자 */
+.spot { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .5s;
+  background-image: radial-gradient(circle, rgba(243, 241, 236, .2) 1.15px, transparent 1.6px); background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(260px circle at var(--mx, -999px) var(--my, -999px), #000, transparent 72%); mask-image: radial-gradient(260px circle at var(--mx, -999px) var(--my, -999px), #000, transparent 72%); }
+#how:hover > .spot, #live:hover > .spot { opacity: 1; }
+#how > .wrap, #live > .wrap { position: relative; z-index: 1; }
+#live { position: relative; }
 .parity { width: 100%; margin-top: 18px; border-collapse: collapse; font-size: 15px; }
 .parity caption { text-align: left; font-size: 14px; font-weight: 700; color: var(--fg2); padding-bottom: 10px; }
 .parity th, .parity td { padding: 11px 6px; border-bottom: 1px solid var(--cline); text-align: right; }

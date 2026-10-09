@@ -10,6 +10,8 @@
   const ko = (n) => Number(n).toLocaleString("ko-KR");
   const seen = (el, fn, threshold = 0.25) => el && new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { fn(); o.disconnect(); } }, { threshold }).observe(el);
   const expo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+  let liveP = null;   // 지금 경보 목록 — 첫 화면 지도와 실시간 전광판이 같이 씀(한 번만 받음)
+  const liveSnap = () => (liveP ||= sb("live_snapshot?select=at,bikes:body->bikes").then((r) => r[0] || null).catch(() => null));
 
   // ── 경보 순간: 점에서 충격파 고리가 퍼지고 불꽃 점들이 튀어 나감 (원리 띠·직접 찍어 보기·12일 표). 카드 밖으로는 안 나감
   const burst = (host, at, big = 1) => {
@@ -194,15 +196,15 @@
 
     // 경보 목록 — 지도는 먼저 그려 두고, 받는 대로 켬
     let marks = [], live = false;
-    try {
-      const [row] = await sb("live_snapshot?select=at,bikes:body->bikes");
+    {
+      const row = await liveSnap();
       if (row && row.bikes && row.bikes.length) {
         live = true; marks = row.bikes.map((b) => [b.station, b.chain, b.bike]);
         const at = new Date(row.at + "+09:00"), hh = String(at.getHours()).padStart(2, "0"), mm = String(at.getMinutes()).padStart(2, "0");
         $("#live-n").textContent = row.bikes.length;
         $("#live-d").textContent = `${at.getMonth() + 1}월 ${at.getDate()}일 ${hh}:${mm} 기준 · 클라우드가 5분마다 다시 셉니다`;
       }
-    } catch {}
+    }
     if (!live) {
       try {
         const m = await (await fetch("data/morning.json")).json();
@@ -507,6 +509,93 @@
     b.classList.add("mag");
     b.addEventListener("pointermove", (e) => { const r = b.getBoundingClientRect(); b.style.translate = `${((e.clientX - r.left - r.width / 2) * 0.22).toFixed(1)}px ${((e.clientY - r.top - r.height / 2) * 0.35).toFixed(1)}px`; });
     b.addEventListener("pointerleave", () => { b.style.translate = ""; });
+  }
+
+  // ── 05 실시간 전광판: 정류장 안내판처럼 점(LED)으로 그린 글자 — 지금 경보 자전거가 한 칸씩 흘러감.
+  //    글자를 16줄짜리 작은 그림으로 그린 뒤 픽셀마다 켜진 점/꺼진 점. 한 칸씩 움직일 때만 다시 그림(초당 16번)
+  (async () => {
+    const box = $("#led"); if (!box) return;
+    const cv = box.querySelector("canvas"), ctx = cv.getContext("2d"), ROWS = 16;
+    const [row, st] = await Promise.all([liveSnap(), stationsP.catch(() => ({}))]);
+    let msg = "RIDEY.   점 하나가 신호다   ●   서울 따릉이 5분마다 실시간   ●   ";
+    if (row && row.bikes && row.bikes.length) {
+      const top = [...row.bikes].sort((a, b) => (b.chain || 0) - (a.chain || 0)).slice(0, 18);
+      msg = `지금 서울 경보 ${row.bikes.length}대   ●   ` + top.map((b) => { const s = st[b.station]; return `${s ? s.gu + " " + s.name.replace(/\s*\(.*\)$/, "") : "대여소 " + b.station} · ${b.bike} · ${b.chain}명 연속`; }).join("   ●   ") + "   ●   ";
+      box.setAttribute("aria-label", `지금 서울 경보 ${row.bikes.length}대 — ` + top.slice(0, 3).map((b) => `${st[b.station]?.gu || ""} ${b.bike} ${b.chain}명 연속`).join(", "));
+    }
+    if (document.fonts) await document.fonts.ready;
+    const m = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+    const font = `800 14px "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", sans-serif`;
+    m.font = font; const w = Math.ceil(m.measureText(msg).width) + 2;
+    m.canvas.width = w; m.canvas.height = ROWS; m.font = font; m.textBaseline = "middle"; m.fillStyle = "#fff"; m.fillText(msg, 0, ROWS / 2 + 1);
+    const px = m.getImageData(0, 0, w, ROWS).data, on = new Uint8Array(w * ROWS);
+    for (let i = 0; i < w * ROWS; i++) on[i] = px[i * 4 + 3] > 110 ? 1 : 0;
+    let W, H, dpr, pitch, cols, lit, dim;
+    const sprite = (r, glow, core, halo) => {
+      const c = document.createElement("canvas"), s = Math.ceil((r + glow) * 2 * dpr); c.width = c.height = s;
+      const g = c.getContext("2d"), cx = s / 2, grd = g.createRadialGradient(cx, cx, 0, cx, cx, s / 2);
+      grd.addColorStop(0, core); grd.addColorStop(r / (r + glow) * 0.82, core); grd.addColorStop(r / (r + glow), halo); grd.addColorStop(1, "rgba(255, 92, 46, 0)");
+      g.fillStyle = grd; g.fillRect(0, 0, s, s); return c;
+    };
+    const size = () => {
+      const r = cv.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      pitch = H / ROWS; cols = Math.ceil(W / pitch) + 1;
+      lit = sprite(pitch * 0.36, pitch * 0.55, "#FFB08F", "rgba(255, 92, 46, .45)"); dim = sprite(pitch * 0.3, 0, "rgba(255, 92, 46, .09)", "rgba(255, 92, 46, .09)");
+    };
+    let off = 0;
+    const draw = () => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+      const sl = lit.width / dpr, sd = dim.width / dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (let c = 0; c < cols; c++) {
+        const x = c * pitch + pitch / 2, src = (c + off) % w;
+        for (let r = 0; r < ROWS; r++) {
+          const y = r * pitch + pitch / 2;
+          if (on[r * w + src]) ctx.drawImage(lit, x - sl / 2, y - sl / 2, sl, sl); else ctx.drawImage(dim, x - sd / 2, y - sd / 2, sd, sd);
+        }
+      }
+    };
+    size(); draw();
+    if (reduce) return;
+    let vis = false, last = 0;
+    new IntersectionObserver(([e]) => (vis = e.isIntersecting)).observe(box);
+    const loop = (t) => { if (vis && t - last > 62) { last = t; off = (off + 1) % w; draw(); } requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { size(); draw(); }, 150); });
+  })();
+
+  // ── 05 흐름: 신호 점 하나가 1 → 2 → 3 → 4 단계를 차례로 지나감(지나가는 단계의 동그라미가 켜짐)
+  (() => {
+    const flow = $(".flow"); if (!flow || reduce) return;
+    const ns = $$(".flow .n"); if (ns.length < 2) return;
+    const track = document.createElement("i"), dot = document.createElement("i");
+    track.className = "flow-track"; dot.className = "flow-dot"; track.setAttribute("aria-hidden", "true"); dot.setAttribute("aria-hidden", "true");
+    flow.append(track, dot); flow.classList.add("run");
+    const pos = (n) => { const f = flow.getBoundingClientRect(), r = n.getBoundingClientRect(); return [r.left + r.width / 2 - f.left, r.top + r.height / 2 - f.top]; };
+    const place = () => { const [x0, y0] = pos(ns[0]), [, y1] = pos(ns[ns.length - 1]); Object.assign(track.style, { left: x0 - 1 + "px", top: y0 + "px", height: y1 - y0 + "px" }); };
+    let i = 0, timer = 0;
+    const go = () => {
+      place(); const [x, y] = pos(ns[i]);
+      dot.style.transform = `translate(${x}px, ${y}px)`;
+      ns.forEach((n, k) => n.classList.toggle("on", k === i));
+      i = (i + 1) % ns.length;
+    };
+    new IntersectionObserver(([e]) => { clearInterval(timer); if (e.isIntersecting) { go(); timer = setInterval(go, 1600); } }).observe(flow);
+    addEventListener("resize", place);
+  })();
+
+  // ── 어두운 구역(원리·실시간): 커서 둘레에만 점 격자가 드러남 — 화면 밑에 깔린 신호들
+  if (!reduce && matchMedia("(hover: hover)").matches) for (const sec of $$("#how, #live")) {
+    const spot = document.createElement("i"); spot.className = "spot"; spot.setAttribute("aria-hidden", "true"); sec.prepend(spot);
+    sec.addEventListener("pointermove", (e) => { const r = sec.getBoundingClientRect(); sec.style.setProperty("--mx", `${(e.clientX - r.left).toFixed(0)}px`); sec.style.setProperty("--my", `${(e.clientY - r.top).toFixed(0)}px`); }, { passive: true });
+  }
+
+  // ── 앱 화면 사진: 커서 쪽으로 살짝 기울어짐(3D)
+  if (!reduce && matchMedia("(hover: hover)").matches) for (const f of $$(".phones figure")) {
+    const img = f.querySelector("img"); if (!img) continue;
+    f.addEventListener("pointermove", (e) => { const r = img.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; img.style.transform = `perspective(1000px) rotateY(${(x * 12).toFixed(2)}deg) rotateX(${(-y * 10).toFixed(2)}deg) translateY(-8px)`; });
+    f.addEventListener("pointerleave", () => { img.style.transform = ""; });
   }
 
   // ── 01 한 대의 12일 — 하루에 한 줄: 그날의 대여를 시간 순서대로 점(빌리자마자 반납)·선(그냥 타고 감)으로, 고장 신고는 세로 막대
