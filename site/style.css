@@ -287,13 +287,21 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .qa details p { padding: 0 0 24px; font-size: 16px; color: var(--fg2); max-width: 40em; }
 
 /* 꼬리 */
-.foot { background: var(--bg); color: var(--fg); padding: 88px 0 56px; }
+.foot { background: var(--bg); color: var(--fg); padding: 88px 0 56px; position: relative; overflow: hidden; }
 .foot .logo .wordmark { height: clamp(40px, 7vw, 84px); }
 .foot .motto { margin-top: 22px; font: 800 clamp(20px, 2.4vw, 28px)/1.2 var(--font); letter-spacing: -.03em; color: var(--fg2); }
 .foot-links { display: flex; gap: 22px; margin-top: 40px; font-weight: 700; }
 .foot-links a { text-decoration: none; opacity: .85; } .foot-links a:hover { opacity: 1; }
 .foot .fine { margin-top: 26px; max-width: 60em; }
 .foot .logo .dot, .nav .logo .dot { fill: var(--sig); }
+/* 맨 아래 로고의 점 놀이: 잡으면 HTML 공으로 바뀌어 던져지고 튐 */
+.foot .wordmark .dot.grab { cursor: grab; touch-action: none; }
+.ball { position: absolute; left: 0; top: 0; z-index: 5; border-radius: 50%; background: var(--sig); cursor: grab; touch-action: none; will-change: transform;
+  box-shadow: 0 0 0 0 transparent, 0 10px 30px -8px color-mix(in srgb, var(--sig) 75%, transparent); transition: box-shadow .3s; }
+.ball.held { cursor: grabbing; box-shadow: 0 0 0 6px color-mix(in srgb, var(--sig) 25%, transparent), 0 18px 40px -10px color-mix(in srgb, var(--sig) 80%, transparent); }
+/* 자석 단추: 커서를 따라 빠르게, 떠나면 스프링으로 제자리 */
+.btn.mag { transition: translate .6s var(--spring), transform .3s, box-shadow .3s, background-color .3s, color .3s; }
+.btn.mag:hover { transition: translate .18s var(--ease), transform .3s, box-shadow .3s, background-color .3s, color .3s; }
 
 /* 진행 기록(releases.html) */
 .doc { width: min(860px, calc(100% - 48px)); margin: 0 auto; padding: 140px 0 100px; }
@@ -459,6 +467,11 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 /* 원리(03) 직접 찍어 보기 — 단추가 곧 브랜드의 점. 짧게 = 점(바로 반납), 길게 = 선(타고 감, 누르는 동안 자람). 서로 다른 두 사람의 점이 이어지면 경보 */
 .key { margin-top: 20px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px clamp(24px, 4vw, 56px); align-items: center; transition: box-shadow .9s var(--ease); }
 .key.flash { box-shadow: 0 0 0 1px rgba(255, 92, 46, .7), 0 30px 80px -30px rgba(255, 92, 46, .55); transition: box-shadow .25s; }
+/* 경보 순간 효과: 충격파 고리 + 불꽃 점 (카드 안에서만) */
+.key { position: relative; }
+.fx { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 3; }
+.fx .sw { position: absolute; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--sig), inset 0 0 26px color-mix(in srgb, var(--sig) 22%, transparent); }
+.fx .spark { position: absolute; border-radius: 50%; background: var(--sig); box-shadow: 0 0 8px color-mix(in srgb, var(--sig) 70%, transparent); }
 .key-l { display: grid; justify-items: center; gap: 12px; }
 .key-btn { position: relative; width: 112px; height: 112px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--sig); touch-action: manipulation;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;

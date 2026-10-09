@@ -11,6 +11,45 @@
   const seen = (el, fn, threshold = 0.25) => el && new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { fn(); o.disconnect(); } }, { threshold }).observe(el);
   const expo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
 
+  // ── 경보 순간: 점에서 충격파 고리가 퍼지고 불꽃 점들이 튀어 나감 (원리 띠·직접 찍어 보기·12일 표). 카드 밖으로는 안 나감
+  const burst = (host, at, big = 1) => {
+    if (reduce || !host || !at || !host.animate) return;
+    let fx = [...host.children].find((c) => c.classList.contains("fx"));
+    if (!fx) { fx = document.createElement("div"); fx.className = "fx"; fx.setAttribute("aria-hidden", "true"); host.appendChild(fx); }
+    const h = host.getBoundingClientRect(), a = at.getBoundingClientRect(), x = a.left + a.width / 2 - h.left, y = a.top + a.height / 2 - h.top;
+    const R = Math.round(Math.min(460, Math.max(h.width, h.height) * 0.55) * big);
+    const el = (c) => { const e = document.createElement("i"); e.className = c; e.style.left = x + "px"; e.style.top = y + "px"; fx.appendChild(e); return e; };
+    for (const [d, k] of [[0, 1], [140, 0.6]]) {   // 고리 둘 — 큰 것 뒤에 작은 것
+      const ring = el("sw"), r = Math.round(R * k);
+      ring.animate([{ width: "8px", height: "8px", margin: "-4px 0 0 -4px", opacity: 1 }, { width: `${2 * r}px`, height: `${2 * r}px`, margin: `-${r}px 0 0 -${r}px`, opacity: 0 }],
+        { duration: 1150, delay: d, easing: "cubic-bezier(.16, 1, .3, 1)", fill: "both" }).finished.then(() => ring.remove());
+    }
+    const n = Math.round(14 * big);
+    for (let i = 0; i < n; i++) {
+      const sp = el("spark"), ang = (i / n) * Math.PI * 2 + Math.random() * 0.45, dist = (36 + Math.random() * 80) * big, sz = 2.5 + Math.random() * 4.5;
+      sp.style.width = sp.style.height = sz.toFixed(1) + "px";
+      sp.animate([{ transform: "translate(-50%, -50%) scale(1)", opacity: 1 }, { transform: `translate(calc(-50% + ${(Math.cos(ang) * dist).toFixed(1)}px), calc(-50% + ${(Math.sin(ang) * dist).toFixed(1)}px)) scale(.15)`, opacity: 0 }],
+        { duration: 650 + Math.random() * 450, easing: "cubic-bezier(.16, 1, .3, 1)", fill: "both" }).finished.then(() => sp.remove());
+    }
+  };
+
+  // ── 번호판 글자가 무작위 글자를 거쳐 왼쪽부터 풀려 나옴 (SPB-69683 · 지도 꼬리표의 자전거 번호)
+  const decode = (el, dur = 850) => {
+    if (!el || reduce) return;
+    const final = el.textContent, D = "0123456789", A = "ABCDEFGHJKLMNPRSTUVWXYZ";
+    let t0 = 0, last = 0;
+    const tick = (now) => {
+      t0 = t0 || now;
+      const k = Math.min(1, (now - t0) / dur);
+      if (now - last > 45 || k >= 1) {
+        last = now; const done = Math.floor(k * final.length);
+        el.textContent = k >= 1 ? final : [...final].map((ch, i) => (i < done || !/[0-9A-Z]/.test(ch) ? ch : /\d/.test(ch) ? D[(Math.random() * 10) | 0] : A[(Math.random() * A.length) | 0])).join("");
+      }
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+
   // ── 숫자 올리기: 글자 속 숫자 덩어리(1,234 · 2.5 · 20~25 의 양 끝)를 0 에서 제 값까지. <small> 단위는 그대로
   function countUp(el, dur = 1500) {
     if (!el || reduce || el.dataset.counted) return;
@@ -182,8 +221,9 @@
     const tag = (p, cls) => {
       const el = document.createElement("div"); el.className = "blip" + (cls ? " " + cls : "");
       el.style.left = p.xy[0] + "px"; el.style.top = p.xy[1] + "px";
-      el.innerHTML = `<b>${p.top}명 연속</b>${esc(p.s.gu)} · ${esc(p.bike || p.s.name)}`;
+      el.innerHTML = `<b>${p.top}명 연속</b>${esc(p.s.gu)} · <span class="id">${esc(p.bike || p.s.name)}</span>`;
       blips.appendChild(el); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
+      if (p.bike) decode(el.querySelector(".id"), 600);
       return el;
     };
     const drop = (el, ms = 800) => { if (!el) return; el.classList.remove("on"); setTimeout(() => el.remove(), ms); };
@@ -399,6 +439,76 @@
     }
   })();
 
+  // ── 맨 아래 로고 'RIDEY.' 의 점: 잡아서 던지면 바닥·벽에 튀고(닿을 때 찌그러짐), 멈추면 스프링으로 제자리. 그냥 누르면 통 튀어 오름.
+  //    보일 때 가끔 혼자 살짝 뛰어 '잡아 보라' 고 알림. 움직임 줄이기면 없음
+  (() => {
+    const foot = $("#foot"), dot = foot?.querySelector(".wordmark .dot"), link = dot?.closest("a"); if (!dot || reduce) return;
+    const SPR = CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() : "cubic-bezier(.34, 1.56, .64, 1)";
+    dot.classList.add("grab");
+    let ball = null, st = null, raf = 0, played = 0, seenFoot = false, touched = false;
+    const home = () => { const r = dot.getBoundingClientRect(), f = foot.getBoundingClientRect(); return { x: r.left + r.width / 2 - f.left, y: r.top + r.height / 2 - f.top, d: r.width }; };
+    const draw = () => { ball.style.transform = `translate(${(st.x - st.r).toFixed(1)}px, ${(st.y - st.r).toFixed(1)}px)`; };
+    const squash = (sx, sy) => ball.animate([{ scale: `${sx} ${sy}` }, { scale: "1 1" }], { duration: 260, easing: SPR });
+    const settle = () => {
+      cancelAnimationFrame(raf); const h = home();
+      const a = ball.animate([{ transform: ball.style.transform }, { transform: `translate(${(h.x - st.r).toFixed(1)}px, ${(h.y - st.r).toFixed(1)}px)` }], { duration: 950, easing: SPR, fill: "forwards" });
+      a.finished.then(() => { if (st?.held) return; ball?.remove(); ball = null; st = null; dot.style.visibility = ""; dot.animate([{ transform: "scale(1.3)" }, { transform: "none" }], { duration: 520, easing: SPR }); }).catch(() => {});
+    };
+    const step = (now) => {
+      if (!st) return;
+      const dt = Math.min(0.033, (now - st.t) / 1000); st.t = now;
+      if (!st.held) {
+        const W = foot.clientWidth, H = foot.clientHeight;
+        st.vy += 2600 * dt; st.x += st.vx * dt; st.y += st.vy * dt;
+        if (st.y > H - st.r) { const v = Math.abs(st.vy); st.y = H - st.r; st.vy = v > 90 ? -v * 0.66 : 0; st.vx *= 0.88; if (v > 260) squash(1.3, 0.72); }
+        if (st.y < st.r) { st.y = st.r; st.vy = Math.abs(st.vy) * 0.6; }
+        if (st.x < st.r || st.x > W - st.r) { st.x = Math.min(W - st.r, Math.max(st.r, st.x)); if (Math.abs(st.vx) > 260) squash(0.75, 1.25); st.vx *= -0.7; }
+        if (st.vy === 0) st.vx *= 0.94;
+        st.rest = st.vy === 0 && Math.abs(st.vx) < 25 ? st.rest + dt : 0;
+        if (st.rest > 0.45 || now - st.thrown > 5000) { draw(); return settle(); }
+      }
+      draw(); raf = requestAnimationFrame(step);
+    };
+    const grab = (e) => {
+      if (e.button > 0) return; e.preventDefault(); touched = true;
+      if (!ball) {
+        const h = home(); ball = document.createElement("i"); ball.className = "ball"; ball.setAttribute("aria-hidden", "true"); ball.style.width = ball.style.height = h.d + "px"; foot.appendChild(ball);
+        ball.addEventListener("pointerdown", grab); ball.addEventListener("pointermove", move); ball.addEventListener("pointerup", release); ball.addEventListener("pointercancel", release);
+        st = { x: h.x, y: h.y, vx: 0, vy: 0, r: h.d / 2, rest: 0, t: performance.now() }; dot.style.visibility = "hidden"; draw();   // opacity 는 CSS 떨어지기 애니메이션이 덮어써서 visibility 로
+      }
+      ball.getAnimations().forEach((a) => a.cancel()); cancelAnimationFrame(raf);
+      const f = foot.getBoundingClientRect();
+      Object.assign(st, { held: true, ox: e.clientX - f.left - st.x, oy: e.clientY - f.top - st.y, trail: [[performance.now(), e.clientX, e.clientY]], moved: 0, t: performance.now() });
+      ball.classList.add("held"); try { ball.setPointerCapture(e.pointerId); } catch {}
+      raf = requestAnimationFrame(step);
+    };
+    const move = (e) => {
+      if (!st?.held) return;
+      const f = foot.getBoundingClientRect(), nx = e.clientX - f.left - st.ox, ny = e.clientY - f.top - st.oy;
+      st.moved += Math.hypot(nx - st.x, ny - st.y); st.x = nx; st.y = ny;
+      st.trail.push([performance.now(), e.clientX, e.clientY]); if (st.trail.length > 6) st.trail.shift();
+    };
+    const release = () => {
+      if (!st?.held) return; st.held = false; ball.classList.remove("held"); played = performance.now();
+      const tr = st.trail, a = tr[0], b = tr[tr.length - 1], dt = Math.max(0.016, (b[0] - a[0]) / 1000);
+      st.vx = (b[1] - a[1]) / dt; st.vy = (b[2] - a[2]) / dt;
+      if (st.moved < 6) { st.vx = (Math.random() - 0.5) * 700; st.vy = -1100; }   // 그냥 누르면 통 튀어 오름
+      const v = Math.hypot(st.vx, st.vy); if (v > 3200) { st.vx *= 3200 / v; st.vy *= 3200 / v; }
+      st.thrown = performance.now(); st.rest = 0;
+    };
+    dot.addEventListener("pointerdown", grab);
+    link?.addEventListener("click", (e) => { if (performance.now() - played < 600 || e.target === dot) e.preventDefault(); });   // 점을 갖고 놀았으면 맨 위로 가지 않음
+    new IntersectionObserver(([e]) => (seenFoot = e.isIntersecting)).observe(foot);
+    setInterval(() => { if (seenFoot && !ball && !touched && document.visibilityState === "visible") dot.animate([{ transform: "none" }, { transform: "translateY(-70%) scale(1.08, .94)", offset: 0.35 }, { transform: "none" }], { duration: 750, easing: SPR }); }, 5200);
+  })();
+
+  // ── 단추가 커서 쪽으로 살짝 끌려옴(자석) — 넓은 화면, 첫 화면 단추와 머리 '웹앱 열기'
+  if (!reduce && matchMedia("(hover: hover)").matches) for (const b of $$(".hero .cta .btn, .nav .btn.solid, .try .btn")) {
+    b.classList.add("mag");
+    b.addEventListener("pointermove", (e) => { const r = b.getBoundingClientRect(); b.style.translate = `${((e.clientX - r.left - r.width / 2) * 0.22).toFixed(1)}px ${((e.clientY - r.top - r.height / 2) * 0.35).toFixed(1)}px`; });
+    b.addEventListener("pointerleave", () => { b.style.translate = ""; });
+  }
+
   // ── 01 한 대의 12일 — 하루에 한 줄: 그날의 대여를 시간 순서대로 점(빌리자마자 반납)·선(그냥 타고 감)으로, 고장 신고는 세로 막대
   (async () => {
     const box = $("#lrows"), fig = $("#ledger"); if (!box || !fig) return;
@@ -432,7 +542,7 @@
         `<span class="sr">6월 ${d}일 ${wd}요일: ${row.length ? `빌리자마자 반납 ${dots}명, 그냥 타고 감 ${rides}번.` : "아무도 빌리지 않음."}</span></li>`;
     }
     box.innerHTML = html;
-    seen(fig, () => setTimeout(() => fig.classList.add("done"), 2600), 0.12);
+    seen(fig, () => { decode(fig.querySelector(".lid b"), 900); setTimeout(() => fig.classList.add("done"), 2600); setTimeout(() => burst(fig, fig.querySelector(".g.dot.alarm"), 0.8), 900); }, 0.12);
 
     // 점에 올리면(손가락은 누르면) 말풍선 하나가 그 점 위로 — 시각과 몇 번째 사람인지
     const tip = document.createElement("div"); tip.className = "ltip"; tip.setAttribute("aria-hidden", "true"); fig.appendChild(tip);
@@ -465,7 +575,7 @@
       void box.offsetWidth; box.classList.add("go");
       ms.forEach((m, i) => t.push(setTimeout(() => {
         m.classList.add("on");
-        if (m.classList.contains("signal")) { box.classList.add("flash"); t.push(setTimeout(() => box.classList.remove("flash"), 700)); }
+        if (m.classList.contains("signal")) { box.classList.add("flash"); burst(box, m.querySelector("i")); t.push(setTimeout(() => box.classList.remove("flash"), 700)); }
       }, 200 + i * 900)));
     };
     seen(box, play, 0.45);
@@ -522,7 +632,8 @@
         chain = 0; card.classList.remove("alarm"); grow = null; return;
       }
       chain++;   // 점 — 빌리자마자 반납
-      add(`dot${chain === 1 ? " first" : chain === 2 ? " alarm" : ""}`);
+      const gd = add(`dot${chain === 1 ? " first" : chain === 2 ? " alarm" : ""}`);
+      if (chain >= 2) requestAnimationFrame(() => burst(card, gd, chain === 2 ? 1 : 0.6));
       if (chain === 1) { buzz(12); tell("한 사람이 빌리자마자 반납 — 한 명은 실수일 수 있어 아직 조용합니다."); }
       else if (chain === 2) { buzz([40, 60, 40]); tone(1320, 0.09, 0.05); tone(1320, 0.09, 0.2); flash(); tell("서로 다른 두 번째 사람도 바로 반납 → <b>경보</b>. 지도에 점이 켜지고 정비 목록에 오릅니다."); }
       else { buzz([30, 40, 30, 40, 90]); tone(1568, 0.08, 0.05); tone(1568, 0.08, 0.17); tone(1568, 0.08, 0.29); flash(); tell(`<b>${chain}명 연속</b> — 더 강한 경보. 다음 사람에게 '피하세요' 라고 알려 줍니다.`); }
