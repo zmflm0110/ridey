@@ -246,7 +246,9 @@
       let last = null;
       setInterval(() => {
         if (!running || L.W < 760 || ptr.on || scrollY > 40) return;
-        const ok = pts.filter((p) => p !== last && p.xy[0] > L.W * 0.47 && p.xy[0] < L.W - 230 && p.xy[1] > 110 && p.xy[1] < L.H - 360);
+        const cr = $(".counter")?.getBoundingClientRect(), hr = hero.getBoundingClientRect();   // 큰 숫자 칸(글자 포함)은 피함
+        const cTop = cr ? cr.top - hr.top - 26 : L.H - 360, cLeft = cr ? cr.left - hr.left - 250 : L.W;
+        const ok = pts.filter((p) => p !== last && p.xy[0] > L.W * 0.47 && p.xy[0] < L.W - 230 && p.xy[1] > 110 && p.xy[1] < L.H - 140 && !(p.xy[1] > cTop && p.xy[0] > cLeft));
         if (!ok.length) return;
         const p = (last = ok[Math.floor(Math.random() * ok.length)]);
         const el = tag(p); setTimeout(() => drop(el), 2600);
@@ -311,16 +313,18 @@
           gl_FragColor = vec4(col, a) * alpha;
         }`;
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-      let prog;
-      try {
+      let prog, U = {}, aT, aD, bT, bD, lost = false;
+      const setup = () => {   // 셰이더·버퍼 — 처음, 그리고 GPU 가 맥락을 잃었다 되찾았을 때(폰이 탭을 내렸다 올림 등)
         prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
         if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-      } catch (err) { console.warn("WebGL 지도 대신 2D", err); const c = cv.cloneNode(); cv.replaceWith(c); cv = c; return null; }
-      gl.useProgram(prog);
-      const U = {}; for (const n of ["uRes", "uO", "uM", "uF", "uDpr", "uT", "uI", "uMk", "uC", "uSy"]) U[n] = gl.getUniformLocation(prog, n);
-      const aT = gl.getAttribLocation(prog, "aT"), aD = gl.getAttribLocation(prog, "aD");
-      const bT = gl.createBuffer(), bD = gl.createBuffer();
-      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(prog);
+        U = {}; for (const n of ["uRes", "uO", "uM", "uF", "uDpr", "uT", "uI", "uMk", "uC", "uSy"]) U[n] = gl.getUniformLocation(prog, n);
+        aT = gl.getAttribLocation(prog, "aT"); aD = gl.getAttribLocation(prog, "aD"); bT = gl.createBuffer(); bD = gl.createBuffer();
+        gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      };
+      try { setup(); } catch (err) { console.warn("WebGL 지도 대신 2D", err); const c = cv.cloneNode(); cv.replaceWith(c); cv = c; return null; }
+      cv.addEventListener("webglcontextlost", (e) => { e.preventDefault(); lost = true; });
+      cv.addEventListener("webglcontextrestored", () => { try { setup(); fill(); lost = false; } catch {} });
       const hash = (i) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
       const tb = Math.max(tSeed + 1050, performance.now() + 80);   // 씨앗 점이 터지는 때
       intro.place(L.cx, L.cy); intro.burst(tb, L.maxR);
@@ -346,6 +350,7 @@
       let mx = -1e4, my = -1e4, mk = 0;
       return {
         frame(now) {
+          if (lost) return;
           gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
           if (ptr.on) { if (mk < 0.02) { mx = ptr.x; my = ptr.y; } mx += (ptr.x - mx) * 0.22; my += (ptr.y - my) * 0.22; }
           mk += ((ptr.on && scrollY < 60 ? 1 : 0) - mk) * 0.07;
