@@ -77,8 +77,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(3800);
   // 이야기 — 실제 자전거 한 대의 12일 (사이트의 '하루에 한 줄' 표를 위에서 아래로 훑으며, 점을 눌러 말풍선)
   // 스크롤은 여기(node)서 조금씩 — 캡처가 쉬지 않고 돌면 페이지 안 애니메이션 시계가 흔들려 한 번에 끝까지 갔다가 되돌아왔다
-  const glide = async (sel, at, ms, bottom = false) => {
-    const [from, to] = await page.evaluate(([sel, at, bottom]) => { const r = document.querySelector(sel).getBoundingClientRect(); return [scrollY, scrollY + (bottom ? r.bottom : r.top) - at]; }, [sel, at, bottom]);
+  const glide = async (sel, at, ms, bottom = false) => {   // sel 이 숫자면 그 스크롤 위치로
+    const [from, to] = await page.evaluate(([sel, at, bottom]) => { if (typeof sel === "number") return [scrollY, sel]; const r = document.querySelector(sel).getBoundingClientRect(); return [scrollY, scrollY + (bottom ? r.bottom : r.top) - at]; }, [sel, at, bottom]);
     const n = Math.max(1, Math.round(ms / 50));
     for (let i = 1; i <= n; i++) {
       const k = i / n;
@@ -88,16 +88,29 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   };
   // 점 위에 말풍선 — 2배 그림이라 마우스 좌표 대신 DOM 에서 바로 (i 가 음수면 뒤에서)
   const point = (sel, i = 0) => page.evaluate(([sel, i]) => { const g = [...document.querySelectorAll(sel)].at(i); g?.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerType: "mouse" })); }, [sel, i]);
+  // 첫 화면에서 천천히 내려감 — 서울의 점들이 소용돌이치며 제목 '먼저.' 의 마침표로 빨려 들어감
+  await cap("내리면 서울의 신호들이 한 점으로 모입니다.", "점 하나 → 서울 → 다시 점 하나. 그리고 실제 자전거 한 대의 이야기.", true);
+  const pdEnd = await page.evaluate(() => { let y = 0; for (let el = document.querySelector(".hero h1 .pd"); el; el = el.offsetParent) y += el.offsetTop; return Math.max(160, y - innerHeight * 0.18); });
+  await glide(Math.round(pdEnd + 40), 0, 2600); await wait(1100);
   // 표의 번호판(SPB-69683)이 자막 아래로 보이게 — 자막을 먼저 바꾸고, 줄이 차례로 나오는 동안 읽게
-  await page.evaluate(() => { const r = document.querySelector("#ledger").getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 128, behavior: "instant" }); });
   await cap("서울 강서구 따릉이 SPB-69683, 2026년 6월 실제 기록.", "6월 12일 오후 3시 43분 — 서로 다른 두 번째 사람도 빌리자마자 반납.", true);
-  await wait(2600); await point("#ledger .g.dot.alarm"); await wait(3200);
+  await glide("#ledger", 128, 1400);
+  await wait(2200); await point("#ledger .g.dot.alarm"); await wait(3000);
   await cap("다음 날 아침 첫 고장 신고. 그런데도 그 뒤 54번 더 빌렸다가 바로 반납.", "출근길엔 37분 사이에 7명이 연달아.", true);
   await glide("#ledger .lrow:nth-child(2)", 200, 2400); await wait(500);
   await point("#ledger .lrow:nth-child(2) .g.rep"); await wait(3200);
   await cap("12일 동안 서로 다른 73명. 기록엔 다 남아 있었어요.", "RIDEY 는 두 번째 사람이 반납한 그 순간 알아요.", true);
   await glide("#ledger .lf", 820, 3200, true); await wait(500);
   await point("#ledger .g.dot", -1); await wait(3200);
+  // 원리 — 직접 찍어 보기: 짧게 두 번 누르면 경보(충격파). 2배 그림이라 마우스 대신 DOM 에 누름 신호를 보냄
+  const press = async (ms) => {
+    await page.evaluate(() => document.querySelector("#key-btn").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 7, button: 0, pointerType: "mouse" })));
+    await wait(ms);
+    await page.evaluate(() => document.querySelector("#key-btn").dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 7, button: 0, pointerType: "mouse" })));
+  };
+  await cap("원리는 하나 — 서로 다른 사람의 '점' 이 두 번 이어지면 경보.", "사이트에서 직접 눌러 볼 수 있어요: 짧게 = 빌리자마자 반납, 길게 = 타고 감.", true);
+  await glide("#key", 200, 2200); await wait(900);
+  await press(70); await wait(900); await press(650); await wait(800); await press(70); await wait(700); await press(70); await wait(2600);
   paused = true;   // 앱을 불러오는 빈 화면은 빼고 잇는다
   await page.goto(URL, { waitUntil: "networkidle" });
   await phone();

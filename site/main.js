@@ -349,7 +349,10 @@
           gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
           if (ptr.on) { if (mk < 0.02) { mx = ptr.x; my = ptr.y; } mx += (ptr.x - mx) * 0.22; my += (ptr.y - my) * 0.22; }
           mk += ((ptr.on && scrollY < 60 ? 1 : 0) - mk) * 0.07;
-          const c = Math.min(1, Math.max(0, scrollY / (L.H * 0.45))), sy = Math.min(scrollY, L.H) * 0.35;
+          // 다 모이는 지점: 마침표가 화면 위쪽 18% 에 올 때(넓은 화면·폰 모두 마침표가 보이는 동안 끝남)
+          let pdY = 0; for (let el = pd; el; el = el.offsetParent) pdY += el.offsetTop;
+          const D = pd ? Math.max(160, pdY - innerHeight * 0.18) : L.H * 0.45;
+          const c = Math.min(1, Math.max(0, scrollY / D)), sy = Math.min(scrollY, L.H) * 0.35;
           let fx = L.cx, fy = L.cy;
           if (pd && c > 0) { const a = pd.getBoundingClientRect(), b = cv.getBoundingClientRect(); fx = a.left + a.width / 2 - b.left; fy = a.top + a.height / 2 - b.top; }
           gl.uniform2f(U.uRes, L.W, L.H); gl.uniform1f(U.uDpr, L.dpr); gl.uniform2f(U.uO, L.cx, L.cy);
@@ -739,7 +742,7 @@
       else if (chain === 2) { buzz([40, 60, 40]); tone(1320, 0.09, 0.05); tone(1320, 0.09, 0.2); flash(); tell("서로 다른 두 번째 사람도 바로 반납 → <b>경보</b>. 지도에 점이 켜지고 정비 목록에 오릅니다."); }
       else { buzz([30, 40, 30, 40, 90]); tone(1568, 0.08, 0.05); tone(1568, 0.08, 0.17); tone(1568, 0.08, 0.29); flash(); tell(`<b>${chain}명 연속</b> — 더 강한 경보. 다음 사람에게 '피하세요' 라고 알려 줍니다.`); }
     };
-    btn.addEventListener("pointerdown", (e) => { if (e.button > 0) return; e.preventDefault(); btn.setPointerCapture?.(e.pointerId); btn.focus({ preventScroll: true }); down(); });
+    btn.addEventListener("pointerdown", (e) => { if (e.button > 0) return; e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch {} btn.focus({ preventScroll: true }); down(); });
     btn.addEventListener("pointerup", up); btn.addEventListener("pointercancel", up); btn.addEventListener("lostpointercapture", up);
     btn.addEventListener("contextmenu", (e) => e.preventDefault());
     btn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } else if (e.key === " " || e.key === "Enter") e.preventDefault(); });
