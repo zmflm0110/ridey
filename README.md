@@ -35,7 +35,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/spb69683-dark.svg">
-  <img src="docs/img/spb69683.svg" alt="SPB-69683 의 12일 — 6월 12일 15시 43분 RIDEY 경보, 다음 날 첫 고장 신고, 그 뒤에도 서로 다른 사람들이 빌리자마자 반납, 24일 두 번째 신고 뒤 사라짐" width="900">
+  <img src="docs/img/spb69683.svg" alt="SPB-69683 의 12일, 하루에 한 줄 — 6월 12일 15시 43분 서로 다른 두 번째 사람에서 RIDEY 경보, 다음 날 첫 고장 신고, 그 뒤에도 서로 다른 사람들이 빌리자마자 반납, 24일 두 번째 신고 뒤 사라짐" width="900">
 </picture>
 
 서울 강서구의 실제 자전거 **SPB-69683** (2026년 6월 대여 기록·고장 신고 그대로, [`analysis/spb69683.py`](analysis/spb69683.py))

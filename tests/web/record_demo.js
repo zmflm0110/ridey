@@ -75,25 +75,29 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const liveN = ((await page.textContent("#live-n").catch(() => "")) || "").trim(), liveK = ((await page.textContent("#live-k").catch(() => "")) || "").trim();
   await cap("RIDEY. — 점 하나가 신호다.", liveN ? `${liveK} ${liveN}대 — 클라우드가 5분마다 다시 셉니다.` : "앞사람들이 빌리자마자 반납한 흔적으로, 고장 난 따릉이를 먼저.", true);
   await wait(3800);
-  // 이야기 — 실제 자전거 한 대의 12일 (사이트의 시간 축 그림을 왼쪽에서 오른쪽으로 밀며)
-  await page.evaluate(() => { const r = document.querySelector("#story .tl").getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 150, behavior: "instant" }); });
-  await wait(1200);
-  await cap("서울 강서구 따릉이 SPB-69683, 2026년 6월 실제 기록.", "6월 12일 오후 3시 43분 — 서로 다른 두 번째 사람도 빌리자마자 반납.", true);
-  await wait(4200);
-  // 가로 밀기는 여기(node)서 조금씩 — 캡처가 쉬지 않고 돌면 페이지 안 애니메이션 시계가 흔들려 한 번에 끝까지 갔다가 되돌아왔다
-  const slide = async (to, ms) => {
-    const [from, max] = await page.evaluate(() => { const e = document.querySelector("#story .tl-scroll"); return [e.scrollLeft, e.scrollWidth - e.clientWidth]; });
-    const end = to * max, n = Math.max(1, Math.round(ms / 50));
+  // 이야기 — 실제 자전거 한 대의 12일 (사이트의 '하루에 한 줄' 표를 위에서 아래로 훑으며, 점을 눌러 말풍선)
+  // 스크롤은 여기(node)서 조금씩 — 캡처가 쉬지 않고 돌면 페이지 안 애니메이션 시계가 흔들려 한 번에 끝까지 갔다가 되돌아왔다
+  const glide = async (sel, at, ms, bottom = false) => {
+    const [from, to] = await page.evaluate(([sel, at, bottom]) => { const r = document.querySelector(sel).getBoundingClientRect(); return [scrollY, scrollY + (bottom ? r.bottom : r.top) - at]; }, [sel, at, bottom]);
+    const n = Math.max(1, Math.round(ms / 50));
     for (let i = 1; i <= n; i++) {
       const k = i / n;
-      await page.evaluate((v) => { document.querySelector("#story .tl-scroll").scrollLeft = v; }, from + (end - from) * k * k * (3 - 2 * k));
+      await page.evaluate((v) => window.scrollTo({ top: v, behavior: "instant" }), from + (to - from) * k * k * (3 - 2 * k));
       await wait(50);
     }
   };
+  // 점 위에 말풍선 — 2배 그림이라 마우스 좌표 대신 DOM 에서 바로 (i 가 음수면 뒤에서)
+  const point = (sel, i = 0) => page.evaluate(([sel, i]) => { const g = [...document.querySelectorAll(sel)].at(i); g?.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerType: "mouse" })); }, [sel, i]);
+  // 표의 번호판(SPB-69683)이 자막 아래로 보이게 — 자막을 먼저 바꾸고, 줄이 차례로 나오는 동안 읽게
+  await page.evaluate(() => { const r = document.querySelector("#ledger").getBoundingClientRect(); window.scrollTo({ top: window.scrollY + r.top - 128, behavior: "instant" }); });
+  await cap("서울 강서구 따릉이 SPB-69683, 2026년 6월 실제 기록.", "6월 12일 오후 3시 43분 — 서로 다른 두 번째 사람도 빌리자마자 반납.", true);
+  await wait(2600); await point("#ledger .g.dot.alarm"); await wait(3200);
   await cap("다음 날 아침 첫 고장 신고. 그런데도 그 뒤 54번 더 빌렸다가 바로 반납.", "출근길엔 37분 사이에 7명이 연달아.", true);
-  await slide(0.5, 4200); await wait(1600);
+  await glide("#ledger .lrow:nth-child(2)", 200, 2400); await wait(500);
+  await point("#ledger .lrow:nth-child(2) .g.rep"); await wait(3200);
   await cap("12일 동안 서로 다른 73명. 기록엔 다 남아 있었어요.", "RIDEY 는 두 번째 사람이 반납한 그 순간 알아요.", true);
-  await slide(1, 3600); await wait(2400);
+  await glide("#ledger .lf", 820, 3200, true); await wait(500);
+  await point("#ledger .g.dot", -1); await wait(3200);
   paused = true;   // 앱을 불러오는 빈 화면은 빼고 잇는다
   await page.goto(URL, { waitUntil: "networkidle" });
   await phone();
