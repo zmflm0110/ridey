@@ -131,35 +131,6 @@ h3 { font-size: 21px; letter-spacing: -.03em; line-height: 1.3; }
 .split { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(24px, 4vw, 56px); align-items: start; }
 /* 움직임은 아래 '움직임' 묶음에 */
 
-/* 01 한 대의 12일 — 선(탄 대여)과 점(바로 반납) */
-.tl { margin: 0; padding: clamp(18px, 2.5vw, 30px) clamp(14px, 2.5vw, 30px) 22px; }
-.tl-scroll { overflow-x: auto; scrollbar-width: thin; }
-.tl-svg { width: 100%; min-width: 760px; height: auto; }
-.tl-svg .ax { stroke: var(--cline2); stroke-width: 1.5; }
-.tl-svg .grid { stroke: var(--cline); stroke-dasharray: 2 5; }
-.tl-svg .day { font: 600 12.5px var(--font); fill: var(--fg3); }
-.tl-svg .dot { fill: var(--sig); stroke: var(--card); stroke-width: 1.5; }
-.tl-svg .dash { fill: var(--fg3); opacity: .75; }
-.tl-svg .alarm { stroke: var(--sig); stroke-width: 2; }
-.tl-svg .alarm-t { font: 800 14px var(--font); fill: var(--sigt); }
-.tl-svg .rep { stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 5 4; }
-.tl-svg .rep-t { font: 700 13.5px var(--font); fill: var(--fg); }
-.js .tl-svg .dot { opacity: 0; transform-box: fill-box; transform-origin: center; }
-.tl.in .tl-svg .dot { animation: pop .5s var(--ease) both; animation-delay: calc(var(--i) * 18ms); }
-@keyframes pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: none; } }
-.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px; font-size: 14px; color: var(--fg2); font-weight: 600; }
-.legend span { display: inline-flex; align-items: center; gap: 8px; }
-.legend i { display: inline-block; }
-.k-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--sig); }
-.k-dash { width: 18px; height: 5px; border-radius: 3px; background: var(--fg3); }
-.k-alarm { width: 3px; height: 16px; background: var(--sig); border-radius: 2px; }
-.k-rep { width: 0; height: 16px; border-left: 2px dashed var(--fg); }
-.moments { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.moments li { padding: 18px 18px 20px; border-radius: var(--r); background: var(--chip); display: grid; gap: 6px; align-content: start; }
-.moments b { font-size: 15px; letter-spacing: -.02em; }
-.moments span { font-size: 14.5px; line-height: 1.5; color: var(--fg2); }
-.moments li.hot { background: #111317; color: #F7F5F0; box-shadow: inset 0 3px 0 #FF4F1F; }   /* 어두운 화면에서도 같은 모습 — 신호 순간은 늘 잉크 카드 */
-.moments li.hot b { color: #FF6B3F; } .moments li.hot span { color: #B3B7BE; }
 
 /* 02 왜 */
 .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2vw, 24px); }
@@ -335,7 +306,6 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 /* 좁은 화면 */
 @media (max-width: 1080px) {
   .split, .try-row, .faq { grid-template-columns: 1fr; }
-  .moments { grid-template-columns: repeat(3, 1fr); }
   .rules { grid-template-columns: repeat(2, 1fr); }
   .rules div:nth-child(3) { border-left: 0; padding-left: 0; }
 }
@@ -356,8 +326,6 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
   .proof-strip b { font-size: 24px; }
   .facts, .phones, .grid3 { grid-template-columns: 1fr; }
   .phones { gap: 44px; } .phones img { max-width: 320px; }
-  .moments { grid-template-columns: 1fr 1fr; }
-  .moments li.hot { grid-column: 1 / -1; }
   .mtrack { grid-template-columns: 1fr; gap: 6px; }
   .mtrack::before { left: 10px; right: auto; top: 10px; bottom: 10px; width: 2px; height: auto; }
   .m { grid-template-columns: 70px 1fr; column-gap: 12px; padding: 0 0 18px; }
@@ -377,7 +345,7 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .js .reveal, .js .morse .m, .js .tl-svg .dot { opacity: 1 !important; transform: none !important; transition: none !important; animation: none !important; }
+  .js .reveal, .js .morse .m { opacity: 1 !important; transform: none !important; transition: none !important; animation: none !important; }
   .ping, .m.signal i::after { animation: none; }
   .bar .col { transition: none; }
 }
@@ -449,21 +417,6 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
   .phones figure:hover img { transform: translateY(-8px) rotate(-.6deg); box-shadow: 0 46px 70px -36px rgba(17, 19, 23, .5); }
 }
 
-/* 한 대의 12일: 축이 그어지고, 선이 펴지고, 점이 튀어나오고, 경보 선이 내려옴 */
-.js .tl-svg .ax { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.3s var(--ease); }
-.tl.in .tl-svg .ax { stroke-dashoffset: 0; }
-.js .tl-svg .grid, .js .tl-svg .day { opacity: 0; transition: opacity .8s var(--ease) .3s; }
-.tl.in .tl-svg .grid, .tl.in .tl-svg .day { opacity: 1; }
-.js .tl-svg .dash { transform-box: fill-box; transform-origin: center; transform: scaleX(0); transition: transform .6s var(--ease); transition-delay: calc(var(--i, 0) * 25ms + 400ms); }
-.tl.in .tl-svg .dash { transform: none; }
-.tl.in .tl-svg .dot { animation: pop .7s var(--spring) both; animation-delay: calc(var(--i) * 16ms + 500ms); }
-.js .tl-svg :is(.alarm, .rep) { stroke-dasharray: 1; stroke-dashoffset: 1; }
-.js .tl-svg .rep { stroke-dasharray: none; stroke-dashoffset: 0; opacity: 0; transition: opacity .8s var(--ease) 1.6s; }
-.js .tl-svg .alarm { transition: stroke-dashoffset 1s var(--ease) 1.2s; }
-.tl.in .tl-svg .alarm { stroke-dashoffset: 0; }
-.tl.in .tl-svg .rep { opacity: 1; }
-.js .tl-svg :is(.alarm-t, .rep-t) { opacity: 0; transition: opacity .8s var(--ease) 1.9s; }
-.tl.in .tl-svg :is(.alarm-t, .rep-t) { opacity: 1; }
 
 /* 원리 띠: 길이 그어지는 동안 점·선이 차례로 튀어나옴, 두 번째 점에서 카드가 한 번 빛남 */
 .mtrack::before { transform: scaleX(0); transform-origin: 0 50%; }
@@ -501,7 +454,6 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 
 @media (prefers-reduced-motion: reduce) {
   .js .reveal, .js .stagger > *, .js .ln > span, .js .head .label, .js .head .sub, .js .nav, .js .hero :is(.eyebrow, .lede, .cta, .counter), .js .proof-strip,
-  .js .tl-svg *, .js .morse .m *, .js .daybars *, .bar .col { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; animation: none !important; stroke-dashoffset: 0 !important; }
   .js .morse .m i::before { opacity: 1 !important; transform: none !important; }
   .mtrack::before { transform: none; }
   .progress, .blips { display: none; }
@@ -510,3 +462,71 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .result.pop { animation: result-in .7s var(--spring) both; }
 @keyframes result-in { from { opacity: 0; transform: translateY(12px) scale(.97); } }
 @media (prefers-reduced-motion: reduce) { .result.pop { animation: none; } }
+
+/* ───────── 01 한 대의 12일 — 하루에 한 줄, 점(빌리자마자 반납)과 선(그냥 타고 감)을 시간 순서대로 */
+.ledger { --pad: clamp(22px, 3vw, 40px); margin: 0; padding: var(--pad); position: relative; }
+.lh { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 32px; flex-wrap: wrap; padding-bottom: 22px; border-bottom: 1px solid var(--cline); }
+.lid { display: grid; gap: 6px; }
+.lid b { font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -.04em; line-height: 1; }
+.lid span { font-size: 14.5px; color: var(--fg2); font-weight: 600; }
+.lk { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--fg2); font-weight: 600; }
+.lk span { display: inline-flex; align-items: center; gap: 8px; } .lk b { color: var(--fg); }
+.lrows { list-style: none; margin: 0; padding: 0; }
+.lrow { position: relative; isolation: isolate; display: grid; grid-template-columns: 72px minmax(0, 1fr) 44px minmax(0, 300px); align-items: center; column-gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--cline); min-height: 54px; }
+.lrow:last-child { border-bottom: 0; }
+.ld { display: flex; align-items: baseline; gap: 6px; }
+.ld b { font: 800 14px/1 var(--num); letter-spacing: -.02em; color: var(--fg); }
+.ld small { font-size: 12.5px; font-weight: 700; color: var(--fg3); }
+.lrow.quiet .ld b { color: var(--fg3); }
+.lg { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 6px; min-height: 22px; }
+.lq { font-size: 14px; font-weight: 500; color: var(--fg3); }                          /* 아무도 빌리지 않은 날 — 빈 줄에 그대로 */
+.g { display: inline-block; flex: none; position: relative; }
+.g.dot { width: 14px; height: 14px; border-radius: 50%; background: var(--sig); }
+.g.dot.first { background: transparent; box-shadow: inset 0 0 0 2.5px var(--sig); }   /* 첫 사람 — 한 명만으로는 경보 없음 */
+.g.dot.alarm { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--sig); }            /* 서로 다른 두 번째 사람 = 경보 */
+.g.dot.alarm::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--sig); animation: ring 2s var(--ease) infinite; }
+.g.dash { width: 30px; height: 9px; border-radius: 99px; background: var(--fg3); opacity: .55; }
+.g.rep { width: 3px; height: 22px; border-radius: 2px; background: var(--fg); margin: 0 4px; }
+.lk .g.dot { width: 11px; height: 11px; } .lk .g.dash { width: 22px; height: 7px; } .lk .g.rep { height: 15px; margin: 0; }
+.lc { font: 800 15px/1 var(--num); letter-spacing: -.03em; color: var(--sigt); text-align: right; }
+.lc.zero { color: var(--fg3); font-weight: 600; }
+.lnote { font-size: 14.5px; line-height: 1.45; font-weight: 600; color: var(--fg2); }
+.lnote b { color: var(--fg); font-family: var(--num); font-weight: 800; font-size: 13px; letter-spacing: -.02em; margin-right: 6px; }
+.lrow.alarm .lnote, .lrow.alarm .lnote b { color: var(--sigt); }
+/* 경보 줄 — 카드 끝까지 옅게 물들이고 왼쪽 끝에 신호 막대 */
+.lrow.alarm::before { content: ""; position: absolute; z-index: -1; inset: 0 calc(-1 * var(--pad)); background: linear-gradient(90deg, color-mix(in srgb, var(--sig) 9%, transparent), transparent 72%); box-shadow: inset 3px 0 0 var(--sig); }
+.lf { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--cline); font-size: 16px; color: var(--fg2); font-weight: 500; }
+.lf b { color: var(--fg); } .lf em { font-style: normal; color: var(--sigt); font-weight: 800; }
+/* 점에 올리면(누르면) 그 사람의 시각과 몇 번째인지 — 화면 하나에 말풍선 하나 */
+.ltip { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; white-space: nowrap; padding: 8px 12px; border-radius: 11px;
+  background: var(--fg); color: var(--card); font-size: 13px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em;
+  opacity: 0; transform: translate(-50%, calc(-100% - 6px)) scale(.9); transform-origin: 50% 100%; transition: opacity .15s, transform .45s var(--spring); }
+.ltip::after { content: ""; position: absolute; left: calc(50% + var(--dx, 0px)); bottom: -4px; width: 9px; height: 9px; margin-left: -4.5px; background: inherit; border-radius: 2px; transform: rotate(45deg); }
+.ltip.on { opacity: 1; transform: translate(-50%, calc(-100% - 12px)); }
+.ltip b { font: 800 12px/1 var(--num); letter-spacing: -.02em; margin-right: 7px; }
+.ltip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--sig); margin-right: 7px; vertical-align: 1px; }
+/* 움직임: 줄이 차례로, 점·선이 한 줄 안에서 왼쪽부터 튀어나옴, 경보 점은 고리가 퍼짐 */
+.js .ledger .lrow { opacity: 0; transform: translateY(10px); transition: opacity .7s var(--ease), transform .8s var(--ease); transition-delay: calc(var(--r, 0) * 70ms + 150ms); }
+.js .ledger.in .lrow { opacity: 1; transform: none; }
+.js .ledger .lg .g { opacity: 0; transform: scale(.3); transition: opacity .3s, transform .6s var(--spring); transition-delay: calc(var(--r, 0) * 70ms + var(--i, 0) * 22ms + 300ms); }
+.js .ledger .lg .g.dash { transform: scaleX(0); transform-origin: 0 50%; }
+.js .ledger.in .lg .g { opacity: 1; transform: none; }
+.js .ledger .lg .g.dash { opacity: 0; }
+.js .ledger.in .lg .g.dash { opacity: .55; }
+.js .ledger.done .lg .g { transition-delay: 0s; transition-duration: .15s, .45s; }   /* 다 나온 뒤에는 올리자마자 반응 */
+.js .ledger.in .lg .g.hot { transform: scale(1.35); }
+.js .ledger.in .lg .g.dash.hot { opacity: .95; transform: scale(1.12, 1.35); }
+@media (max-width: 760px) {
+  .lrow { grid-template-columns: 52px minmax(0, 1fr) 30px; row-gap: 8px; column-gap: 14px; }
+  .lnote { grid-column: 2 / -1; font-size: 13.5px; }
+  .lnote:empty { display: none; }
+  .ld { flex-direction: column; gap: 3px; }
+  .lq { font-size: 13.5px; }
+  .g.dot { width: 12px; height: 12px; } .g.dash { width: 24px; height: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .ledger .lrow, .js .ledger .lg .g { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .js .ledger .lg .g.dash { opacity: .55 !important; }
+  .g.dot.alarm::after { animation: none; }
+  .ltip { transition: none; }
+}

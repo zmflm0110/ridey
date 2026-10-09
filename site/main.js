@@ -185,30 +185,60 @@
     }
   })();
 
-  // ── 01 한 대의 12일 — 선 = 그냥 타고 감, 점 = 서로 다른 사람의 '빌리자마자 반납'(위로 쌓음)
+  // ── 01 한 대의 12일 — 하루에 한 줄: 그날의 대여를 시간 순서대로 점(빌리자마자 반납)·선(그냥 타고 감)으로, 고장 신고는 세로 막대
   (async () => {
-    const svg = $("#tl"); if (!svg) return;
+    const box = $("#lrows"), fig = $("#ledger"); if (!box || !fig) return;
     let D; try { D = await (await fetch("data/spb69683.json")).json(); } catch { return; }
-    const X0 = 40, X1 = 980, H0 = 12, H1 = 306, base = 204, NS = "http://www.w3.org/2000/svg";
-    const x = (h) => X0 + (h - H0) / (H1 - H0) * (X1 - X0);
-    const el = (tag, a, text) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text) e.textContent = text; svg.appendChild(e); return e; };
-    const tip = (e, t) => { e.appendChild(document.createElementNS(NS, "title")).textContent = t; return e; };
-    const hm = (h) => { const d = 12 + Math.floor(h / 24), m = Math.round((h % 24) * 60); return `6월 ${d}일 ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
-    for (let d = 13; d <= 24; d++) { const xx = x((d - 12) * 24); el("line", { class: "grid", x1: xx, y1: 70, x2: xx, y2: base + 6 }); el("text", { class: "day", x: xx, y: base + 28, "text-anchor": "middle" }, `${d}일`); }
-    el("line", { class: "ax", x1: X0, y1: base, x2: X1, y2: base, pathLength: 1 });
-    [[D.alarm, "alarm", "15:43 RIDEY 경보", "start", 0], [D.reports[0], "rep", "첫 고장 신고 (16시간 뒤)", "start", 1], [D.reports[1], "rep", "두 번째 신고 → 사라짐", "end", 0]].forEach(([h, c, t, an, row]) => {
-      const xx = x(h), y = 30 + row * 22;
-      el("line", c === "alarm" ? { class: c, x1: xx, y1: y + 7, x2: xx, y2: base, pathLength: 1 } : { class: c, x1: xx, y1: y + 7, x2: xx, y2: base });
-      el("text", { class: c + "-t", x: xx + (an === "start" ? 7 : -7), y: y + 4, "text-anchor": an }, t);
-    });
-    D.rides.forEach((h, i) => tip(el("rect", { class: "dash", x: x(h) - 6, y: base - 2, width: 12, height: 4, rx: 2, style: `--i:${i}` }), `${hm(h)} · 그냥 타고 감`));
-    const rows = [];
-    [...D.duds].sort((a, b) => a - b).forEach((h, i) => {
-      const xx = x(h); let r = 0;
-      while (rows.some(([px, pr]) => pr === r && Math.abs(px - xx) < 10.5)) r++;
-      rows.push([xx, r]);
-      tip(el("circle", { class: "dot", cx: xx.toFixed(1), cy: base - 14 - r * 11, r: 4.6, style: `--i:${i}` }), `${hm(h)} · 빌리자마자 반납`);
-    });
+    const ev = [...D.duds.map((h) => [h, "d"]), ...D.rides.map((h) => [h, "r"]), ...D.reports.map((h) => [h, "R"])].sort((a, b) => a[0] - b[0]);
+    const alarmAt = D.duds.reduce((best, h) => (Math.abs(h - D.alarm) < Math.abs(best - D.alarm) ? h : best), D.duds[0]);
+    const firstAt = Math.min(...D.duds);
+    // 시각은 버림(15:43:34 → 15:43) — 본문·보고서의 시각과 같게
+    const hm = (h) => { const m = Math.floor((h % 24) * 60 + 1e-6); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+    const WD = ["일", "월", "화", "수", "목", "금", "토"];
+    const NOTE = { 12: ["alarm", `<b>15:43</b>RIDEY 경보 — 서로 다른 두 번째 사람`], 13: ["", `<b>07:58</b>첫 고장 신고. 그 뒤에도 54번 더`],
+                   16: ["", `<b>07:13</b>출근길 37분 사이 7명이 연달아`], 21: ["", "누군가 탔다 — 그래도 고쳐지지 않음"], 24: ["", `<b>17:18</b>두 번째 신고 → 사라짐`] };
+    let html = "", n = 0;
+    for (let d = 12; d <= 24; d++) {
+      const row = ev.filter(([h]) => 12 + Math.floor(h / 24) === d), dots = row.filter(([, k]) => k === "d").length, rides = row.filter(([, k]) => k === "r").length;
+      const wd = WD[new Date(2026, 5, d).getDay()];
+      const [cls, note] = NOTE[d] || (row.length ? ["", ""] : ["quiet", ""]);
+      const glyphs = row.map(([h, k], i) => {
+        const t = `<b>6/${d} ${hm(h)}</b>`;
+        if (k === "R") return `<i class="g rep" style="--i:${i}" data-t="${t}고장 신고"></i>`;
+        if (k === "r") return `<i class="g dash" style="--i:${i}" data-t="${t}그냥 타고 감"></i>`;
+        n++;
+        const c = h === firstAt ? "first" : h === alarmAt ? "alarm" : "";
+        const what = c === "first" ? "1번째 사람 · 한 명만으로는 경보 없음" : c === "alarm" ? "<i></i>2번째 사람 · RIDEY 경보" : `${n}번째 사람 · 빌리자마자 반납`;
+        return `<i class="g dot${c ? " " + c : ""}" style="--i:${i}" data-t="${t}${what}"></i>`;
+      }).join("");
+      html += `<li class="lrow${cls ? " " + cls : ""}" style="--r:${d - 12}">` +
+        `<span class="ld"><b>6/${d}</b><small>${wd}</small></span>` +
+        `<span class="lg" aria-hidden="true">${glyphs || `<span class="lq">아무도 빌리지 않음</span>`}</span>` +
+        `<span class="lc${dots ? "" : " zero"}" aria-hidden="true">${dots || "–"}</span><span class="lnote">${note}</span>` +
+        `<span class="sr">6월 ${d}일 ${wd}요일: ${row.length ? `빌리자마자 반납 ${dots}명, 그냥 타고 감 ${rides}번.` : "아무도 빌리지 않음."}</span></li>`;
+    }
+    box.innerHTML = html;
+    seen(fig, () => setTimeout(() => fig.classList.add("done"), 2600), 0.12);
+
+    // 점에 올리면(손가락은 누르면) 말풍선 하나가 그 점 위로 — 시각과 몇 번째 사람인지
+    const tip = document.createElement("div"); tip.className = "ltip"; tip.setAttribute("aria-hidden", "true"); fig.appendChild(tip);
+    let hot = null, hide = 0;
+    const show = (g) => {
+      clearTimeout(hide);
+      if (g === hot) return;
+      hot?.classList.remove("hot"); hot = g;
+      if (!g) { tip.classList.remove("on"); return; }
+      g.classList.add("hot"); tip.innerHTML = g.dataset.t;
+      const r = g.getBoundingClientRect(), f = fig.getBoundingClientRect(), w = tip.offsetWidth;
+      const x = r.left + r.width / 2 - f.left, cx = Math.max(w / 2 + 10, Math.min(f.width - w / 2 - 10, x));
+      tip.style.left = `${cx}px`; tip.style.top = `${r.top - f.top}px`; tip.style.setProperty("--dx", `${x - cx}px`);
+      tip.classList.add("on");
+    };
+    const later = () => { clearTimeout(hide); hide = setTimeout(() => show(null), 140); };
+    box.addEventListener("pointerover", (e) => { const g = e.target.closest?.(".g[data-t]"); g ? show(g) : later(); });
+    box.addEventListener("pointerleave", (e) => { if (e.pointerType !== "touch") later(); });
+    document.addEventListener("pointerdown", (e) => { if (!e.target.closest?.(".g[data-t]")) show(null); }, { passive: true });
+    addEventListener("scroll", () => hot && show(null), { passive: true });
   })();
 
   // ── 03 원리 — 길이 그어지는 동안 선과 점이 하나씩, 서로 다른 두 번째 점에서 카드가 한 번 빛남
