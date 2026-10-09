@@ -598,6 +598,18 @@
     f.addEventListener("pointerleave", () => { img.style.transform = ""; });
   }
 
+  // ── 02 왜: 숫자 밑에 점 그림 — '16만 건' 은 점 16개(점 하나 = 1만 건), 비율은 점 100개(점 하나 = 1%, 빈 점은 달마다 다른 범위). 카드가 나타날 때 차례로 켜짐
+  (() => {
+    const facts = $$("#why .fact"); if (facts.length < 3) return;
+    const spec = [{ n: 16, solid: 16, hollow: 0, cls: "ink", cap: "점 하나 = 1만 건" }, { n: 100, solid: 49, hollow: 12, cls: "", cap: "점 하나 = 1% · 빈 점은 달마다 다른 범위" }, { n: 100, solid: 82, hollow: 9, cls: "", cap: "점 하나 = 1% · 빈 점은 달마다 다른 범위" }];
+    facts.forEach((f, k) => {
+      const sp = spec[k], g = document.createElement("div");
+      g.className = `iarr${sp.n === 16 ? " few" : ""}${sp.cls ? " " + sp.cls : ""}`; g.setAttribute("aria-hidden", "true");
+      g.innerHTML = Array.from({ length: sp.n }, (_, i) => `<i class="${i < sp.solid ? "s" : i < sp.solid + sp.hollow ? "h" : ""}" style="--j:${i}"></i>`).join("") + `<span>${sp.cap}</span>`;
+      f.querySelector(".num").after(g);
+    });
+  })();
+
   // ── 01 한 대의 12일 — 하루에 한 줄: 그날의 대여를 시간 순서대로 점(빌리자마자 반납)·선(그냥 타고 감)으로, 고장 신고는 세로 막대
   (async () => {
     const box = $("#lrows"), fig = $("#ledger"); if (!box || !fig) return;
@@ -865,8 +877,9 @@
       if (hit) {
         const [bike, , stn, chain, level, lastDud] = hit;
         out.className = "result warn pop";
-        out.innerHTML = `<h4>${esc(bike)} 는 피하세요</h4>어제까지 <b>서로 다른 ${chain}명</b>이 빌리자마자 반납했어요 (마지막 ${esc(lastDud)}, ${esc(stn)}). ` +
+        out.innerHTML = `<h4><i class="rdot" aria-hidden="true"></i>${esc(bike)} 는 피하세요</h4>어제까지 <b>서로 다른 ${chain}명</b>이 빌리자마자 반납했어요 (마지막 ${esc(lastDud)}, ${esc(stn)}). ` +
           `이런 자전거는 다음 사람도 ${level === "빨강" ? "절반 넘게" : "3명 중 1명꼴로"} 바로 반납했어요. 옆 자전거를 고르세요.`;
+        setTimeout(() => burst(out, out.querySelector(".rdot"), 0.7), 120);
       } else { out.className = "result ok pop"; out.innerHTML = `<h4>${esc(id)} — 타도 괜찮아요</h4>어제까지 기록에 빌리자마자 반납한 연쇄가 없어요.`; }
     }
     form.addEventListener("submit", (e) => { e.preventDefault(); lookup($("#bike").value); });
