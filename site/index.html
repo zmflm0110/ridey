@@ -118,6 +118,19 @@
         </ol>
         <button class="btn sm line" id="morse-again" type="button">다시 보기</button>
       </div>
+      <!-- 직접 찍어 보기: 큰 점 단추 — 짧게 누르면 점(바로 반납), 길게 누르면 선(타고 감). 서로 다른 두 사람의 점이 이어지면 경보 -->
+      <div class="key card reveal" id="key">
+        <div class="key-l">
+          <button class="key-btn" id="key-btn" type="button" aria-describedby="key-say"><span class="sr">찍기 — 짧게 누르면 빌리자마자 반납, 길게 누르면 타고 감</span></button>
+          <p class="key-hint" aria-hidden="true"><b>짧게</b> 점 · <b>길게</b> 선</p>
+        </div>
+        <div class="key-r">
+          <p class="key-t"><b>직접 찍어 보기</b> 누를 때마다 다른 사람이 이 자전거를 빌립니다.</p>
+          <ol class="key-strip" id="key-strip" aria-hidden="true"></ol>
+          <p class="key-say" id="key-say" role="status">짧게 두 번 눌러 보세요.</p>
+          <div class="key-tools"><button class="btn sm line" id="key-reset" type="button">처음부터</button><button class="btn sm line" id="key-sound" type="button" aria-pressed="false">소리 켜기</button></div>
+        </div>
+      </div>
       <dl class="rules reveal stagger">
         <div><dt>점 (헛대여)</dt><dd>같은 대여소에 <kbd>3분</kbd> 안에, <kbd>300m</kbd>도 안 가고 반납한 대여.</dd></div>
         <div><dt>서로 다른 사람</dt><dd>한 사람이 여러 번 해 본 건 한 번으로. 생년·성별로 거르고, 그 자료가 없으면 <kbd>2분</kbd> 안에 다시 빌린 사람을 같은 사람으로 봅니다(차이 0.2%p).</dd></div>

@@ -97,7 +97,10 @@
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting) return; e.target.classList.add("in"); io.unobserve(e.target); }), { threshold: 0.12 });
   $$(".reveal, .foot, #days").forEach((el) => io.observe(el));
   const heads = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("lines-in"); heads.unobserve(e.target); } }), { threshold: 0.3 });
-  $$(".head").forEach((h) => heads.observe(h));
+  // 원리(03)는 위에서 신호 점이 커져 어두운 구역이 된 뒤에 제목이 올라옴(점이 화면을 다 덮기 전엔 밝은 바탕) — 화면 위쪽 58% 에 들어올 때
+  const iris = !reduce && CSS.supports("animation-timeline: view()");
+  const headsLate = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("lines-in"); headsLate.unobserve(e.target); } }), { rootMargin: "0px 0px -42% 0px" });
+  $$(".head").forEach((h) => (iris && h.closest("#how") ? headsLate : heads).observe(h));
   const nums = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { setTimeout(() => countUp(e.target), 250); nums.unobserve(e.target); } }), { threshold: 0.6 });
   $$(".fact .num, .stat .num, .grid3 .num, .why-card .big-p, .proof-strip .num").forEach((el) => nums.observe(el));
 
@@ -276,6 +279,74 @@
     };
     seen(box, play, 0.45);
     $("#morse-again")?.addEventListener("click", play);
+  })();
+
+  // ── 03 직접 찍어 보기 — 단추가 곧 브랜드의 점. 짧게 누르면 점(빌리자마자 반납), 길게 누르면 선(타고 감 — 누르는 동안 자람).
+  //    누를 때마다 다른 사람. 점이 서로 다른 두 사람째 이어지면 경보(카드가 빛나고, 안드로이드는 진동), 선이 오면 연쇄가 끊김.
+  //    소리는 '소리 켜기' 를 눌렀을 때만(누르는 동안 삐— 전신기처럼, Web Audio).
+  (() => {
+    const btn = $("#key-btn"), strip = $("#key-strip"), say = $("#key-say"), card = $("#key"); if (!btn) return;
+    const LONG = 220, MAX = 16;
+    let t0 = 0, held = false, grow = null, raf = 0, chain = 0, ac = null, osc = null, soundOn = false;
+    const buzz = (p) => { try { navigator.vibrate?.(p); } catch {} };
+    const tone = (f, dur, at = 0) => {
+      if (!soundOn || !ac) return;
+      const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.08, t + 0.01); g.gain.setValueAtTime(0.08, t + dur - 0.03); g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+    };
+    const hum = (on) => {   // 누르는 동안만 소리
+      if (!soundOn || !ac) return;
+      if (on && !osc) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 660; g.gain.value = 0; g.gain.linearRampToValueAtTime(0.07, ac.currentTime + 0.01); o.connect(g).connect(ac.destination); o.start(); osc = [o, g]; }
+      if (!on && osc) { const [o, g] = osc; g.gain.cancelScheduledValues(ac.currentTime); g.gain.setValueAtTime(g.gain.value, ac.currentTime); g.gain.linearRampToValueAtTime(0, ac.currentTime + 0.03); o.stop(ac.currentTime + 0.05); osc = null; }
+    };
+    const add = (cls, w) => {
+      const g = document.createElement("li"); g.className = `g ${cls}${reduce ? "" : " in"}`; if (w) g.style.setProperty("--w", `${w}px`);
+      strip.appendChild(g);
+      const kids = [...strip.children].filter((c) => !c.classList.contains("out"));
+      if (kids.length > MAX) { const old = kids[0]; old.classList.add("out"); setTimeout(() => old.remove(), reduce ? 0 : 350); }
+      return g;
+    };
+    const tell = (html) => { say.innerHTML = html; card.classList.toggle("alarm", chain >= 2); };
+    const flash = () => { card.classList.add("flash"); setTimeout(() => card.classList.remove("flash"), 700); };
+    const tick = () => {   // 길게 누르는 중: 선이 자람
+      const ms = performance.now() - t0;
+      if (ms >= LONG) {
+        if (!grow) { grow = add("dash grow", 16); hum(true); }
+        grow.style.setProperty("--w", `${Math.min(120, 16 + (ms - LONG) * 0.13)}px`);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    const down = () => {
+      if (held) return; held = true; t0 = performance.now(); grow = null;
+      btn.classList.add("down"); btn.classList.remove("tap"); hum(true);
+      raf = requestAnimationFrame(tick);
+    };
+    const up = () => {
+      if (!held) return; held = false; cancelAnimationFrame(raf); hum(false);
+      btn.classList.remove("down"); void btn.offsetWidth; btn.classList.add("tap");
+      if (grow) {   // 선 — 누군가 제대로 탔음: 연쇄가 끊김
+        grow.classList.remove("grow");
+        tell(chain >= 2 ? "누군가 제대로 타고 갔습니다 — 연쇄가 끊기고 <b>경보가 꺼집니다</b>." : "제대로 탄 대여(선) — 괜찮습니다.");
+        chain = 0; card.classList.remove("alarm"); grow = null; return;
+      }
+      chain++;   // 점 — 빌리자마자 반납
+      add(`dot${chain === 1 ? " first" : chain === 2 ? " alarm" : ""}`);
+      if (chain === 1) { buzz(12); tell("한 사람이 빌리자마자 반납 — 한 명은 실수일 수 있어 아직 조용합니다."); }
+      else if (chain === 2) { buzz([40, 60, 40]); tone(1320, 0.09, 0.05); tone(1320, 0.09, 0.2); flash(); tell("서로 다른 두 번째 사람도 바로 반납 → <b>경보</b>. 지도에 점이 켜지고 정비 목록에 오릅니다."); }
+      else { buzz([30, 40, 30, 40, 90]); tone(1568, 0.08, 0.05); tone(1568, 0.08, 0.17); tone(1568, 0.08, 0.29); flash(); tell(`<b>${chain}명 연속</b> — 더 강한 경보. 다음 사람에게 '피하세요' 라고 알려 줍니다.`); }
+    };
+    btn.addEventListener("pointerdown", (e) => { if (e.button > 0) return; e.preventDefault(); btn.setPointerCapture?.(e.pointerId); btn.focus({ preventScroll: true }); down(); });
+    btn.addEventListener("pointerup", up); btn.addEventListener("pointercancel", up); btn.addEventListener("lostpointercapture", up);
+    btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    btn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); down(); } else if (e.key === " " || e.key === "Enter") e.preventDefault(); });
+    btn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); up(); } });
+    btn.addEventListener("blur", up);
+    $("#key-reset")?.addEventListener("click", () => { strip.innerHTML = ""; chain = 0; card.classList.remove("alarm"); tell("짧게 두 번 눌러 보세요."); });
+    $("#key-sound")?.addEventListener("click", (e) => {
+      soundOn = !soundOn; e.currentTarget.setAttribute("aria-pressed", soundOn); e.currentTarget.textContent = soundOn ? "소리 끄기" : "소리 켜기";
+      if (soundOn) { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume?.(); } catch { soundOn = false; } }
+    });
   })();
 
   // ── 04 검증 막대 (보고서 5-1): 앞서 서로 다른 사람 몇 명이 바로 반납 → 다음 사람도

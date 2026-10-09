@@ -444,6 +444,67 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .morse { transition: box-shadow .9s var(--ease); }
 .morse.flash { box-shadow: 0 0 0 1px rgba(255, 92, 46, .7), 0 30px 80px -30px rgba(255, 92, 46, .55); transition: box-shadow .25s; }
 
+/* 원리(03) 직접 찍어 보기 — 단추가 곧 브랜드의 점. 짧게 = 점(바로 반납), 길게 = 선(타고 감, 누르는 동안 자람). 서로 다른 두 사람의 점이 이어지면 경보 */
+.key { margin-top: 20px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px clamp(24px, 4vw, 56px); align-items: center; transition: box-shadow .9s var(--ease); }
+.key.flash { box-shadow: 0 0 0 1px rgba(255, 92, 46, .7), 0 30px 80px -30px rgba(255, 92, 46, .55); transition: box-shadow .25s; }
+.key-l { display: grid; justify-items: center; gap: 12px; }
+.key-btn { position: relative; width: 112px; height: 112px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--sig); touch-action: manipulation;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  box-shadow: inset 0 -7px 0 rgba(0, 0, 0, .2), 0 22px 44px -20px color-mix(in srgb, var(--sig) 85%, transparent); transition: transform .55s var(--spring), box-shadow .3s; }
+.key-btn.down { transform: scale(.9); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .2), 0 8px 16px -12px color-mix(in srgb, var(--sig) 85%, transparent); transition: transform .12s var(--ease), box-shadow .12s; }
+.key-btn::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 2px var(--sig); opacity: 0; pointer-events: none; }
+.key-btn.tap::after { animation: key-ring .8s var(--ease); }
+@keyframes key-ring { from { transform: scale(1); opacity: .8; } to { transform: scale(1.55); opacity: 0; } }
+.key-btn:focus-visible { outline-offset: 6px; border-radius: 50%; }
+.key-hint { margin: 0; font-size: 13.5px; color: var(--fg3); } .key-hint b { color: var(--fg2); }
+.key-t { margin: 0 0 16px; font-size: 15.5px; color: var(--fg2); } .key-t b { color: var(--fg); margin-right: 6px; }
+.key-strip { list-style: none; margin: 0; padding: 0 0 0 4px; display: flex; align-items: center; gap: 9px; height: 46px; overflow: clip visible; position: relative; }
+.key-strip::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--cline2); opacity: .7; z-index: -1; }
+.key-strip { isolation: isolate; }
+.key-strip .g { flex: none; }
+.key-strip .g.dot { width: 18px; height: 18px; }
+.key-strip .g.dash { width: var(--w, 30px); height: 11px; opacity: .7; }
+.key-strip .g.grow { background: var(--fg2); opacity: .85; }
+.key-strip .g.in { animation: g-in .55s var(--spring) both; }
+.key-strip .g.dash.in { animation: none; }
+.key-strip .g.out { animation: g-out .35s var(--ease) both; }
+@keyframes g-in { from { transform: scale(.2); opacity: 0; } }
+@keyframes g-out { to { transform: scale(.4); opacity: 0; margin-left: -27px; } }
+.key-say { margin: 16px 0 0; min-height: 3.1em; font-size: 16.5px; font-weight: 700; line-height: 1.5; color: var(--fg); }
+.key-say b { color: var(--sigt); }
+.key.alarm .key-say { color: var(--sigt); }
+.key-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#key-sound[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--sig); color: var(--sigt); }
+@media (max-width: 760px) {
+  .key { grid-template-columns: 1fr; gap: 18px; }
+  .key-r { display: contents; } .key-t { order: -1; margin: 0; }   /* 폰: 제목 → 단추 → 띠 → 말 */
+  .key-l { grid-auto-flow: column; justify-content: start; align-items: center; gap: 16px; }
+  .key-say { margin: 0; }
+  .key-btn { width: 88px; height: 88px; }
+  .key-strip .g.dot { width: 16px; height: 16px; }
+}
+
+/* 원리(03): 위 구역에서 내려오면 신호 점 하나가 떠올라(고리가 숨 쉬듯) 커지며 어두운 구역이 됨 — 스크롤 연동, 지원하는 브라우저만. 움직임 줄이기면 그냥 어두운 띠 */
+#how { --iris-under: var(--surface); }
+:root[data-theme="dark"] #how { --iris-under: #0F1114; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #how { --iris-under: #0F1114; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    #how { view-timeline: --how block; background: var(--iris-under); position: relative; isolation: isolate; }
+    #how::before, #how::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+    /* 어두운 원: 점에서 퍼져 나가 구역을 덮음 (색은 바뀌지 않음 — 주황에서 검정으로 섞이면 갈색이 됨) */
+    #how::before { inset: 0; background: var(--bg); animation: iris linear both; animation-timeline: --how; animation-range: entry 0% entry 100%; }
+    /* 신호 점: 경계에 먼저 떠서 숨 쉬듯 고리를 내다가, 어둠이 다 퍼지면 작아지며 사라짐 */
+    #how::after { left: 50%; top: 56px; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--sig); box-shadow: 0 0 0 0 rgba(255, 79, 31, .55);
+      animation: iris-dot linear both, ping 1.8s infinite; animation-timeline: --how, auto; animation-range: entry 0% entry 100%, normal; }
+  }
+}
+@keyframes iris {
+  0%, 15% { clip-path: circle(0px at 50% 56px); animation-timing-function: cubic-bezier(.55, 0, .8, .3); }
+  48%, 100% { clip-path: circle(150% at 50% 56px); }
+}
+@keyframes iris-dot { 0% { transform: scale(.3); opacity: 0; } 5%, 44% { transform: none; opacity: 1; } 56%, 100% { transform: scale(.2); opacity: 0; } }
+
 /* 막대: 스프링으로 자람 (검증 · 날짜별) */
 .bar .col { transition: height 1.2s var(--spring); transition-delay: calc(var(--i, 0) * 70ms); }
 .js .daybars .db { transform: scaleY(0); transform-origin: 50% 100%; transition: transform .9s var(--spring); transition-delay: calc(var(--i, 0) * 45ms + 150ms); }
@@ -479,6 +540,7 @@ html.vt-theme::view-transition-old(root), html.vt-theme::view-transition-new(roo
   .mtrack::before { transform: none; }
   .progress, .blips { display: none; }
   .js .ln .pd { opacity: 1; animation: none !important; } .pd::after { display: none; }
+  .key-btn, .key-btn.down { transition: none; } .key-btn::after, .key-strip .g { animation: none !important; }
   .navdot { transition: none; }
   .phones img { animation: none !important; translate: none !important; }
 }
