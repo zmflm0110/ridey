@@ -109,8 +109,8 @@
   // ── 머리: 어두운 첫 화면을 지나면 종이색 바탕 · 지금 보는 구역 아래 신호 점
   const nav = $("#top"), hero = $("#hero");
   if (nav && hero) new IntersectionObserver(([e]) => nav.classList.toggle("solid", !e.isIntersecting), { rootMargin: "-90px 0px 0px 0px" }).observe(hero);
+  else if (nav) nav.classList.add("solid");   // 첫 화면이 없는 쪽(진행 기록)은 처음부터 종이색
   if (nav) { const sc = () => nav.classList.toggle("scrolled", scrollY > 8); sc(); addEventListener("scroll", sc, { passive: true }); }   // 첫 화면 안에서도 내리면 어두운 유리 바탕
-  else { nav?.classList.add("solid"); start(); }
   const links = $$(".nav nav > a[href^='#']"), ndot = $(".navdot");
   const placeDot = () => {
     const a = $(".nav nav > a.on:not(.btn)");
@@ -127,7 +127,10 @@
     }), { rootMargin: "-45% 0px -50% 0px" });
     links.forEach((a) => { const s = $(a.getAttribute("href")); if (s) sio.observe(s); });
     $("#hero") && new IntersectionObserver(([e]) => { if (e.isIntersecting) { links.forEach((a) => a.classList.remove("on")); placeDot(); } }, { rootMargin: "-45% 0px -50% 0px" }).observe($("#hero"));
-  } else $$(".nav nav > a:not(.btn)").forEach((a) => { if (location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("on"); });
+  } else {   // 진행 기록 쪽: 지금 페이지와 같은 메뉴 아래에 점 (releases.html 이든 /releases 든)
+    const here = location.pathname.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+    $$(".nav nav > a:not(.btn)").forEach((a) => { const h = a.getAttribute("href") || ""; if (!/^(https?:|#|\.\/#)/.test(h) && here.endsWith(h.replace(/\.html$/, ""))) a.classList.add("on"); });
+  }
   placeDot(); addEventListener("resize", placeDot); document.fonts?.ready.then(placeDot);
   // 위쪽 진행 막대 — CSS 스크롤 타임라인이 없는 브라우저만 스크립트로
   const prog = $(".progress");
@@ -173,7 +176,9 @@
     const hero = $("#hero"), blips = $("#blips");
     const tSeed = performance.now();
     const intro = !reduce && window.WebGLRenderingContext ? seedIntro() : null;   // 씨앗 점은 대여소 자료를 받기 전에 먼저
-    const st = await stationsP, B = box(st);
+    const st = await stationsP.catch(() => null);
+    if (!st || !Object.keys(st).length) { intro?.cancel(); return; }   // 지도 자료를 못 받으면 씨앗 점도 거둠(그대로 두면 영원히 숨 쉼)
+    const B = box(st);
     const L = {}; let pts = [];
     const layout = () => {
       Object.assign(L, sizeCanvas(cv));
@@ -346,7 +351,7 @@
       fill();
       const pd = $(".hero h1 .pd");   // 스크롤하면 점들이 모일 곳 — 제목 '먼저.' 의 마침표
       let total = 0, counted = -1;
-      const ign = () => [...pts].sort((a, b) => a.d - b.d);   // 켜지는 차례(가까운 곳부터) — 셰이더의 순서와 같게
+      let order = null, sPd = "", sVeil = "";   // 켜지는 차례(가까운 곳부터 — 셰이더의 순서와 같게)·직전에 쓴 스타일 값
       let mx = -1e4, my = -1e4, mk = 0;
       return {
         frame(now) {
@@ -366,18 +371,23 @@
           gl.uniform2f(U.uF, fx, fy - sy); gl.uniform1f(U.uC, c); gl.uniform1f(U.uSy, sy);
           gl.drawArrays(gl.POINTS, 0, N);
           // 마침표가 빨아들임: 다 모일수록 커지고 빛남
-          if (pd) { const k = Math.max(0, (c - 0.55) / 0.45); pd.style.scale = (1 + k * 0.45).toFixed(3); pd.style.boxShadow = k > 0 ? `0 0 ${(k * 26).toFixed(1)}px ${(k * 5).toFixed(1)}px rgba(255, 92, 46, ${(k * 0.55).toFixed(2)})` : ""; }
-          hero.style.setProperty("--veil", (1 - Math.min(1, c * 1.4) * 0.85).toFixed(3));   // 글 보호 그늘을 걷어 점들이 마침표까지 보이게
+          if (pd) {
+            const k = Math.max(0, (c - 0.55) / 0.45), v = k.toFixed(3);
+            if (v !== sPd) { sPd = v; pd.style.scale = (1 + k * 0.45).toFixed(3); pd.style.boxShadow = k > 0 ? `0 0 ${(k * 26).toFixed(1)}px ${(k * 5).toFixed(1)}px rgba(255, 92, 46, ${(k * 0.55).toFixed(2)})` : ""; }
+          }
+          const veil = (1 - Math.min(1, c * 1.4) * 0.85).toFixed(3);   // 글 보호 그늘을 걷어 점들이 마침표까지 보이게
+          if (veil !== sVeil) { sVeil = veil; hero.style.setProperty("--veil", veil); }
           // 큰 숫자: 켜진 경보 대여소의 자전거 수만 — 다 켜지면 실제 대수
           if (counted < total && pts.length) {
             const e = (now - tIgn) / 1000; let n = 0;
-            const order = ign(); order.forEach((p, i) => { if (e >= (i / Math.max(1, order.length - 1)) * 1.2) n += p.n; });
+            if (!order || order.length !== pts.length) order = [...pts].sort((a, b) => a.d - b.d);
+            order.forEach((p, i) => { if (e >= (i / Math.max(1, order.length - 1)) * 1.2) n += p.n; });
             n = e >= 1.3 ? total : Math.min(n, total);
             if (n !== counted) { counted = n; const el = $("#live-n"); if (el) el.textContent = ko(n); }
           }
         },
         resize() { intro.place(L.cx, L.cy); fill(); },
-        alarms(n) { tIgn = Math.max(tb + 650, performance.now() + 120); total = n; counted = -1; const el = $("#live-n"); if (el) { el.dataset.counted = 1; el.textContent = "0"; } fill(); },
+        alarms(n) { order = null; tIgn = Math.max(tb + 650, performance.now() + 120); total = n; counted = -1; const el = $("#live-n"); if (el) { el.dataset.counted = 1; el.textContent = "0"; } fill(); },
         tb,
       };
     }
@@ -609,9 +619,12 @@
   // ── 02 왜: 숫자 밑에 점 그림 — '16만 건' 은 점 16개(점 하나 = 1만 건), 비율은 점 100개(점 하나 = 1%, 빈 점은 달마다 다른 범위). 카드가 나타날 때 차례로 켜짐
   (() => {
     const facts = $$("#why .fact"); if (facts.length < 3) return;
-    const spec = [{ n: 16, solid: 16, hollow: 0, cls: "ink", cap: "점 하나 = 1만 건" }, { n: 100, solid: 49, hollow: 12, cls: "", cap: "점 하나 = 1% · 빈 점은 달마다 다른 범위" }, { n: 100, solid: 82, hollow: 9, cls: "", cap: "점 하나 = 1% · 빈 점은 달마다 다른 범위" }];
-    facts.forEach((f, k) => {
-      const sp = spec[k], g = document.createElement("div");
+    const RANGE = "점 하나 = 1% · 빈 점은 달마다 다른 범위";
+    facts.forEach((f) => {
+      const t = f.querySelector(".num").textContent.replace(/\s+/g, ""), g = document.createElement("div");
+      const mR = t.match(/^(\d+)~(\d+)%$/), mC = t.match(/^(\d+)만건$/);
+      const sp = mR ? { n: 100, solid: +mR[1], hollow: +mR[2] - +mR[1], cls: "", cap: RANGE } : mC ? { n: Math.min(40, +mC[1]), solid: Math.min(40, +mC[1]), hollow: 0, cls: "ink", cap: "점 하나 = 1만 건" } : null;
+      if (!sp) return;
       g.className = `iarr${sp.n === 16 ? " few" : ""}${sp.cls ? " " + sp.cls : ""}`; g.setAttribute("aria-hidden", "true");
       g.innerHTML = Array.from({ length: sp.n }, (_, i) => `<i class="${i < sp.solid ? "s" : i < sp.solid + sp.hollow ? "h" : ""}" style="--j:${i}"></i>`).join("") + `<span>${sp.cap}</span>`;
       f.querySelector(".num").after(g);
@@ -705,9 +718,9 @@
       o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.08, t + 0.01); g.gain.setValueAtTime(0.08, t + dur - 0.03); g.gain.linearRampToValueAtTime(0, t + dur);
       o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
     };
-    const hum = (on) => {   // 누르는 동안만 소리
-      if (!soundOn || !ac) return;
-      if (on && !osc) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 660; g.gain.value = 0; g.gain.linearRampToValueAtTime(0.07, ac.currentTime + 0.01); o.connect(g).connect(ac.destination); o.start(); osc = [o, g]; }
+    const hum = (on) => {   // 누르는 동안만 소리 (멈추는 쪽은 소리를 껐어도 반드시 멈춤)
+      if (!ac) return;
+      if (on && soundOn && !osc) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 660; g.gain.value = 0; g.gain.linearRampToValueAtTime(0.07, ac.currentTime + 0.01); o.connect(g).connect(ac.destination); o.start(); osc = [o, g]; }
       if (!on && osc) { const [o, g] = osc; g.gain.cancelScheduledValues(ac.currentTime); g.gain.setValueAtTime(g.gain.value, ac.currentTime); g.gain.linearRampToValueAtTime(0, ac.currentTime + 0.03); o.stop(ac.currentTime + 0.05); osc = null; }
     };
     const add = (cls, w) => {

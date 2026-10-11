@@ -546,7 +546,7 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 }
 
 /* 원리(03): 위 구역에서 내려오면 신호 점 하나가 떠올라(고리가 숨 쉬듯) 커지며 어두운 구역이 됨 — 스크롤 연동, 지원하는 브라우저만. 움직임 줄이기면 그냥 어두운 띠 */
-#how { --iris-under: var(--surface); }
+#how { --iris-under: var(--surface); position: relative; }   /* 점 격자(.spot)의 기준 — view-timeline 을 모르는 브라우저에서도 */
 :root[data-theme="dark"] #how { --iris-under: #0F1114; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #how { --iris-under: #0F1114; } }
 @supports (animation-timeline: view()) {
