@@ -44,6 +44,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       check(await page.evaluate(() => !!document.querySelector(".hero h1 .pd")), "제목 마침표가 점(.pd)으로 바뀜");
       check(await page.evaluate(() => document.querySelector(".hero h1").textContent.trim().endsWith(".")), "제목 글자에는 마침표가 남아 있음(복사·화면 읽기)");
       check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "가로로 넘치지 않음(넓은 화면)");
+      const og = await page.evaluate(() => document.querySelector('meta[property="og:image"]')?.content);
+      check(!!og && /\/img\/og\.png$/.test(og) && (await fetch(BASE + "img/og.png")).ok, "링크 미리보기(og:image) 이미지가 있음");
       // 12일 표
       await jump(page, "#ledger"); await wait(1200);
       const rows = await page.$$eval("#lrows .lrow", (r) => r.length);
