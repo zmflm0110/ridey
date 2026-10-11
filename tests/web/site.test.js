@@ -191,6 +191,26 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       await ctx.close();
     }
 
+    // ── 4-1. 글꼴이 더 넓은 기기(리눅스·안드로이드 기본 한글 글꼴)에서도 가로로 넘치지 않음 — 글자를 일부러 5% 넓혀, 작은 폰(320·360)까지.
+    //        (격자 한 칸짜리가 minmax(auto,1fr) 이면 내용 최소 너비가 칸을 화면보다 넓힌다 — 맥에서는 통과하고 CI(리눅스)에서만 실패했던 문제)
+    for (const w of [320, 360, 390]) {
+      const { ctx, page } = await open({ viewport: { width: w, height: 800 }, colorScheme: "light", deviceScaleFactor: 1 });
+      await page.goto(BASE, { waitUntil: "networkidle" }); await wait(1200);
+      await page.addStyleTag({ content: "body *:not(svg):not(svg *) { letter-spacing: .05em !important; }" }); await wait(300);
+      const r = await page.evaluate(() => {
+        const W = innerWidth, bad = [];
+        for (const el of document.querySelectorAll("body *")) {
+          const q = el.getBoundingClientRect(); if (!q.width || q.right <= W + 0.5) continue;
+          let a = el.parentElement, clipped = false;
+          while (a && a !== document.body) { const o = getComputedStyle(a).overflowX; if (o !== "visible") { clipped = true; break; } a = a.parentElement; }
+          if (!clipped && getComputedStyle(el).position !== "fixed") bad.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}#${el.id}`);
+        }
+        return { sw: document.documentElement.scrollWidth, W, bad: bad.slice(0, 4) };
+      });
+      check(r.sw <= r.W + 1, `${w}px 폭, 글자 5% 넓혀도 가로로 넘치지 않음 (${r.sw}/${r.W}${r.bad.length ? " — " + r.bad.join(", ") : ""})`);
+      await ctx.close();
+    }
+
     // ── 5. 진행 기록 쪽 머리
     {
       const { ctx, page, errors } = await open({ colorScheme: "light" });
