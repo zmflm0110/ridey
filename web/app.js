@@ -382,13 +382,13 @@ function renderMap(bikes) {
     if (!s) return;
     const red = arr.some((b) => b.level === "빨강");
     L.circleMarker([s.lat, s.lon], { radius: 5 + 2 * arr.length, color: red ? "#FF4F1F" : "#FF9A73", weight: 1.5, fillOpacity: 0.55, className: red ? "m-strong" : "" })
-      .bindPopup(`<b>${s.name}</b><br>${arr.map((b) => `${b.bike} · ${b.chain}명 연속`).join("<br>")}`)
+      .bindPopup(`<b>${esc(s.name)}</b><br>${arr.map((b) => `${esc(b.bike)} · ${b.chain}명 연속`).join("<br>")}`)
       .addTo(state.layer);
   });
 }
 
 // ── 자전거 조회
-const VERDICTS = (id, fine = "멀쩡해요") => `<div class="choices">` +
+const VERDICTS = (id, fine = "멀쩡해요") => !/^SPB-\d{5}$/.test(id) ? "" : `<div class="choices">` +   // 번호 모양이 아니면 단추를 만들지 않음(onclick 속성에 들어가는 값)
   ["체인·기어", "타이어", "안장·핸들"].map((v) => `<button onclick="rescueSave('${id}','${v}')">${v}</button>`).join("") +
   `<button class="fine" onclick="rescueSave('${id}','멀쩡함')">${fine}</button></div>`;
 function lookup(raw) {
@@ -399,7 +399,7 @@ function lookup(raw) {
   const until = state.day === "live" ? "최근" : isPast() ? `${koDay(state.day)} 아침 목록에서` : "어제까지";
   if (hit) {
     const soft = hit.p_next != null && hit.p_next < 30;   // 모델이 낮게 본 자전거는 말을 누그러뜨림 (그래도 평소의 몇 배)
-    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">⚠︎</span><h2>${id}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h2>` +
+    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">⚠︎</span><h2>${esc(id)}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h2>` +
       `${until} <b>서로 다른 ${hit.chain}명</b>이 빌리자마자 반납했어요. 옆 자전거를 골라 주세요.` +
       `<div class="facts"><div><span>다음 사람도 반납할 확률${hit.p_next != null ? " (모델)" : ""}</span><b class="red">${hit.p_next != null ? hit.p_next + "%" : hit.level === "빨강" ? "55% 이상" : "약 35~44%"}</b></div>` +
       `<div><span>평소 자전거</span><b>2.5%</b></div><div><span>마지막 반납</span><b>${esc(hit.last_dud)}</b></div><div><span>대여소</span><b>${esc(hit.station_name)}</b></div></div>` +
