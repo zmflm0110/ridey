@@ -456,9 +456,8 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .blip::before { content: ""; position: absolute; left: -14px; top: 50%; width: 12px; height: 1.5px; background: rgba(255, 92, 46, .7); }
 .blip.hover { transition-duration: .25s, .45s; }
 /* 첫 화면 WebGL 지도: 씨앗 점(숨 쉬다 움츠렸다 터짐)·터지는 고리·스크롤하면 이야기 대여소 꼬리표 */
-.seed, .shock { position: absolute; left: 0; top: 0; z-index: 1; border-radius: 50%; pointer-events: none; opacity: 0; }
-.seed { width: 18px; height: 18px; margin: -9px 0 0 -9px; background: var(--sig); }
-.shock { width: 20px; height: 20px; margin: -10px 0 0 -10px; box-shadow: 0 0 0 1.5px rgba(255, 120, 80, .8), inset 0 0 18px rgba(255, 92, 46, .35); }
+.seed { position: absolute; left: 0; top: 0; z-index: 1; border-radius: 50%; pointer-events: none; opacity: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; background: var(--sig); }
+.shock { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; color: rgba(255, 120, 80, .85); will-change: transform, opacity; }   /* 지름은 스크립트가 정함 · 크기는 transform 만 */
 .dive { position: absolute; left: 0; top: 0; z-index: 1; width: 0; height: 0; margin: 0; pointer-events: none; opacity: 0; }
 .dive i { position: absolute; left: 12px; top: -.75px; width: 16px; height: 1.5px; background: rgba(255, 92, 46, .8); }
 .dive span { position: absolute; left: 30px; top: 0; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; padding: 9px 15px 9px 12px; border-radius: 999px;
@@ -506,7 +505,7 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 /* 경보 순간 효과: 충격파 고리 + 불꽃 점 (카드 안에서만) */
 .key { position: relative; }
 .fx { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 3; }
-.fx .sw { position: absolute; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--sig), inset 0 0 26px color-mix(in srgb, var(--sig) 22%, transparent); }
+.fx .sw { position: absolute; color: var(--sig); will-change: transform, opacity; }
 .fx .spark { position: absolute; border-radius: 50%; background: var(--sig); box-shadow: 0 0 8px color-mix(in srgb, var(--sig) 70%, transparent); }
 .key-l { display: grid; justify-items: center; gap: 12px; }
 .key-btn { position: relative; width: 112px; height: 112px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--sig); touch-action: manipulation;

@@ -7,11 +7,22 @@
   const SB = "https://iqvquwvoljzuvdgtbpnu.supabase.co/rest/v1/", KEY = "sb_publishable_YFBKlBvyPFAhBpLdS3o8_A_xIeUmTVE";
   const sb = (q) => fetch(SB + q, { headers: { apikey: KEY } }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
   const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const ko = (n) => Number(n).toLocaleString("ko-KR");
+  const KO = new Intl.NumberFormat("ko-KR"), ko = (n) => KO.format(Number(n));   // 포매터를 한 번만 — 숫자가 올라가는 동안 프레임마다 부르므로
   const seen = (el, fn, threshold = 0.25) => el && new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { fn(); o.disconnect(); } }, { threshold }).observe(el);
   const expo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
   let liveP = null;   // 지금 경보 목록 — 첫 화면 지도와 실시간 전광판이 같이 씀(한 번만 받음)
   const liveSnap = () => (liveP ||= sb("live_snapshot?select=at,bikes:body->bikes").then((r) => r[0] || null).catch(() => null));
+
+  // 고리 하나: 처음부터 마지막 크기(지름 2r)로 만들고 transform:scale 로만 키움 — width/height/margin 을 바꾸면 매 프레임 레이아웃이 다시 돼 화면 흔들림(CLS)으로 잡혔다.
+  // 선 굵기는 SVG non-scaling-stroke 로 일정하게. 반환: [요소, scale 시작값]
+  const NS = "http://www.w3.org/2000/svg";
+  const ringEl = (cls, r, w = 1.5) => {
+    const e = document.createElementNS(NS, "svg"); e.setAttribute("class", cls); e.setAttribute("viewBox", "0 0 100 100"); e.setAttribute("aria-hidden", "true");
+    e.style.width = e.style.height = `${2 * r}px`; e.style.marginLeft = e.style.marginTop = `${-r}px`;
+    const c = document.createElementNS(NS, "circle"); c.setAttribute("cx", 50); c.setAttribute("cy", 50); c.setAttribute("r", 49.2);
+    c.setAttribute("fill", "none"); c.setAttribute("stroke", "currentColor"); c.setAttribute("stroke-width", w); c.setAttribute("vector-effect", "non-scaling-stroke");
+    e.appendChild(c); return e;
+  };
 
   // ── 경보 순간: 점에서 충격파 고리가 퍼지고 불꽃 점들이 튀어 나감 (원리 띠·직접 찍어 보기·12일 표). 카드 밖으로는 안 나감
   const burst = (host, at, big = 1) => {
@@ -22,8 +33,9 @@
     const R = Math.round(Math.min(460, Math.max(h.width, h.height) * 0.55) * big);
     const el = (c) => { const e = document.createElement("i"); e.className = c; e.style.left = x + "px"; e.style.top = y + "px"; fx.appendChild(e); return e; };
     for (const [d, k] of [[0, 1], [140, 0.6]]) {   // 고리 둘 — 큰 것 뒤에 작은 것
-      const ring = el("sw"), r = Math.round(R * k);
-      ring.animate([{ width: "8px", height: "8px", margin: "-4px 0 0 -4px", opacity: 1 }, { width: `${2 * r}px`, height: `${2 * r}px`, margin: `-${r}px 0 0 -${r}px`, opacity: 0 }],
+      const r = Math.max(12, Math.round(R * k)), ring = ringEl("sw", r);
+      ring.style.left = x + "px"; ring.style.top = y + "px"; fx.appendChild(ring);
+      ring.animate([{ transform: `scale(${(4 / r).toFixed(3)})`, opacity: 1 }, { transform: "scale(1)", opacity: 0 }],
         { duration: 1150, delay: d, easing: "cubic-bezier(.16, 1, .3, 1)", fill: "both" }).finished.then(() => ring.remove());
     }
     const n = Math.round(14 * big);
@@ -110,7 +122,7 @@
   const nav = $("#top"), hero = $("#hero");
   if (nav && hero) new IntersectionObserver(([e]) => nav.classList.toggle("solid", !e.isIntersecting), { rootMargin: "-90px 0px 0px 0px" }).observe(hero);
   else if (nav) nav.classList.add("solid");   // 첫 화면이 없는 쪽(진행 기록)은 처음부터 종이색
-  if (nav) { const sc = () => nav.classList.toggle("scrolled", scrollY > 8); sc(); addEventListener("scroll", sc, { passive: true }); }   // 첫 화면 안에서도 내리면 어두운 유리 바탕
+  if (nav) { let was = null; const sc = () => { const on = scrollY > 8; if (on !== was) { was = on; nav.classList.toggle("scrolled", on); } }; sc(); addEventListener("scroll", sc, { passive: true }); }   // 첫 화면 안에서도 내리면 어두운 유리 바탕
   const links = $$(".nav nav > a[href^='#']"), ndot = $(".navdot");
   const placeDot = () => {
     const a = $(".nav nav > a.on:not(.btn)");
@@ -349,7 +361,14 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, bD); gl.bufferData(gl.ARRAY_BUFFER, D, gl.STATIC_DRAW); gl.enableVertexAttribArray(aD); gl.vertexAttribPointer(aD, 4, gl.FLOAT, false, 0, 0);
       };
       fill();
-      const pd = $(".hero h1 .pd");   // 스크롤하면 점들이 모일 곳 — 제목 '먼저.' 의 마침표
+      const pd = $(".hero h1 .pd"), liveN = $("#live-n");   // pd: 스크롤하면 점들이 모일 곳 — 제목 '먼저.' 의 마침표
+      let pdX = 0, pdY = 0, pdTop = 0;   // 마침표 중심(첫 화면 안 좌표)·문서 위쪽 끝 — 스크롤과 무관해서 배치가 바뀔 때만 읽음
+      const readPd = () => {
+        if (!pd) return;
+        let x = 0, y = 0; for (let el = pd; el && el !== hero; el = el.offsetParent) { x += el.offsetLeft; y += el.offsetTop; }
+        pdX = x + pd.offsetWidth / 2; pdY = y + pd.offsetHeight / 2; pdTop = y;
+      };
+      readPd(); document.fonts?.ready.then(readPd); addEventListener("resize", () => setTimeout(readPd, 200));
       let total = 0, counted = -1;
       let order = null, sPd = "", sVeil = "";   // 켜지는 차례(가까운 곳부터 — 셰이더의 순서와 같게)·직전에 쓴 스타일 값
       let mx = -1e4, my = -1e4, mk = 0;
@@ -360,11 +379,9 @@
           if (ptr.on) { if (mk < 0.02) { mx = ptr.x; my = ptr.y; } mx += (ptr.x - mx) * 0.22; my += (ptr.y - my) * 0.22; }
           mk += ((ptr.on && scrollY < 60 ? 1 : 0) - mk) * 0.07;
           // 다 모이는 지점: 마침표가 화면 위쪽 18% 에 올 때(넓은 화면·폰 모두 마침표가 보이는 동안 끝남)
-          let pdY = 0; for (let el = pd; el; el = el.offsetParent) pdY += el.offsetTop;
-          const D = pd ? Math.max(160, pdY - innerHeight * 0.18) : L.H * 0.45;
+          const D = pd ? Math.max(160, pdTop - innerHeight * 0.18) : L.H * 0.45;
           const c = Math.min(1, Math.max(0, scrollY / D)), sy = Math.min(scrollY, L.H) * 0.35;
-          let fx = L.cx, fy = L.cy;
-          if (pd && c > 0) { const a = pd.getBoundingClientRect(), b = cv.getBoundingClientRect(); fx = a.left + a.width / 2 - b.left; fy = a.top + a.height / 2 - b.top; }
+          const fx = pd ? pdX : L.cx, fy = pd ? pdY : L.cy;
           gl.uniform2f(U.uRes, L.W, L.H); gl.uniform1f(U.uDpr, L.dpr); gl.uniform2f(U.uO, L.cx, L.cy);
           gl.uniform1f(U.uT, (now - tb) / 1000); gl.uniform1f(U.uI, (now - tIgn) / 1000);
           gl.uniform2f(U.uM, mx, my); gl.uniform1f(U.uMk, mk);
@@ -383,7 +400,7 @@
             if (!order || order.length !== pts.length) order = [...pts].sort((a, b) => a.d - b.d);
             order.forEach((p, i) => { if (e >= (i / Math.max(1, order.length - 1)) * 1.2) n += p.n; });
             n = e >= 1.3 ? total : Math.min(n, total);
-            if (n !== counted) { counted = n; const el = $("#live-n"); if (el) el.textContent = ko(n); }
+            if (n !== counted) { counted = n; if (liveN) liveN.textContent = ko(n); }
           }
         },
         resize() { intro.place(L.cx, L.cy); fill(); },
@@ -395,8 +412,10 @@
     // ── 씨앗 점(CSS): 지도 가운데 떠서 숨 쉬다가, 움츠렸다 터짐 + 얇게 퍼지는 고리. 자료 전엔 서울 모양 비율(1.23)로 자리를 어림
     function seedIntro() {
       const mk = (c) => { const el = document.createElement("i"); el.className = c; el.setAttribute("aria-hidden", "true"); hero.append(el); return el; };
-      const seed = mk("seed"), shock = mk("shock");
-      const place = (x, y) => { for (const el of [seed, shock]) { el.style.left = x + "px"; el.style.top = y + "px"; } };
+      const seed = mk("seed");
+      let shock = null;   // 고리는 크기를 알 때(burst) 만들어 transform 으로만 키움
+      let cx = 0, cy = 0;
+      const place = (x, y) => { cx = x; cy = y; for (const el of [seed, shock]) if (el) { el.style.left = x + "px"; el.style.top = y + "px"; } };
       const r = hero.getBoundingClientRect(), W = r.width, H = r.height, a = 1.23, mobile = W < 760;
       const mw = mobile ? W * 1.08 : Math.min(W * 0.62, (H * 0.84) * a), mh = mw / a;
       place((mobile ? (W - mw) / 2 : Math.min(W - mw - 12, W * 0.66 - mw / 2)) + mw / 2, (mobile ? H - mh - 40 : Math.max(70, (H - mh) / 2 - 20)) + mh / 2);
@@ -411,11 +430,12 @@
           seed.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(.62)", opacity: 1, offset: .55 }, { transform: "scale(2.6)", opacity: 1, offset: .8 }, { transform: "scale(3.2)", opacity: 0 }],
             { duration: 640, delay: Math.max(0, d - 430), easing: "cubic-bezier(.3, 0, .2, 1)", fill: "forwards" });
           const R = Math.round(maxR * 1.05);
-          shock.animate([{ width: "16px", height: "16px", margin: "-8px 0 0 -8px", opacity: 1 }, { width: `${R * 2}px`, height: `${R * 2}px`, margin: `-${R}px 0 0 -${R}px`, opacity: 0 }],
+          shock = ringEl("shock", R); shock.style.left = cx + "px"; shock.style.top = cy + "px"; shock.style.opacity = "0"; hero.append(shock);
+          shock.animate([{ transform: `scale(${(16 / (2 * R)).toFixed(4)})`, opacity: 1 }, { transform: "scale(1)", opacity: 0 }],
             { duration: 1600, delay: Math.max(0, d - 30), easing: "cubic-bezier(.16, 1, .3, 1)", fill: "forwards" });
-          setTimeout(() => { seed.remove(); shock.remove(); }, d + 1800);
+          setTimeout(() => { seed.remove(); shock?.remove(); }, d + 1800);
         },
-        cancel() { seed.remove(); shock.remove(); },
+        cancel() { seed.remove(); shock?.remove(); },
       };
     }
 

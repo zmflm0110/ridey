@@ -97,6 +97,21 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       await ctx.close();
     }
 
+    // ── 1-1. 화면 흔들림(CLS): 충격파 고리처럼 크기를 키우는 움직임이 레이아웃을 건드리면 여기서 잡힘 (좋음 < 0.1, 여기서는 0.03 안쪽)
+    for (const [name, vp] of [["넓은 화면", { width: 1440, height: 900 }], ["폰", { width: 390, height: 844 }]]) {
+      const { ctx, page } = await open({ viewport: vp, deviceScaleFactor: vp.width < 800 ? 2 : 1 });
+      await page.addInitScript(() => {
+        window.__cls = 0;
+        new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: "layout-shift", buffered: true });
+      });
+      await page.goto(BASE, { waitUntil: "load" }); await wait(3500);
+      await jump(page, "#key"); await wait(900); await press(page, 60); await press(page, 60); await wait(1200);   // 경보 충격파까지
+      await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; scrollTo(0, 0); });
+      const cls = await page.evaluate(() => window.__cls);
+      check(cls < 0.03, `${name}: 화면 흔들림(CLS) ${cls.toFixed(4)} < 0.03`);
+      await ctx.close();
+    }
+
     // ── 2. 대여소 자료를 못 받아도 깨지지 않음(씨앗 점이 남지 않음)
     {
       const { ctx, page, errors } = await open({}, async (c, p) => { await p.route("**/data/stations.json", (r) => r.fulfill({ status: 404, body: "" })); });
