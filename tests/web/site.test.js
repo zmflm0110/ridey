@@ -75,6 +75,23 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       check((await page.$$eval("#key-strip .g:not(.out)", (g) => g.length)) <= 16, "띠는 16칸을 넘지 않음");
       await page.keyboard.press("Tab"); await page.click("#key-reset"); await wait(100);
       check((await page.$$("#key-strip .g")).length === 0, "처음부터 → 띠가 빔");
+      // 기준 탐색기: 격자 값이 docs/phase1.md 와 같고, 기준을 바꾸면 균형(정밀도↑ → 경보↓)대로 움직임
+      await jump(page, "#explore"); await wait(900);
+      const num = async (id) => parseFloat((await page.textContent(id)).replace(/[^\d.]/g, ""));
+      await wait(600);
+      check((await num("#ex-p")) === 54.1 && (await num("#ex-a")) === 95 && (await num("#ex-v")) === 90, `탐색기 처음: 서울 1월 180초·300m·2명 = 54.1% · 95건 · 90명 (docs/phase1.md 와 같음)`);
+      check((await page.$$("#ex-plot .pt")).length === 18 && (await page.$$("#ex-plot .pt.on")).length === 1, "탐색기: 점 18개 중 고른 점 1개");
+      await page.click('#ex-k button[data-v="3"]'); await wait(700);
+      const p3 = await num("#ex-p"), a3 = await num("#ex-a");
+      check(p3 > 54.1 && a3 < 95, `탐색기: 3명 연속 → 정밀도↑ ${p3}% · 경보↓ ${a3}건`);
+      check(/놓치는|떨어집니다|줄어요/.test(await page.textContent("#ex-say")), "탐색기: 균형을 말로 설명");
+      await page.click("#ex-sets button:nth-child(3)"); await page.click('#ex-k button[data-v="2"]'); await wait(900);
+      check((await num("#ex-p")) === 51.8, "탐색기: 서울 6월(기준을 정하지 않은 달)에도 같은 기준 51.8%");
+      await page.click('#ex-sec button[data-v="60"]'); await page.click('#ex-m button[data-v="100"]'); await page.click('#ex-k button[data-v="2"]'); await wait(700);
+      check(/평소 자전거 2\.0%/.test(await page.textContent("#ex-plot .basel")), "탐색기: 평소 비율 점선이 고른 기준의 값(2.0%)을 따라감");
+      const before = await page.textContent("#ex-title");
+      await page.dispatchEvent("#ex-plot .pt:not(.on)", "click"); await wait(300);   // 고른 점은 고리가 계속 돌아 '안정' 을 기다리지 않게 이벤트를 직접
+      check((await page.$$("#ex-plot .pt.on")).length === 1 && (await page.textContent("#ex-title")) !== before, "탐색기: 점을 눌러도 기준이 바뀜");
       // 번호 확인
       await jump(page, "#try"); await wait(800);
       await page.fill("#bike", "69683"); await page.press("#bike", "Enter"); await wait(300);

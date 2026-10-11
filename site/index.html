@@ -160,6 +160,32 @@
           <div class="stat"><b class="num">90~243<small>명</small></b><p>서울에서 경보가 있었다면 하루에 막을 수 있었던 헛걸음(달·계절에 따라).</p></div>
         </div>
       </div>
+      <div class="explore card reveal" id="explore">
+        <header class="ex-head">
+          <div>
+            <p class="label"><span class="no">직접</span>기준을 바꿔 보세요</p>
+            <h3 id="ex-title">3분 · 300m · 서로 다른 2명, 왜 이 기준일까?</h3>
+          </div>
+          <div class="tabs" role="tablist" id="ex-sets" aria-label="도시·달"></div>
+        </header>
+        <div class="ex-body">
+          <figure class="ex-plot" id="ex-plot" aria-hidden="true"></figure>
+          <div class="ex-side">
+            <div class="ex-ctl">
+              <div class="seg" role="group" aria-label="빌리고 반납까지 걸린 시간"><span class="seg-k">빌리자마자</span><div id="ex-sec"></div></div>
+              <div class="seg" role="group" aria-label="움직인 거리"><span class="seg-k">거의 안 움직임</span><div id="ex-m"></div></div>
+              <div class="seg" role="group" aria-label="서로 다른 사람 연속 횟수"><span class="seg-k">서로 다른 사람</span><div id="ex-k"></div></div>
+            </div>
+            <dl class="ex-out" aria-live="polite">
+              <div><dt>다음 사람도 또 반납</dt><dd><b class="num" id="ex-p">–</b><small id="ex-pm"></small></dd></div>
+              <div><dt>하루 경보</dt><dd><b class="num" id="ex-a">–</b><small>건</small></dd></div>
+              <div><dt>하루 막을 수 있던 헛걸음</dt><dd><b class="num" id="ex-v">–</b><small>명</small></dd></div>
+            </dl>
+            <p class="ex-say" id="ex-say"></p>
+          </div>
+        </div>
+        <p class="fine ex-fine">실제 대여기록으로 같은 18가지 기준을 모두 돌린 결과입니다. 기준은 <b>1월 기록만</b>으로 정했고(정밀도 30% 이상 중 하루 막은 수가 가장 큰 것), 다른 달·대전에는 그대로 적용했습니다. <code>analysis/rule_grid.py</code></p>
+      </div>
       <div class="replay dark-card reveal" aria-label="2026년 6월 15일 서울 따릉이 하루를 빠르게 재생하는 지도">
         <div class="replay-top">
           <div><p class="label light"><span class="no">REPLAY</span>2026년 6월 15일, 실제 기록 재생</p><b class="clock num" id="clock">00:00</b></div>

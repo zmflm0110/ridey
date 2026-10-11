@@ -814,6 +814,104 @@
     seen(bars, () => show(0, true), 0.3);
   })();
 
+  // ── 04 기준 탐색기 — 경보 기준 18가지(시간 × 거리 × 연쇄)를 실제 기록으로 모두 돌린 격자(site/data/rule_grid.json, analysis/rule_grid.py).
+  //    점 하나가 기준 하나: 가로 = 하루 경보 수, 세로 = 경보 뒤 다음 사람도 또 반납한 비율. 점을 누르거나 단추로 바꾸면 숫자가 따라 바뀜.
+  //    정밀도를 올리면 경보가 줄어 놓치는 자전거가 늘어난다는 균형을, 그리고 1월에 고른 기준이 다른 달·도시에서도 성립하는지를 직접 본다.
+  (async () => {
+    const root = $("#explore"); if (!root) return;
+    let G; try { G = await (await fetch("data/rule_grid.json")).json(); } catch { root.hidden = true; return; }
+    const SEC = G.grid.sec, MS = G.grid.m, KS = G.grid.k, CH = G.chosen;
+    const cur = { set: 0, sec: CH.sec, m: CH.m, k: CH.k };
+    const row = (set, sec, m, k) => { const r = G.sets[set].rows.find((x) => x[0] === sec && x[1] === m && x[2] === k); return r && { p: r[3], a: r[4], v: r[5], base: r[6] }; };
+    const isChosen = (c) => c.sec === CH.sec && c.m === CH.m && c.k === CH.k;
+    const min = (sec) => (sec % 60 ? sec + "초" : sec / 60 + "분");
+
+    // 단추 묶음
+    const seg = (host, vals, key, label) => {
+      host.innerHTML = vals.map((v) => `<button type="button" data-v="${v}" aria-pressed="false" class="${v === CH[key] ? "mine" : ""}" ${v === CH[key] ? 'title="우리가 고른 기준"' : ""}>${label(v)}</button>`).join("");
+      host.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; cur[key] = +b.dataset.v; render(); });
+    };
+    seg($("#ex-sec"), SEC, "sec", (v) => `${min(v)} 안에`);
+    seg($("#ex-m"), MS, "m", (v) => `${v}m 안`);
+    seg($("#ex-k"), KS, "k", (v) => `${v}명 연속`);
+    const tabs = $("#ex-sets");
+    tabs.innerHTML = G.sets.map((x, i) => `<button role="tab" type="button" aria-selected="${i === 0}">${esc(x.name)}</button>`).join("");
+    tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; cur.set = [...tabs.children].indexOf(b); render(true); });
+
+    // 점 그림 (SVG) — 점은 처음 한 번 만들고, 달을 바꾸면 위치만 옮김(스프링)
+    const L = 46, R = 22, T = 16, B = 44, YMAX = 80, plot = $("#ex-plot");
+    let W = 620, H = 330;   // 좁은 화면에서는 그림 칸을 작게 잡아(글자가 같은 비율로 줄어 6px 이 되지 않게) 글자를 키움
+    const fitSize = () => { const n = plot.clientWidth || 600; W = n < 520 ? 400 : 620; H = n < 520 ? 330 : 330; svg.setAttribute("viewBox", `0 0 ${W} ${H}`); };
+    const NS = "http://www.w3.org/2000/svg", mk = (n, at = {}, kids) => { const e = document.createElementNS(NS, n); for (const k in at) e.setAttribute(k, at[k]); if (kids) e.append(...kids); return e; };
+    const svg = mk("svg", { viewBox: "0 0 620 330", role: "img" });
+    const axes = mk("g"), pts = mk("g");
+    svg.append(axes, pts); plot.append(svg); fitSize();
+    const dots = [];
+    for (const sec of SEC) for (const m of MS) for (const k of KS) {
+      const g = mk("g", { class: "pt" + (k === 3 ? " k3" : "") }), ring = mk("circle", { class: "ring", r: 9 }), d = mk("circle", { class: "d", r: 7 });
+      g.append(ring, d); g.addEventListener("click", () => { Object.assign(cur, { sec, m, k }); render(); });
+      pts.append(g); dots.push({ g, d, sec, m, k });
+    }
+    let xMax = 100, baseG = null, baseT = null;
+    const nice = (v) => { const u = v <= 120 ? 20 : v <= 300 ? 50 : 100; return Math.ceil(v / u) * u; };
+    const px = (x) => L + (x / xMax) * (W - L - R), py = (y) => T + (1 - y / YMAX) * (H - T - B);
+    const drawAxes = () => {
+      const set = G.sets[cur.set], mx = Math.max(...set.rows.map((r) => r[4]));
+      xMax = nice(mx * 1.12);
+      axes.replaceChildren();
+      for (let y = 0; y <= YMAX; y += 20) axes.append(mk("line", { class: "ax", x1: L, x2: W - R, y1: py(y), y2: py(y) }), Object.assign(mk("text", { class: "axl", x: L - 8, y: py(y) + 4, "text-anchor": "end" }), { textContent: y + "%" }));
+      const step = xMax <= 120 ? 20 : xMax <= 300 ? 50 : 100;
+      for (let x = 0; x <= xMax; x += step) axes.append(Object.assign(mk("text", { class: "axl", x: px(x), y: H - B + 20, "text-anchor": "middle" }), { textContent: String(x) }));
+      axes.append(Object.assign(mk("text", { class: "axl", x: W - R, y: H - 6, "text-anchor": "end" }), { textContent: "하루 경보 수 (건) →" }),
+        Object.assign(mk("text", { class: "axl", x: L, y: 8 }), { textContent: "경보 뒤 다음 사람도 또 반납한 비율" }));
+      // 평소 비율 점선 — 고른 기준의 헛대여 정의에 따라 평소 값도 다르므로(느슨하면 평소도 큼) 고른 기준의 값을 따라감
+      baseG = mk("g", { class: "baseg" }); baseT = mk("text", { class: "basel", x: W - R, y: -7, "text-anchor": "end" });
+      baseG.append(mk("line", { class: "base", x1: L, x2: W - R, y1: 0, y2: 0 }), baseT); axes.append(baseG);
+      // 범례 + '우리 선택' 이름표
+      const lg = mk("g", { transform: `translate(${W - R - 168}, ${T + 22})` });
+      lg.append(mk("circle", { cx: 6, cy: 6, r: 5, fill: "currentColor", opacity: 0.55 }), Object.assign(mk("text", { class: "leg", x: 18, y: 10 }), { textContent: "2명 연속" }),
+        mk("circle", { cx: 88, cy: 6, r: 4.2, fill: "none", stroke: "currentColor", "stroke-width": 2, opacity: 0.75 }), Object.assign(mk("text", { class: "leg", x: 100, y: 10 }), { textContent: "3명 연속" }));
+      lg.style.color = "var(--fg3)"; axes.append(lg);
+      const c = row(cur.set, CH.sec, CH.m, CH.k);
+      axes.append(Object.assign(mk("text", { class: "mine", x: px(c.a), y: py(c.p) - 16, "text-anchor": "middle" }), { textContent: "우리 선택" }));
+    };
+    const place = () => dots.forEach((o) => { const r = row(cur.set, o.sec, o.m, o.k); o.g.style.transform = `translate(${px(r.a).toFixed(1)}px, ${py(r.p).toFixed(1)}px)`; });
+
+    // 숫자는 이전 값에서 새 값으로 부드럽게
+    const tw = (el, to, dec, suf = "") => {
+      const from = parseFloat(el.dataset.v ?? to); el.dataset.v = to; const t0 = performance.now();
+      const set = (v) => (el.textContent = (dec ? v.toFixed(dec) : ko(Math.round(v))) + suf);
+      if (reduce || from === to) return set(to);
+      const step = (t) => { const k = Math.min(1, (t - t0) / 450); set(from + (to - from) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    };
+    const render = (setChanged) => {
+      const set = G.sets[cur.set], me = row(cur.set, cur.sec, cur.m, cur.k), ch = row(cur.set, CH.sec, CH.m, CH.k);
+      [...tabs.children].forEach((b, i) => b.setAttribute("aria-selected", i === cur.set));
+      for (const [id, key] of [["ex-sec", "sec"], ["ex-m", "m"], ["ex-k", "k"]]) [...$("#" + id).children].forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === cur[key]));
+      if (setChanged) { drawAxes(); place(); }
+      dots.forEach((o) => o.g.classList.toggle("on", o.sec === cur.sec && o.m === cur.m && o.k === cur.k));
+      dots.forEach((o) => { if (o.sec === cur.sec && o.m === cur.m && o.k === cur.k) pts.append(o.g); });   // 고른 점이 맨 위
+      tw($("#ex-p"), me.p, 1, "%"); tw($("#ex-a"), me.a, 0); tw($("#ex-v"), me.v, 0);
+      $("#ex-pm").textContent = `평소의 ${Math.round(me.p / me.base)}배`;
+      if (baseG) { baseG.style.transform = `translateY(${py(me.base).toFixed(1)}px)`; baseT.textContent = `평소 자전거 ${me.base.toFixed(1)}%`; }
+      $("#ex-title").textContent = isChosen(cur) ? "3분 · 300m · 서로 다른 2명, 왜 이 기준일까?" : `${min(cur.sec)} · ${cur.m}m · 서로 다른 ${cur.k}명이라면?`;
+      let say;
+      if (isChosen(cur)) {
+        say = cur.set === 0 ? `<b>1월 기록만</b>으로, 정밀도 30% 이상인 기준 중 <b>하루 막은 헛걸음이 가장 많은</b> 이 기준을 골랐습니다.`
+          : `<b>1월에 고른 기준 그대로</b>인데, 처음 보는 ${esc(set.name)}에서도 정밀도 <em>${me.p}%</em> — 평소(${me.base}%)의 ${Math.round(me.p / me.base)}배입니다.`;
+      } else {
+        const dA = Math.round(me.a - ch.a), dP = me.p - ch.p, dV = Math.round(me.v - ch.v);
+        say = `우리 선택보다 경보는 <b>${Math.abs(dA)}건 ${dA < 0 ? "적고" : "많고"}</b>, 정밀도는 <b>${Math.abs(dP).toFixed(1)}%p ${dP >= 0 ? "높고" : "낮고"}</b>, 막을 수 있던 헛걸음은 <em>${Math.abs(dV)}명 ${dV < 0 ? "줄어요" : "늘어요"}</em>. ` +
+          (dP > 0 && dV < 0 ? "더 정확해지지만, 그만큼 놓치는 자전거가 늘어납니다." : dP < 0 ? "경보는 늘어도 그중 맞는 비율이 떨어집니다." : "");
+      }
+      $("#ex-say").innerHTML = say;
+      plot.parentElement.querySelector("svg")?.setAttribute("aria-label", `${set.name}: 경보 기준 18가지 — 가로 하루 경보 수, 세로 다음 사람도 또 반납한 비율`);
+    };
+    render(true);
+    let rt2, lastW = W; addEventListener("resize", () => { clearTimeout(rt2); rt2 = setTimeout(() => { fitSize(); if (W !== lastW) { lastW = W; render(true); } }, 150); });
+  })();
+
   // ── 04 하루 재생 (6월 15일) — 헛대여(회색)·경보(신호색)·경보 뒤 또 헛걸음(흰색)·뒤늦은 고장 신고(파랑)
   (async () => {
     const cv = $("#replay"); if (!cv) return;

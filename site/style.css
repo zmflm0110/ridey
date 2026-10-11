@@ -204,6 +204,60 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .stat .num { font-size: clamp(40px, 4.4vw, 58px); line-height: 1; }
 .stat p { font-size: 16px; color: var(--fg2); max-width: 32em; }
 .stat p strong { color: var(--fg); }
+/* 04 기준 탐색기 — 18가지 기준을 점으로(가로 = 하루 경보 수, 세로 = 다음 사람도 또 반납한 비율). 점을 누르거나 단추로 바꿈 */
+.explore { margin-top: clamp(28px, 4vw, 48px); padding: clamp(22px, 3vw, 40px); }
+.ex-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px 32px; flex-wrap: wrap; margin-bottom: clamp(18px, 2.4vw, 30px); }
+.ex-head h3 { font-size: clamp(22px, 2.6vw, 32px); letter-spacing: -.04em; margin-top: 6px; }
+.ex-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(20px, 3.5vw, 52px); align-items: center; }
+.ex-plot { margin: 0; }
+.ex-plot svg { width: 100%; height: auto; overflow: visible; touch-action: manipulation; }
+.ex-plot .ax { stroke: var(--cline); stroke-width: 1; }
+.ex-plot .axl { font: 600 11.5px var(--font); fill: var(--fg3); }
+.ex-plot .baseg { transition: transform .7s var(--spring); }
+.ex-plot .base { stroke: var(--fg3); stroke-width: 1.2; stroke-dasharray: 3 5; opacity: .7; }
+.ex-plot .basel { font: 700 12px var(--font); fill: var(--fg2); }
+.ex-plot .pt { cursor: pointer; transition: transform .7s var(--spring); }
+.ex-plot .pt circle.d { fill: color-mix(in srgb, var(--fg3) 55%, transparent); stroke: none; transition: fill .3s, r .4s var(--spring); }
+.ex-plot .pt.k3 circle.d { fill: var(--card); stroke: color-mix(in srgb, var(--fg3) 75%, transparent); stroke-width: 2; }
+.ex-plot .pt:hover circle.d { fill: var(--fg2); }
+.ex-plot .pt.k3:hover circle.d { fill: var(--card); stroke: var(--fg2); }
+.ex-plot .pt.on circle.d { fill: var(--sig); stroke: none; }
+.ex-plot .pt.k3.on circle.d { fill: var(--card); stroke: var(--sig); stroke-width: 3; }
+.ex-plot .pt .ring { fill: none; stroke: var(--sig); stroke-width: 1.5; opacity: 0; }
+.ex-plot .pt.on .ring { opacity: 1; animation: ex-ping 2s var(--ease) infinite; }
+@keyframes ex-ping { from { transform: scale(1); opacity: .8; } to { transform: scale(2.6); opacity: 0; } }
+.ex-plot .pt .ring { transform-box: fill-box; transform-origin: center; }
+.ex-plot .mine { font: 800 12.5px var(--font); fill: var(--sigt); }
+.ex-plot .leg { font: 600 12px var(--font); fill: var(--fg2); }
+.ex-ctl { display: grid; gap: 14px; }
+.seg { display: grid; grid-template-columns: 7.2em 1fr; align-items: center; gap: 10px; }
+.seg-k { font-size: 14px; font-weight: 700; color: var(--fg2); }
+.seg > div { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.seg button { border: 0; cursor: pointer; padding: 9px 14px; border-radius: 999px; font: 700 14.5px var(--font); color: var(--fg2); background: var(--chip); transition: background-color .2s, color .2s, transform .3s var(--spring); }
+.seg button:hover { transform: translateY(-1px); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg button.mine::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--sig); margin-left: 7px; vertical-align: 2px; }
+.ex-out { margin: 22px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--cline); }
+.ex-out > div { padding: 18px 14px 4px 0; }
+.ex-out > div + div { padding-left: 16px; border-left: 1px solid var(--cline); }
+.ex-out dt { font-size: 12.5px; font-weight: 700; color: var(--fg3); line-height: 1.35; min-height: 2.7em; }
+.ex-out dd { margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.ex-out b { font-size: clamp(26px, 2.8vw, 38px); line-height: 1; letter-spacing: -.04em; }
+.ex-out #ex-p { color: var(--sigt); }
+.ex-out small { font-size: 13px; font-weight: 700; color: var(--fg2); }
+.ex-say { margin-top: 18px; font-size: 16px; line-height: 1.6; color: var(--fg2); min-height: 4.8em; }
+.ex-say b { color: var(--fg); } .ex-say em { font-style: normal; color: var(--sigt); font-weight: 800; }
+.ex-fine { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--cline); }
+.ex-fine code { font-size: 12.5px; }
+@media (max-width: 860px) {
+  .ex-plot .axl { font-size: 12.5px; } .ex-plot .basel, .ex-plot .mine, .ex-plot .leg { font-size: 13px; }
+  .ex-body { grid-template-columns: 1fr; }
+  .seg { grid-template-columns: 1fr; gap: 6px; }
+  .ex-out { grid-template-columns: 1fr 1fr 1fr; }
+  .ex-out > div, .ex-out > div + div { padding-right: 8px; }
+  .ex-out > div + div { padding-left: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .ex-plot .pt, .ex-plot .pt circle.d, .ex-plot .baseg, .seg button { transition: none; } .ex-plot .pt.on .ring { animation: none; } }
 .replay { margin-top: clamp(28px, 4vw, 48px); border-radius: var(--r-lg); background: var(--bg); color: var(--fg); padding: clamp(20px, 3vw, 34px); position: relative; overflow: hidden; }
 .replay-top { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; position: relative; z-index: 1; }
 .replay .clock { display: block; font-size: clamp(44px, 6vw, 76px); line-height: 1; margin-top: 4px; }
