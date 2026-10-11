@@ -269,6 +269,26 @@
           <div><h3>휴대폰으로 열기</h3><p>카메라로 비추거나 <a href="app/">zmflm0110.github.io/ridey/app</a> 을 엽니다. 공유 → 홈 화면에 추가하면 앱처럼 열립니다.</p></div>
         </div>
       </div>
+      <div class="stk-row reveal" id="stk">
+        <div class="stk-copy">
+          <p class="label"><span class="no">실물</span>대여소 스티커</p>
+          <h3>대여소 기둥에 붙이면,<br>스캔 한 번에 그곳의 피할 번호.</h3>
+          <p class="stk-p">대여소를 고르면 QR 스티커가 만들어져요. 카메라로 비추면 웹앱이 <b>그 대여소</b>를 열어, 지금 서 있는 고장 의심 자전거 번호만 바로 보여 줍니다. 설치도, 번호 입력도 필요 없어요.</p>
+          <form class="stk-form" id="stk-form" autocomplete="off" role="search">
+            <label class="sr" for="stk-q">대여소 이름으로 찾기</label>
+            <input id="stk-q" type="search" placeholder="대여소 이름 (예: 망원역)" enterkeyhint="search" aria-controls="stk-sugg">
+          </form>
+          <ul class="stk-sugg" id="stk-sugg" aria-label="찾은 대여소"></ul>
+          <div class="stk-actions">
+            <button class="btn solid" id="stk-print" type="button">인쇄 · PDF 로 저장</button>
+            <a class="btn line" id="stk-open" href="app/?s=02720">앱에서 열어 보기</a>
+          </div>
+          <p class="fine">100×140mm 로 인쇄됩니다. QR 은 이 브라우저에서 만들고(서버로 보내지 않음) 주소는 <code>zmflm0110.github.io/ridey/app/?s=대여소번호</code> 하나뿐입니다.</p>
+        </div>
+        <figure class="stk-prev" aria-live="polite">
+          <div class="sbox"><div class="sticker" id="sticker" role="img" aria-label="대여소 스티커 미리보기"></div></div>
+        </figure>
+      </div>
     </div>
   </section>
 

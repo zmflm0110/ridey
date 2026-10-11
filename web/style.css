@@ -175,6 +175,16 @@ video { width: 100%; margin: 10px 0 0; border-radius: 18px; }
 .result.warn { background: linear-gradient(180deg, var(--signal-soft) 0, var(--card) 170px); border-color: color-mix(in srgb, var(--signal) 35%, var(--line)); }
 .result.ok { background: linear-gradient(180deg, var(--calm-soft) 0, var(--card) 170px); border-color: color-mix(in srgb, var(--calm) 30%, var(--line)); }
 .result.warn .icon { color: var(--signal-ink); } .result.ok .icon { color: var(--calm-ink); }
+/* 대여소 QR 로 연 카드(조회 탭 맨 위) */
+.st-card { margin-top: 8px; }
+.st-card .st-name { margin: 0 0 6px; font-weight: 800; font-size: 15px; color: var(--ink); }
+.st-card .st-name span { font-weight: 600; color: var(--sub); margin-left: 6px; }
+.st-card .st-when { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--signal-ink); }
+.st-card.ok .st-when, .result.ok.st-card .st-when { color: var(--calm-ink); }
+.st-card .my-bikes { margin: 4px 0 0; }
+.st-card .st-help { margin: 14px 0 0; font-size: 14.5px; color: var(--body); }
+.st-card .st-add { margin-top: 16px; }
+.st-card .st-add[disabled] { opacity: .6; cursor: default; }
 .result .icon { animation: pop .45s cubic-bezier(.3, 1.6, .5, 1) both; }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } }
 .facts { background: var(--fill); border-radius: 18px; padding: 14px 16px; margin: 14px 0 4px; display: grid; gap: 8px; font-size: 15px; }

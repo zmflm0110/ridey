@@ -1003,6 +1003,48 @@
     sb("ops_alarm_days?select=day,scored,hit&order=day").then((r) => Array.isArray(r) && draw(r.map((x) => [x.day, x.scored, x.hit]))).catch(() => {});
   })();
 
+  // ── 06 대여소 스티커 — 대여소를 고르면 100×140mm QR 스티커. QR 은 이 브라우저에서 만든다(qr.js, 처음 볼 때만 받음). 주소는 앱의 ?s=대여소번호.
+  (async () => {
+    const root = $("#stk"); if (!root) return;
+    const st = await stationsP.catch(() => null);
+    if (!st || !Object.keys(st).length) { root.hidden = true; return; }
+    const APP = "https://zmflm0110.github.io/ridey/app/?s=", DEFAULT = "02720";   // 기본: SPB-69683 이 서 있던 강서구 힐스테이트에코
+    const sticker = $("#sticker"), sugg = $("#stk-sugg"), q = $("#stk-q"), open = $("#stk-open");
+    const loadQR = () => window.RideyQR ? Promise.resolve() : new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "qr.js"; sc.onload = ok; sc.onerror = no; document.head.append(sc); });
+    const logo = $(".nav .wordmark")?.outerHTML || "";
+    let cur = null;
+    const draw = async (id) => {
+      const s = st[id]; if (!s) return;
+      await loadQR(); cur = id;
+      const name = s.name.trim().replace(/\s+/g, " ");
+      sticker.innerHTML = `${logo.replace('class="wordmark"', 'class="wordmark s-logo"')}` +
+        `<p class="s-t">타기 전에, 스캔<i></i></p><p class="s-sub">이 대여소에 지금 서 있는<br>고장 의심 따릉이 번호가 바로 떠요</p>` +
+        `<div class="s-qr">${window.RideyQR.svg(APP + id, { label: `${name} 대여소 QR 코드` })}</div>` +
+        `<div><div class="s-name">${esc(name)}</div><div class="s-gu">${esc(s.gu || "")} · ${esc(id)}</div></div>` +
+        `<p class="s-foot">RIDEY. 점 하나가 신호다 · zmflm0110.github.io/ridey</p>`;
+      sticker.setAttribute("aria-label", `${name} 대여소 스티커 미리보기. QR 을 스캔하면 이 대여소의 고장 의심 자전거 번호가 열립니다.`);
+      open.href = `app/?s=${id}`;
+    };
+    const find = (text) => {
+      const k = text.replace(/\s+/g, ""); if (!k) return [];
+      const all = Object.values(st), starts = all.filter((s) => s.name.replace(/\s+/g, "").startsWith(k)), has = all.filter((s) => !starts.includes(s) && s.name.replace(/\s+/g, "").includes(k));
+      return [...starts, ...has].slice(0, 6);
+    };
+    const show = (list) => { sugg.innerHTML = list.map((s) => `<li><button type="button" data-id="${esc(s.id)}">${esc(s.name.trim())}<small>${esc(s.gu || "")}</small></button></li>`).join(""); };
+    q.addEventListener("input", () => show(find(q.value.trim())));
+    $("#stk-form").addEventListener("submit", (e) => { e.preventDefault(); const l = find(q.value.trim()); if (l[0]) { draw(l[0].id); q.value = l[0].name.trim(); sugg.innerHTML = ""; } });
+    sugg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; draw(b.dataset.id); q.value = st[b.dataset.id].name.trim(); sugg.innerHTML = ""; });
+    // 인쇄: 스티커만 남기는 복사본을 body 끝에 붙이고 print — 닫히면 치움(인쇄 CSS 가 나머지를 숨김)
+    $("#stk-print").addEventListener("click", async () => {
+      if (!cur) await draw(DEFAULT);
+      const host = document.createElement("div"); host.id = "print-root"; host.innerHTML = sticker.parentElement.outerHTML.replace('id="sticker"', "");
+      document.body.append(host); document.body.classList.add("printing");
+      const done = () => { document.body.classList.remove("printing"); host.remove(); removeEventListener("afterprint", done); };
+      addEventListener("afterprint", done); setTimeout(() => window.print(), 50);
+    });
+    seen(root, () => draw(DEFAULT), 0.05);   // 보일 때 처음 그림(qr.js 도 이때 받음)
+  })();
+
   // ── 06 번호로 확인 (6월 15일 아침 시연 목록) — [번호, 대여소 번호, 대여소, 연쇄, 단계, 마지막]
   (async () => {
     const form = $("#lookup"); if (!form) return;

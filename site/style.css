@@ -326,6 +326,46 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .phones figcaption { display: grid; gap: 6px; }
 .phones figcaption b { font-size: 19px; letter-spacing: -.03em; }
 .phones figcaption span { font-size: 15.5px; color: var(--fg2); line-height: 1.6; }
+/* 06 대여소 스티커 — 크기를 cqw(스티커 너비의 1%)로 잡아 미리보기(약 340px)와 인쇄(100mm)가 같은 모양 */
+.stk-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(24px, 4vw, 64px); align-items: center; margin-top: clamp(40px, 5vw, 64px);
+  padding: clamp(24px, 3.4vw, 48px); border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--cline); }
+.stk-copy h3 { font-size: clamp(24px, 2.8vw, 36px); letter-spacing: -.045em; margin: 8px 0 14px; }
+.stk-p { color: var(--fg2); max-width: 34em; } .stk-p b { color: var(--fg); }
+.stk-form { margin-top: 20px; }
+.stk-form input { width: 100%; max-width: 420px; height: 52px; border-radius: 999px; border: 1.5px solid var(--cline2); background: transparent; color: var(--fg); padding: 0 22px; font: 700 16px var(--font); }
+.stk-form input:focus { outline: none; border-color: var(--fg); }
+.stk-sugg { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+.stk-sugg button { border: 0; cursor: pointer; padding: 8px 14px; border-radius: 999px; background: var(--chip); color: var(--fg); font: 700 14px var(--font); }
+.stk-sugg button:hover { background: var(--fg); color: var(--bg); }
+.stk-sugg small { color: var(--fg3); font-weight: 600; margin-left: 4px; }
+.stk-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.stk-prev { margin: 0; display: grid; place-items: center; }
+.sbox { container-type: inline-size; width: min(100%, 340px); }   /* cqw 는 '바깥 컨테이너' 너비 기준이라 컨테이너를 따로 둠 */
+.sticker { width: 100%; aspect-ratio: 100 / 140; border-radius: 6cqw; background: #111317; color: #F3F1EC; overflow: hidden;
+  display: grid; grid-template-rows: auto auto 1fr auto auto; justify-items: center; text-align: center; padding: 7cqw 7cqw 6cqw; position: relative;
+  box-shadow: 0 30px 60px -34px rgba(17, 19, 23, .55); -webkit-print-color-adjust: exact; print-color-adjust: exact; transition: transform .6s var(--spring); }
+@media (hover: hover) { .sticker:hover { transform: rotate(-1.2deg) translateY(-4px); } }
+.sticker .s-logo { height: 7.2cqw; width: auto; color: #F3F1EC; }
+.sticker .s-logo .dot { fill: #FF5C2E; }
+.sticker .s-t { margin: 5.5cqw 0 0; font-weight: 800; font-size: 10.6cqw; line-height: 1.12; letter-spacing: -.05em; }
+.sticker .s-t i { display: inline-block; width: 2.3cqw; height: 2.3cqw; margin-left: .7cqw; border-radius: 50%; background: #FF5C2E; }
+.sticker .s-sub { margin: 2.2cqw 0 0; font-size: 3.8cqw; line-height: 1.45; color: #B3B7BE; font-weight: 600; }
+.sticker .s-qr { align-self: center; width: 60cqw; height: 60cqw; margin: 4.5cqw 0; padding: 2.4cqw; background: #fff; border-radius: 4.5cqw; }
+.sticker .s-qr svg { display: block; width: 100%; height: 100%; }
+.sticker .s-name { font-weight: 800; font-size: 6.4cqw; line-height: 1.2; letter-spacing: -.04em; max-width: 100%; overflow-wrap: anywhere; }
+.sticker .s-gu { margin-top: .8cqw; font-size: 3.7cqw; color: #FF7A52; font-weight: 800; }
+.sticker .s-foot { margin-top: 3.6cqw; font-size: 3cqw; color: #8A8F98; font-weight: 600; letter-spacing: -.01em; }
+#print-root { display: none; }
+@media print {
+  @page { size: 100mm 140mm; margin: 0; }
+  html, body { background: #fff !important; }
+  body.printing > *:not(#print-root) { display: none !important; }
+  body.printing #print-root { display: block; position: fixed; inset: 0; }
+  body.printing #print-root .sbox { width: 100mm; }
+  body.printing #print-root .sticker { height: 140mm; border-radius: 0; box-shadow: none; transform: none; }
+}
+@media (max-width: 860px) { .stk-row { grid-template-columns: 1fr; } .stk-prev { order: -1; } }
+@media (prefers-reduced-motion: reduce) { .sticker { transition: none; } .sticker:hover { transform: none; } }
 .try-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: clamp(16px, 2vw, 24px); margin-top: clamp(40px, 5vw, 64px); }
 .try h3 { font-size: 24px; margin-bottom: 20px; }
 .try form { display: flex; gap: 10px; }

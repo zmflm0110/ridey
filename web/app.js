@@ -214,6 +214,7 @@ function renderLists() {
   more.textContent = state.allBikes ? "접기" : `${Math.min(list.length, 80)}대 모두 보기`;
   more.setAttribute("aria-expanded", String(!!state.allBikes));
   renderMine();
+  { const sid = stationFromUrl(); if (sid && $("#st-card").innerHTML) renderStationCard(sid); }   // 대여소 QR 로 연 카드는 날짜·목록이 바뀌면 같이
 }
 $("#bike-more").addEventListener("click", () => { state.allBikes = !state.allBikes; renderLists(); });
 
@@ -604,6 +605,7 @@ function defaultDay(days) {
   $("#day").addEventListener("change", (e) => loadDay(e.target.value));
   await loadDay($("#day").value, live);   // 실시간 목록은 위에서 받은 것 그대로 (두 번 받지 않게)
   stationOptions(null);
+  openStationLink();   // 대여소 QR 로 들어왔으면 그 대여소를 맨 위에
   flushQueue();
   if ("serviceWorker" in navigator && !window.Capacitor) navigator.serviceWorker.register("sw.js").catch(() => {});   // 안드로이드 앱은 파일이 앱 안에 있어 필요 없음
 })();
@@ -724,6 +726,38 @@ $("#my-list").addEventListener("click", (e) => {
   const b = e.target.closest("[data-bike]");
   if (b) { $("#bike-input").value = b.dataset.bike; lookup(b.dataset.bike); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
+
+// 대여소 QR(?s=02720) — 대여소 기둥 스티커를 스캔하면 그 대여소에 지금 서 있는 의심 자전거 번호를 바로 보여 준다(조회 탭 맨 위).
+// 번호를 누르면 아래에서 바로 조회, '내 대여소에 넣기' 로 계속 볼 수 있다. 주소는 5자리 대여소 번호만(다른 값은 무시).
+function stationFromUrl() {
+  const raw = new URLSearchParams(location.search).get("s");
+  return raw && /^\d{3,5}$/.test(raw) ? raw.padStart(5, "0") : null;
+}
+function renderStationCard(id) {
+  const st = state.stations[id], box = $("#st-card");
+  if (!st || !box) return;
+  const bikes = ((state.morning && state.morning.bikes) || []).filter((b) => b.station === id).sort((a, b) => (b.p_next ?? b.chain) - (a.p_next ?? a.chain));
+  const when = state.day === "live" ? "지금 이 대여소에 서 있는" : isPast() ? `${koDay(state.day)} 아침 목록 기준 (시연 자료)` : "오늘 아침 목록 기준";
+  const added = mine.includes(id);
+  box.innerHTML = `<div class="result ${bikes.length ? "warn" : "ok"} st-card"><span class="icon" aria-hidden="true">${bikes.length ? "⚠︎" : "✓"}</span>` +
+    `<p class="st-name">${esc(st.name)} <span>${esc(st.gu || "")}</span></p>` +
+    `<p class="st-when">${when}</p>` +
+    `<h2>${bikes.length ? `피할 자전거<br>${bikes.length}대 있어요` : `고장 의심 자전거가<br>없어요`}</h2>` +
+    (bikes.length ? `<div class="my-bikes">${bikes.map((b) => `<button type="button" class="chip ${b.level}" data-bike="${esc(b.bike)}" aria-label="${esc(b.bike)} 피하기, 자세히">${esc(b.bike)}</button>`).join("")}</div>` +
+      `<p class="st-help">번호를 누르면 아래에서 자세히 보여 줘요. 이 번호만 피하고 옆 자전거를 타세요.</p>` : `<p class="st-help">서로 다른 사람이 연달아 빌리자마자 반납한 자전거가 없어요. 다른 대여소도 확인하려면 아래에서 번호를 넣어 보세요.</p>`) +
+    `<button type="button" class="secondary st-add" data-add-st="${esc(id)}" ${added ? "disabled" : ""}>${added ? "내 대여소에 있어요" : "내 대여소에 넣기"}</button></div>`;
+}
+$("#st-card").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-bike]");
+  if (b) { $("#bike-input").value = b.dataset.bike; lookup(b.dataset.bike); $("#lookup-result").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  const a = e.target.closest("[data-add-st]");
+  if (a) { myAdd(a.dataset.addSt); renderStationCard(a.dataset.addSt); }
+});
+function openStationLink() {
+  const id = stationFromUrl();
+  if (!id || !state.stations[id]) return;
+  showTab("lookup"); renderStationCard(id);
+}
 
 // 오늘 갈 곳 — 눈 가리고(docs/field_protocol.md): 경보 대여소 3곳 + 그 근처(1.5km 안) 경보 없는 대여소 2곳을 섞어 이름만.
 // 어느 곳이 경보인지 숨겨야 '고장일 거야' 하는 선입견 없이 본다. 고른 목록은 이 폰에만 남김(분석 땐 조사 시각의 실시간 기록으로 맞춤).
