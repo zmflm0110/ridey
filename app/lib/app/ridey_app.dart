@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/rider/rider_home_page.dart';
+import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/widgets/liquid_navigation.dart';
 
 class RideyApp extends StatefulWidget {
-  const RideyApp({super.key});
+  const RideyApp({super.key, this.liveRepository});
+
+  final LiveSnapshotRepository? liveRepository;
 
   @override
   State<RideyApp> createState() => _RideyAppState();
@@ -21,6 +25,7 @@ class _RideyAppState extends State<RideyApp> {
       darkTheme: RideyTheme.dark(),
       themeMode: _themeMode,
       home: RideyShell(
+        liveRepository: widget.liveRepository,
         themeMode: _themeMode,
         onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
       ),
@@ -31,10 +36,12 @@ class _RideyAppState extends State<RideyApp> {
 class RideyShell extends StatefulWidget {
   const RideyShell({
     super.key,
+    required this.liveRepository,
     required this.themeMode,
     required this.onThemeModeChanged,
   });
 
+  final LiveSnapshotRepository? liveRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
@@ -49,13 +56,7 @@ class _RideyShellState extends State<RideyShell> {
   Widget build(BuildContext context) {
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
     final pages = <Widget>[
-      const _FoundationPage(
-        key: ValueKey('ride'),
-        eyebrow: '이용하기',
-        title: '타기 전에,\n확인하세요.',
-        description: '카메라·번호 조회와 내 대여소 화면을 다음 단계에서 연결해요.',
-        icon: Icons.directions_bike_outlined,
-      ),
+      RiderHomePage(key: ValueKey('ride'), repository: widget.liveRepository),
       const _FoundationPage(
         key: ValueKey('work'),
         eyebrow: '업무',
@@ -109,32 +110,10 @@ class _AppHeader extends StatelessWidget {
         children: [
           const _Wordmark(),
           const Spacer(),
-          Semantics(
-            label: '데이터 상태: 연결 준비 중',
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                border: Border.all(color: context.ridey.line),
-                borderRadius: BorderRadius.circular(99),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.cloud_queue_outlined,
-                    size: 15,
-                    color: context.ridey.muted,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    '연결 준비 중',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: context.ridey.muted,
-                    ),
-                  ),
-                ],
-              ),
+          Text(
+            '타기 전 확인',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: context.ridey.muted,
             ),
           ),
         ],

@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
+import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+
+class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
+  @override
+  Future<LiveSnapshot> fetch() async {
+    return LiveSnapshot(
+      updatedAt: DateTime(2026, 10, 20, 15),
+      date: '2026-10-20',
+      bikes: const [],
+      feed: const FeedHealth(isHealthy: true),
+    );
+  }
+}
 
 void main() {
   testWidgets('switches between the shared app destinations', (tester) async {
-    await tester.pumpWidget(const RideyApp());
+    await tester.pumpWidget(
+      RideyApp(liveRepository: _FakeLiveSnapshotRepository()),
+    );
 
     expect(find.text('타기 전에,\n확인하세요.'), findsOneWidget);
     expect(find.text('업무'), findsOneWidget);
@@ -21,7 +37,9 @@ void main() {
   });
 
   testWidgets('changes the app appearance from settings', (tester) async {
-    await tester.pumpWidget(const RideyApp());
+    await tester.pumpWidget(
+      RideyApp(liveRepository: _FakeLiveSnapshotRepository()),
+    );
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
 
