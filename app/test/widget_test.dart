@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/stations/bike_station.dart';
+import 'package:ridey_app/features/stations/station_repository.dart';
 
 class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
   @override
@@ -26,10 +28,18 @@ class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
   }
 }
 
+class _FakeStationRepository implements StationRepository {
+  @override
+  Future<List<BikeStation>> fetch() async => const [];
+}
+
 void main() {
   testWidgets('switches between the shared app destinations', (tester) async {
     await tester.pumpWidget(
-      RideyApp(liveRepository: _FakeLiveSnapshotRepository()),
+      RideyApp(
+        liveRepository: _FakeLiveSnapshotRepository(),
+        stationRepository: _FakeStationRepository(),
+      ),
     );
 
     expect(find.text('타기 전에,\n확인하세요.'), findsOneWidget);
@@ -48,7 +58,10 @@ void main() {
 
   testWidgets('changes the app appearance from settings', (tester) async {
     await tester.pumpWidget(
-      RideyApp(liveRepository: _FakeLiveSnapshotRepository()),
+      RideyApp(
+        liveRepository: _FakeLiveSnapshotRepository(),
+        stationRepository: _FakeStationRepository(),
+      ),
     );
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
@@ -64,7 +77,10 @@ void main() {
 
   testWidgets('opens an alert detail from a bike number', (tester) async {
     await tester.pumpWidget(
-      RideyApp(liveRepository: _FakeLiveSnapshotRepository()),
+      RideyApp(
+        liveRepository: _FakeLiveSnapshotRepository(),
+        stationRepository: _FakeStationRepository(),
+      ),
     );
     await tester.pumpAndSettle();
 
