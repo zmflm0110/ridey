@@ -17,3 +17,11 @@ LiveBike? findBike(List<LiveBike> bikes, String value) {
   }
   return null;
 }
+
+String? bikeIdFromRecognizedText(String text) {
+  final match = RegExp(
+    r'SPB\s*-?\s*\d{3,6}',
+    caseSensitive: false,
+  ).firstMatch(text);
+  return match == null ? null : normalizeBikeId(match.group(0)!);
+}

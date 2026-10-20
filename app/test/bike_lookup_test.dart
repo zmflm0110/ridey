@@ -25,4 +25,9 @@ void main() {
     expect(findBike(bikes, 'spb-69683'), same(bikes.single));
     expect(findBike(bikes, 'SPB-12345'), isNull);
   });
+
+  test('extracts a bike number from OCR text', () {
+    expect(bikeIdFromRecognizedText('RIDEY\nspb 69683\n대여소'), 'SPB-69683');
+    expect(bikeIdFromRecognizedText('번호를 읽지 못했어요'), isNull);
+  });
 }
