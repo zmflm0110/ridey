@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 
 class RiderHomePage extends StatefulWidget {
   const RiderHomePage({super.key, this.repository});
@@ -28,6 +29,23 @@ class _RiderHomePageState extends State<RiderHomePage> {
     await _snapshot;
   }
 
+  Future<void> _openLookup(LiveSnapshot snapshot) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            BikeLookupPage(snapshot: snapshot, repository: _repository),
+      ),
+    );
+  }
+
+  void _openDetail(LiveBike bike, DateTime updatedAt) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BikeDetailPage(bike: bike, updatedAt: updatedAt),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<LiveSnapshot>(
@@ -42,6 +60,9 @@ class _RiderHomePageState extends State<RiderHomePage> {
           ConnectionState.done => _LoadedHome(
             snapshot: snapshot.requireData,
             onRefresh: _refresh,
+            onLookup: () => _openLookup(snapshot.requireData),
+            onBikeSelected: (bike) =>
+                _openDetail(bike, snapshot.requireData.updatedAt),
           ),
           _ => const _LoadingHome(),
         };
@@ -53,10 +74,17 @@ class _RiderHomePageState extends State<RiderHomePage> {
 }
 
 class _LoadedHome extends StatelessWidget {
-  const _LoadedHome({required this.snapshot, required this.onRefresh});
+  const _LoadedHome({
+    required this.snapshot,
+    required this.onRefresh,
+    required this.onLookup,
+    required this.onBikeSelected,
+  });
 
   final LiveSnapshot snapshot;
   final RefreshCallback onRefresh;
+  final VoidCallback onLookup;
+  final ValueChanged<LiveBike> onBikeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +104,7 @@ class _LoadedHome extends StatelessWidget {
           count: snapshot.bikes.length,
           highAlertCount: highAlerts,
           onRefresh: onRefresh,
+          onLookup: onLookup,
         ),
         if (!snapshot.feed.isHealthy) ...[
           const SizedBox(height: 16),
@@ -90,7 +119,10 @@ class _LoadedHome extends StatelessWidget {
           ...preview.map(
             (bike) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _BikeAlertCard(bike: bike),
+              child: _BikeAlertCard(
+                bike: bike,
+                onTap: () => onBikeSelected(bike),
+              ),
             ),
           ),
       ],
@@ -103,11 +135,13 @@ class _AlertSummary extends StatelessWidget {
     required this.count,
     required this.highAlertCount,
     required this.onRefresh,
+    required this.onLookup,
   });
 
   final int count;
   final int highAlertCount;
   final RefreshCallback onRefresh;
+  final VoidCallback onLookup;
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +209,19 @@ class _AlertSummary extends StatelessWidget {
               color: theme.colorScheme.surface.withValues(alpha: .76),
             ),
           ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onLookup,
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.surface,
+                foregroundColor: theme.colorScheme.onSurface,
+              ),
+              icon: const Icon(Icons.search_rounded),
+              label: const Text('자전거 번호로 확인'),
+            ),
+          ),
         ],
       ),
     );
@@ -182,9 +229,10 @@ class _AlertSummary extends StatelessWidget {
 }
 
 class _BikeAlertCard extends StatelessWidget {
-  const _BikeAlertCard({required this.bike});
+  const _BikeAlertCard({required this.bike, required this.onTap});
 
   final LiveBike bike;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -194,67 +242,80 @@ class _BikeAlertCard extends StatelessWidget {
         : context.ridey.signalText.withValues(alpha: .72);
     final levelText = bike.isHighAlert ? '강한 경보' : '경보';
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border.all(color: context.ridey.line),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 11,
-            height: 11,
-            margin: const EdgeInsets.only(top: 5),
+    return Semantics(
+      button: true,
+      label: '${bike.bike} 경보 자세히 보기',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Ink(
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: severityColor,
-              shape: BoxShape.circle,
+              color: theme.colorScheme.surface,
+              border: Border.all(color: context.ridey.line),
+              borderRadius: BorderRadius.circular(22),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  width: 11,
+                  height: 11,
+                  margin: const EdgeInsets.only(top: 5),
+                  decoration: BoxDecoration(
+                    color: severityColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bike.stationName.isEmpty
+                            ? bike.station
+                            : bike.stationName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '${bike.bike} · 서로 다른 ${bike.chain}명이 바로 반납',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: context.ridey.muted,
+                        ),
+                      ),
+                      if (bike.probability != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          '다음 사람도 바로 반납할 가능성 ${bike.probability}%',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: context.ridey.signalText,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  bike.stationName.isEmpty ? bike.station : bike.stationName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  levelText,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: severityColor,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  '${bike.bike} · 서로 다른 ${bike.chain}명이 바로 반납',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: context.ridey.muted,
-                  ),
-                ),
-                if (bike.probability != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    '다음 사람도 바로 반납할 가능성 ${bike.probability}%',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: context.ridey.signalText,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            levelText,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: severityColor,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

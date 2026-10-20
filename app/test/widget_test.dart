@@ -10,7 +10,17 @@ class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
     return LiveSnapshot(
       updatedAt: DateTime(2026, 10, 20, 15),
       date: '2026-10-20',
-      bikes: const [],
+      bikes: const [
+        LiveBike(
+          bike: 'SPB-69683',
+          station: '02720',
+          stationName: '힐스테이트에코',
+          chain: 3,
+          isHighAlert: true,
+          lastDud: '10-20 14:58',
+          probability: 48,
+        ),
+      ],
       feed: const FeedHealth(isHealthy: true),
     );
   }
@@ -50,5 +60,21 @@ void main() {
       Theme.of(tester.element(find.byType(Switch))).brightness,
       Brightness.dark,
     );
+  });
+
+  testWidgets('opens an alert detail from a bike number', (tester) async {
+    await tester.pumpWidget(
+      RideyApp(liveRepository: _FakeLiveSnapshotRepository()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('자전거 번호로 확인'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'spb-69683');
+    await tester.tap(find.text('경보 기록 확인'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('타지 마세요.'), findsOneWidget);
+    expect(find.text('왜 경보가 켜졌나요?'), findsOneWidget);
   });
 }
