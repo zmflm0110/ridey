@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
+import 'package:ridey_app/features/field/field_verdict.dart';
+import 'package:ridey_app/features/field/field_verification_repository.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
@@ -39,6 +41,7 @@ void main() {
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
+        fieldRepository: _emptyFieldRepository(),
       ),
     );
 
@@ -61,6 +64,7 @@ void main() {
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
+        fieldRepository: _emptyFieldRepository(),
       ),
     );
     await tester.tap(find.text('더보기'));
@@ -80,6 +84,7 @@ void main() {
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
+        fieldRepository: _emptyFieldRepository(),
       ),
     );
     await tester.pumpAndSettle();
@@ -93,4 +98,48 @@ void main() {
     expect(find.text('타지 마세요.'), findsOneWidget);
     expect(find.text('왜 경보가 켜졌나요?'), findsOneWidget);
   });
+
+  testWidgets('shows field verification status without changing queue order', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      RideyApp(
+        liveRepository: _FakeLiveSnapshotRepository(),
+        stationRepository: _FakeStationRepository(),
+        fieldRepository: FieldVerificationRepository(
+          remote: _FakeFieldRemote(),
+          queue: _MemoryFieldQueue(),
+        ),
+      ),
+    );
+    await tester.tap(find.text('업무'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('현장 확인 1대'), findsOneWidget);
+  });
+}
+
+FieldVerificationRepository _emptyFieldRepository() {
+  return FieldVerificationRepository(
+    remote: _FakeFieldRemote(),
+    queue: _MemoryFieldQueue(),
+  );
+}
+
+class _FakeFieldRemote implements FieldVerificationRemote {
+  @override
+  Future<CheckedVerdicts> fetchChecked() async => {
+    'SPB-69683': {FieldVerdict.tire: 1},
+  };
+
+  @override
+  Future<void> record(FieldVerificationRecord record) async {}
+}
+
+class _MemoryFieldQueue implements FieldVerificationQueue {
+  @override
+  Future<List<FieldVerificationRecord>> load() async => const [];
+
+  @override
+  Future<void> save(List<FieldVerificationRecord> records) async {}
 }

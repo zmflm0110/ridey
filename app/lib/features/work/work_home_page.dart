@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/field/field_verdict.dart';
+import 'package:ridey_app/features/field/field_verification_repository.dart';
+import 'package:ridey_app/features/field/quick_verdict_sheet.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
@@ -9,10 +12,16 @@ import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/features/work/work_queue.dart';
 
 class WorkHomePage extends StatefulWidget {
-  const WorkHomePage({super.key, this.liveRepository, this.stationRepository});
+  const WorkHomePage({
+    super.key,
+    this.liveRepository,
+    this.stationRepository,
+    this.fieldRepository,
+  });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final FieldVerificationRepository? fieldRepository;
 
   @override
   State<WorkHomePage> createState() => _WorkHomePageState();
@@ -21,6 +30,7 @@ class WorkHomePage extends StatefulWidget {
 class _WorkHomePageState extends State<WorkHomePage> {
   late final LiveSnapshotRepository _liveRepository;
   late final StationRepository _stationRepository;
+  late final FieldVerificationRepository _fieldRepository;
   late Future<_WorkData> _loading;
   Position? _position;
   _QueueSort _sort = _QueueSort.priority;
@@ -31,17 +41,31 @@ class _WorkHomePageState extends State<WorkHomePage> {
     super.initState();
     _liveRepository = widget.liveRepository ?? SupabaseLiveSnapshotRepository();
     _stationRepository = widget.stationRepository ?? GitHubStationRepository();
+    _fieldRepository = widget.fieldRepository ?? FieldVerificationRepository();
     _loading = _load();
   }
 
   Future<_WorkData> _load() async {
+    try {
+      await _fieldRepository.sync();
+    } catch (_) {
+      // A local-storage failure must not prevent access to the live queue.
+    }
     final result = await Future.wait([
       _liveRepository.fetch(),
       _stationRepository.fetch(),
     ]);
+    CheckedVerdicts checked = const {};
+    try {
+      checked = await _fieldRepository.fetchChecked();
+    } catch (_) {
+      // The live work queue still has value when aggregate check status is
+      // temporarily unavailable.
+    }
     return _WorkData(
       snapshot: result[0] as LiveSnapshot,
       stations: result[1] as List<BikeStation>,
+      checked: checked,
     );
   }
 
@@ -105,6 +129,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
           onRefresh: _refresh,
           onSortChanged: (sort) => setState(() => _sort = sort),
           onUseLocation: _useLocation,
+          fieldRepository: _fieldRepository,
         );
       },
     );
@@ -120,6 +145,7 @@ class _WorkQueue extends StatelessWidget {
     required this.onRefresh,
     required this.onSortChanged,
     required this.onUseLocation,
+    required this.fieldRepository,
   });
 
   final _WorkData data;
@@ -129,6 +155,7 @@ class _WorkQueue extends StatelessWidget {
   final RefreshCallback onRefresh;
   final ValueChanged<_QueueSort> onSortChanged;
   final VoidCallback onUseLocation;
+  final FieldVerificationRepository fieldRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +182,7 @@ class _WorkQueue extends StatelessWidget {
             stationCount: tasks.length,
             bikeCount: data.snapshot.bikes.length,
             highCount: high,
+            checkedBikeCount: _checkedBikeCount(tasks),
             onRefresh: onRefresh,
           ),
           const SizedBox(height: 32),
@@ -212,6 +240,8 @@ class _WorkQueue extends StatelessWidget {
                   task: entry.$2,
                   distance: _distance(entry.$2),
                   updatedAt: data.snapshot.updatedAt,
+                  fieldRepository: fieldRepository,
+                  checked: data.checked,
                 ),
               ),
             ),
@@ -246,6 +276,13 @@ class _WorkQueue extends StatelessWidget {
       task.station!.longitude,
     );
   }
+
+  int _checkedBikeCount(List<_LocatedTask> tasks) {
+    return tasks
+        .expand((task) => task.task.bikes)
+        .where((bike) => (data.checked[bike.bike] ?? const {}).isNotEmpty)
+        .length;
+  }
 }
 
 class _WorkSummary extends StatelessWidget {
@@ -253,12 +290,14 @@ class _WorkSummary extends StatelessWidget {
     required this.stationCount,
     required this.bikeCount,
     required this.highCount,
+    required this.checkedBikeCount,
     required this.onRefresh,
   });
 
   final int stationCount;
   final int bikeCount;
   final int highCount;
+  final int checkedBikeCount;
   final RefreshCallback onRefresh;
 
   @override
@@ -316,7 +355,7 @@ class _WorkSummary extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            '자전거 $bikeCount대 · 강한 경보 $highCount대',
+            '자전거 $bikeCount대 · 강한 경보 $highCount대 · 현장 확인 $checkedBikeCount대',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.surface.withValues(alpha: .76),
             ),
@@ -333,17 +372,24 @@ class _WorkTaskCard extends StatelessWidget {
     required this.task,
     required this.distance,
     required this.updatedAt,
+    required this.fieldRepository,
+    required this.checked,
   });
 
   final int order;
   final _LocatedTask task;
   final double? distance;
   final DateTime updatedAt;
+  final FieldVerificationRepository fieldRepository;
+  final CheckedVerdicts checked;
 
   @override
   Widget build(BuildContext context) {
     final high = task.task.highAlertCount > 0;
     final signal = high ? context.ridey.signal : context.ridey.signalText;
+    final checkedBikeCount = task.task.bikes
+        .where((bike) => (checked[bike.bike] ?? const {}).isNotEmpty)
+        .length;
 
     return Material(
       color: Colors.transparent,
@@ -355,6 +401,8 @@ class _WorkTaskCard extends StatelessWidget {
                 task: task,
                 distance: distance,
                 updatedAt: updatedAt,
+                fieldRepository: fieldRepository,
+                checked: checked,
               ),
             ),
           );
@@ -398,6 +446,7 @@ class _WorkTaskCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${task.task.bikes.length}대 확인 · 연쇄 합 ${task.task.totalChain}명'
+                      '${checkedBikeCount == 0 ? '' : ' · 현장 확인 $checkedBikeCount대'}'
                       '${distance == null ? '' : ' · ${distance!.round()}m'}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: context.ridey.muted,
@@ -420,11 +469,15 @@ class _WorkStationDetailPage extends StatelessWidget {
     required this.task,
     required this.distance,
     required this.updatedAt,
+    required this.fieldRepository,
+    required this.checked,
   });
 
   final _LocatedTask task;
   final double? distance;
   final DateTime updatedAt;
+  final FieldVerificationRepository fieldRepository;
+  final CheckedVerdicts checked;
 
   @override
   Widget build(BuildContext context) {
@@ -456,13 +509,27 @@ class _WorkStationDetailPage extends StatelessWidget {
                 ),
                 tileColor: theme.colorScheme.surface,
                 title: Text(bike.bike),
-                subtitle: Text('서로 다른 ${bike.chain}명이 바로 반납'),
-                trailing: const Icon(Icons.chevron_right_rounded),
+                subtitle: Text(
+                  _bikeSubtitle(bike, checked[bike.bike] ?? const {}),
+                ),
+                trailing: TextButton(
+                  onPressed: () => showQuickVerdictSheet(
+                    context,
+                    bikeId: bike.bike,
+                    repository: fieldRepository,
+                  ),
+                  child: const Text('현장 확인'),
+                ),
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) =>
-                          BikeDetailPage(bike: bike, updatedAt: updatedAt),
+                      builder: (_) => BikeDetailPage(
+                        bike: bike,
+                        updatedAt: updatedAt,
+                        isWorkContext: true,
+                        fieldRepository: fieldRepository,
+                        checkedVerdicts: checked[bike.bike] ?? const {},
+                      ),
                     ),
                   );
                 },
@@ -472,6 +539,12 @@ class _WorkStationDetailPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _bikeSubtitle(LiveBike bike, Map<FieldVerdict, int> verdicts) {
+    final count = verdicts.values.fold(0, (sum, value) => sum + value);
+    return '서로 다른 ${bike.chain}명이 바로 반납'
+        '${count == 0 ? '' : ' · 현장 확인 $count건'}';
   }
 }
 
@@ -526,10 +599,15 @@ class _WorkLoadFailure extends StatelessWidget {
 }
 
 class _WorkData {
-  const _WorkData({required this.snapshot, required this.stations});
+  const _WorkData({
+    required this.snapshot,
+    required this.stations,
+    required this.checked,
+  });
 
   final LiveSnapshot snapshot;
   final List<BikeStation> stations;
+  final CheckedVerdicts checked;
 }
 
 class _LocatedTask {

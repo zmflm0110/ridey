@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/field/field_verdict.dart';
+import 'package:ridey_app/features/field/field_verification_repository.dart';
+import 'package:ridey_app/features/field/quick_verdict_sheet.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
@@ -203,10 +206,16 @@ class BikeDetailPage extends StatelessWidget {
     super.key,
     required this.bike,
     required this.updatedAt,
+    this.isWorkContext = false,
+    this.fieldRepository,
+    this.checkedVerdicts = const {},
   });
 
   final LiveBike bike;
   final DateTime updatedAt;
+  final bool isWorkContext;
+  final FieldVerificationRepository? fieldRepository;
+  final Map<FieldVerdict, int> checkedVerdicts;
 
   @override
   Widget build(BuildContext context) {
@@ -284,9 +293,25 @@ class BikeDetailPage extends StatelessWidget {
             Text('왜 경보가 켜졌나요?', style: theme.textTheme.titleLarge),
             const SizedBox(height: 14),
             _EvidenceCard(bike: bike),
+            if (checkedVerdicts.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _CheckedVerdictsCard(verdicts: checkedVerdicts),
+            ],
             const SizedBox(height: 16),
             _DataNote(updatedAt: updatedAt),
             const SizedBox(height: 30),
+            if (isWorkContext) ...[
+              FilledButton.icon(
+                onPressed: () => showQuickVerdictSheet(
+                  context,
+                  bikeId: bike.bike,
+                  repository: fieldRepository ?? FieldVerificationRepository(),
+                ),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('현장에서 확인하기'),
+              ),
+              const SizedBox(height: 10),
+            ],
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.search_rounded),
@@ -294,6 +319,43 @@ class BikeDetailPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CheckedVerdictsCard extends StatelessWidget {
+  const _CheckedVerdictsCard({required this.verdicts});
+
+  final Map<FieldVerdict, int> verdicts;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = verdicts.values.fold(0, (sum, value) => sum + value);
+    final rows = FieldVerdict.values
+        .where((verdict) => (verdicts[verdict] ?? 0) > 0)
+        .map((verdict) => '${verdict.label} ${verdicts[verdict]}건')
+        .join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: context.ridey.line),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('현장 확인 $total건', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 6),
+          Text(
+            rows,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: context.ridey.muted),
+          ),
+        ],
       ),
     );
   }

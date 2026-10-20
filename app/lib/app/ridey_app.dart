@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/field/field_verification_repository.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
@@ -7,10 +8,16 @@ import 'package:ridey_app/features/work/work_home_page.dart';
 import 'package:ridey_app/widgets/liquid_navigation.dart';
 
 class RideyApp extends StatefulWidget {
-  const RideyApp({super.key, this.liveRepository, this.stationRepository});
+  const RideyApp({
+    super.key,
+    this.liveRepository,
+    this.stationRepository,
+    this.fieldRepository,
+  });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final FieldVerificationRepository? fieldRepository;
 
   @override
   State<RideyApp> createState() => _RideyAppState();
@@ -30,6 +37,7 @@ class _RideyAppState extends State<RideyApp> {
       home: RideyShell(
         liveRepository: widget.liveRepository,
         stationRepository: widget.stationRepository,
+        fieldRepository: widget.fieldRepository,
         themeMode: _themeMode,
         onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
       ),
@@ -42,12 +50,14 @@ class RideyShell extends StatefulWidget {
     super.key,
     required this.liveRepository,
     required this.stationRepository,
+    required this.fieldRepository,
     required this.themeMode,
     required this.onThemeModeChanged,
   });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final FieldVerificationRepository? fieldRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
@@ -57,6 +67,18 @@ class RideyShell extends StatefulWidget {
 
 class _RideyShellState extends State<RideyShell> {
   var _index = 0;
+  late final FieldVerificationRepository _fieldRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    _fieldRepository = widget.fieldRepository ?? FieldVerificationRepository();
+    _syncPendingVerifications();
+  }
+
+  Future<void> _syncPendingVerifications() async {
+    await _fieldRepository.sync();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,11 +89,13 @@ class _RideyShellState extends State<RideyShell> {
         key: ValueKey('work'),
         liveRepository: widget.liveRepository,
         stationRepository: widget.stationRepository,
+        fieldRepository: _fieldRepository,
       ),
       _MorePage(
         key: const ValueKey('more'),
         themeMode: widget.themeMode,
         onThemeModeChanged: widget.onThemeModeChanged,
+        fieldRepository: _fieldRepository,
       ),
     ];
 
@@ -134,15 +158,41 @@ class _AppHeader extends StatelessWidget {
   }
 }
 
-class _MorePage extends StatelessWidget {
+class _MorePage extends StatefulWidget {
   const _MorePage({
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.fieldRepository,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final FieldVerificationRepository fieldRepository;
+
+  @override
+  State<_MorePage> createState() => _MorePageState();
+}
+
+class _MorePageState extends State<_MorePage> {
+  late Future<int> _pendingCount;
+  var _syncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pendingCount = widget.fieldRepository.pendingCount();
+  }
+
+  Future<void> _sync() async {
+    setState(() => _syncing = true);
+    await widget.fieldRepository.sync();
+    if (!mounted) return;
+    setState(() {
+      _syncing = false;
+      _pendingCount = widget.fieldRepository.pendingCount();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,10 +225,43 @@ class _MorePage extends StatelessWidget {
             trailing: Switch(
               value: isDark,
               onChanged: (value) {
-                onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
+                widget.onThemeModeChanged(
+                  value ? ThemeMode.dark : ThemeMode.light,
+                );
               },
             ),
           ),
+        ),
+        const SizedBox(height: 12),
+        FutureBuilder<int>(
+          future: _pendingCount,
+          builder: (context, snapshot) {
+            final pending = snapshot.data ?? 0;
+            return Card(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                leading: const Icon(Icons.cloud_sync_outlined),
+                title: const Text('전송 대기 중인 현장 확인'),
+                subtitle: Text(
+                  pending == 0 ? '기기에 보관된 기록이 없어요.' : '$pending건을 전송할 수 있어요.',
+                ),
+                trailing: TextButton(
+                  onPressed: pending == 0 || _syncing ? null : _sync,
+                  child: _syncing
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('동기화'),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
