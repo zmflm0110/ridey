@@ -3,6 +3,7 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
+import 'package:ridey_app/features/rider/qr_scanner_page.dart';
 
 class BikeLookupPage extends StatefulWidget {
   const BikeLookupPage({
@@ -77,6 +78,15 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     );
   }
 
+  Future<void> _scanQr() async {
+    final bikeId = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const QrScannerPage()),
+    );
+    if (!mounted || bikeId == null) return;
+    _controller.text = bikeId;
+    _lookup();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -146,6 +156,12 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
             ),
             const SizedBox(height: 12),
             FilledButton(onPressed: _lookup, child: const Text('경보 기록 확인')),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _scanQr,
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              label: const Text('QR로 찍기'),
+            ),
             if (_message != null) ...[
               const SizedBox(height: 22),
               _LookupMessage(message: _message!),
