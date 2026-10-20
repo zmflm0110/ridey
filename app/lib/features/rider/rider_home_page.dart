@@ -3,6 +3,7 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
+import 'package:ridey_app/features/stations/saved_stations_page.dart';
 
 class RiderHomePage extends StatefulWidget {
   const RiderHomePage({super.key, this.repository});
@@ -46,6 +47,14 @@ class _RiderHomePageState extends State<RiderHomePage> {
     );
   }
 
+  Future<void> _openSavedStations(LiveSnapshot snapshot) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SavedStationsPage(snapshot: snapshot),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<LiveSnapshot>(
@@ -63,6 +72,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
             onLookup: () => _openLookup(snapshot.requireData),
             onBikeSelected: (bike) =>
                 _openDetail(bike, snapshot.requireData.updatedAt),
+            onSavedStations: () => _openSavedStations(snapshot.requireData),
           ),
           _ => const _LoadingHome(),
         };
@@ -79,12 +89,14 @@ class _LoadedHome extends StatelessWidget {
     required this.onRefresh,
     required this.onLookup,
     required this.onBikeSelected,
+    required this.onSavedStations,
   });
 
   final LiveSnapshot snapshot;
   final RefreshCallback onRefresh;
   final VoidCallback onLookup;
   final ValueChanged<LiveBike> onBikeSelected;
+  final VoidCallback onSavedStations;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +117,7 @@ class _LoadedHome extends StatelessWidget {
           highAlertCount: highAlerts,
           onRefresh: onRefresh,
           onLookup: onLookup,
+          onSavedStations: onSavedStations,
         ),
         if (!snapshot.feed.isHealthy) ...[
           const SizedBox(height: 16),
@@ -136,12 +149,14 @@ class _AlertSummary extends StatelessWidget {
     required this.highAlertCount,
     required this.onRefresh,
     required this.onLookup,
+    required this.onSavedStations,
   });
 
   final int count;
   final int highAlertCount;
   final RefreshCallback onRefresh;
   final VoidCallback onLookup;
+  final VoidCallback onSavedStations;
 
   @override
   Widget build(BuildContext context) {
@@ -221,6 +236,15 @@ class _AlertSummary extends StatelessWidget {
               icon: const Icon(Icons.search_rounded),
               label: const Text('자전거 번호로 확인'),
             ),
+          ),
+          const SizedBox(height: 6),
+          TextButton.icon(
+            onPressed: onSavedStations,
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.surface.withValues(alpha: .82),
+            ),
+            icon: const Icon(Icons.bookmark_outline_rounded),
+            label: const Text('내 대여소 관리'),
           ),
         ],
       ),
