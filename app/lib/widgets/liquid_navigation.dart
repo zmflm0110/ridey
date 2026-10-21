@@ -7,17 +7,13 @@ class LiquidNavigation extends StatelessWidget {
   const LiquidNavigation({
     super.key,
     required this.index,
+    required this.items,
     required this.onChanged,
   });
 
   final int index;
+  final List<RideyNavigationItem> items;
   final ValueChanged<int> onChanged;
-
-  static const _items = <_NavigationItem>[
-    _NavigationItem('이용하기', Icons.directions_bike_outlined),
-    _NavigationItem('업무', Icons.assignment_outlined),
-    _NavigationItem('더보기', Icons.more_horiz_rounded),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +40,10 @@ class LiquidNavigation extends StatelessWidget {
               height: 64,
               child: Row(
                 children: List.generate(
-                  _items.length,
+                  items.length,
                   (itemIndex) => Expanded(
                     child: _LiquidNavigationItem(
-                      item: _items[itemIndex],
+                      item: items[itemIndex],
                       selected: index == itemIndex,
                       reducedMotion: reducedMotion,
                       onTap: () => onChanged(itemIndex),
@@ -71,7 +67,7 @@ class _LiquidNavigationItem extends StatelessWidget {
     required this.onTap,
   });
 
-  final _NavigationItem item;
+  final RideyNavigationItem item;
   final bool selected;
   final bool reducedMotion;
   final VoidCallback onTap;
@@ -125,8 +121,8 @@ class _LiquidNavigationItem extends StatelessWidget {
   }
 }
 
-class _NavigationItem {
-  const _NavigationItem(this.label, this.icon);
+class RideyNavigationItem {
+  const RideyNavigationItem(this.label, this.icon);
 
   final String label;
   final IconData icon;

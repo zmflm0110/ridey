@@ -9,15 +9,60 @@ import 'package:ridey_app/features/rider/bike_lookup.dart';
 import 'package:ridey_app/features/rider/bike_ocr_scanner_page.dart';
 import 'package:ridey_app/features/rider/qr_scanner_page.dart';
 
+class BikeLookupDestination extends StatefulWidget {
+  const BikeLookupDestination({super.key, this.repository});
+
+  final LiveSnapshotRepository? repository;
+
+  @override
+  State<BikeLookupDestination> createState() => _BikeLookupDestinationState();
+}
+
+class _BikeLookupDestinationState extends State<BikeLookupDestination> {
+  late final LiveSnapshotRepository _repository;
+  late Future<LiveSnapshot> _snapshot;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? SupabaseLiveSnapshotRepository();
+    _snapshot = _repository.fetch();
+  }
+
+  void _retry() => setState(() => _snapshot = _repository.fetch());
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<LiveSnapshot>(
+      future: _snapshot,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
+        if (snapshot.hasError) {
+          return _LookupLoadFailure(onRetry: _retry);
+        }
+        return BikeLookupPage(
+          snapshot: snapshot.requireData,
+          repository: _repository,
+          showAppBar: false,
+        );
+      },
+    );
+  }
+}
+
 class BikeLookupPage extends StatefulWidget {
   const BikeLookupPage({
     super.key,
     required this.snapshot,
     required this.repository,
+    this.showAppBar = true,
   });
 
   final LiveSnapshot snapshot;
   final LiveSnapshotRepository repository;
+  final bool showAppBar;
 
   @override
   State<BikeLookupPage> createState() => _BikeLookupPageState();
@@ -105,21 +150,25 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('자전거 확인'),
-        actions: [
-          IconButton(
-            tooltip: '실시간 목록 새로고침',
-            onPressed: _refreshing ? null : _refresh,
-            icon: _refreshing
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: const Text('자전거 확인'),
+              actions: [
+                IconButton(
+                  tooltip: '실시간 목록 새로고침',
+                  onPressed: _refreshing ? null : _refresh,
+                  icon: _refreshing
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            )
+          : null,
       body: SafeArea(
         top: false,
         child: ListView(
@@ -194,6 +243,31 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
                 color: context.ridey.muted,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LookupLoadFailure extends StatelessWidget {
+  const _LookupLoadFailure({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_outlined, size: 36),
+            const SizedBox(height: 14),
+            const Text('확인할 목록을 불러오지 못했어요.'),
+            const SizedBox(height: 14),
+            OutlinedButton(onPressed: onRetry, child: const Text('다시 시도')),
           ],
         ),
       ),

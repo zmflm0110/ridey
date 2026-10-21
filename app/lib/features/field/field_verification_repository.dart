@@ -62,6 +62,8 @@ class FieldVerificationRepository {
 
   Future<int> pendingCount() async => (await _queue.load()).length;
 
+  Future<List<FieldVerificationRecord>> pendingRecords() => _queue.load();
+
   Future<VerificationSubmission> submit(FieldVerificationRecord record) async {
     if (!_isValidRecord(record)) {
       return const VerificationSubmission(

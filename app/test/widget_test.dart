@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ridey_app/app/app_purpose.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/field/field_verdict.dart';
 import 'package:ridey_app/features/field/field_verification_repository.dart';
@@ -36,23 +37,34 @@ class _FakeStationRepository implements StationRepository {
 }
 
 void main() {
-  testWidgets('switches between the shared app destinations', (tester) async {
+  testWidgets('changes navigation destinations with the selected purpose', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
         fieldRepository: _emptyFieldRepository(),
+        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('타기 전에,\n확인하세요.'), findsOneWidget);
-    expect(find.text('업무'), findsOneWidget);
+    expect(find.text('번호 확인'), findsOneWidget);
 
-    await tester.tap(find.text('업무'));
+    await tester.tap(find.byTooltip('목적 전환'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('업무').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('대여소 작업'), findsOneWidget);
+    expect(find.text('오늘\n처리할 일.'), findsOneWidget);
+
+    await tester.tap(find.text('대여소 작업'));
     await tester.pumpAndSettle();
 
     expect(find.text('오늘 먼저\n볼 곳.'), findsOneWidget);
-
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
 
@@ -65,8 +77,10 @@ void main() {
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
         fieldRepository: _emptyFieldRepository(),
+        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
       ),
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
 
@@ -85,6 +99,7 @@ void main() {
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
         fieldRepository: _emptyFieldRepository(),
+        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
       ),
     );
     await tester.pumpAndSettle();
@@ -110,13 +125,59 @@ void main() {
           remote: _FakeFieldRemote(),
           queue: _MemoryFieldQueue(),
         ),
+        purposeStore: _MemoryPurposeStore(AppPurpose.worker),
       ),
     );
-    await tester.tap(find.text('업무'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('대여소 작업'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('현장 확인 1대'), findsOneWidget);
   });
+
+  testWidgets('stores an onboarding purpose and lets users change it later', (
+    tester,
+  ) async {
+    final purposeStore = _MemoryPurposeStore(null);
+    await tester.pumpWidget(
+      RideyApp(
+        liveRepository: _FakeLiveSnapshotRepository(),
+        stationRepository: _FakeStationRepository(),
+        fieldRepository: _emptyFieldRepository(),
+        purposeStore: purposeStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('타기 전,\n한 번 확인하세요.'), findsOneWidget);
+    await tester.tap(find.text('업무 화면 보기').first);
+    await tester.pumpAndSettle();
+
+    expect(purposeStore.value, AppPurpose.worker);
+    expect(find.text('오늘\n처리할 일.'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('목적 전환'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('이용자').last);
+    await tester.pumpAndSettle();
+
+    expect(purposeStore.value, AppPurpose.rider);
+    expect(find.text('타기 전에,\n확인하세요.'), findsOneWidget);
+  });
+}
+
+class _MemoryPurposeStore implements AppPurposeStore {
+  _MemoryPurposeStore(this.value);
+
+  AppPurpose? value;
+
+  @override
+  Future<AppPurpose?> load() async => value;
+
+  @override
+  Future<void> save(AppPurpose purpose) async {
+    value = purpose;
+  }
 }
 
 FieldVerificationRepository _emptyFieldRepository() {

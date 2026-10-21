@@ -2,10 +2,63 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
+
+class SavedStationsDestination extends StatefulWidget {
+  const SavedStationsDestination({
+    super.key,
+    this.liveRepository,
+    this.stationRepository,
+  });
+
+  final LiveSnapshotRepository? liveRepository;
+  final StationRepository? stationRepository;
+
+  @override
+  State<SavedStationsDestination> createState() =>
+      _SavedStationsDestinationState();
+}
+
+class _SavedStationsDestinationState extends State<SavedStationsDestination> {
+  late final LiveSnapshotRepository _liveRepository;
+  late Future<LiveSnapshot> _snapshot;
+
+  @override
+  void initState() {
+    super.initState();
+    _liveRepository = widget.liveRepository ?? SupabaseLiveSnapshotRepository();
+    _snapshot = _liveRepository.fetch();
+  }
+
+  Future<void> _retry() async {
+    setState(() => _snapshot = _liveRepository.fetch());
+    await _snapshot;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<LiveSnapshot>(
+      future: _snapshot,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
+        if (snapshot.hasError) {
+          return _StationLoadFailure(onRetry: _retry);
+        }
+        return SavedStationsPage(
+          snapshot: snapshot.requireData,
+          stationRepository: widget.stationRepository,
+          showAppBar: false,
+        );
+      },
+    );
+  }
+}
 
 class SavedStationsPage extends StatefulWidget {
   const SavedStationsPage({
@@ -13,11 +66,13 @@ class SavedStationsPage extends StatefulWidget {
     required this.snapshot,
     this.stationRepository,
     this.store,
+    this.showAppBar = true,
   });
 
   final LiveSnapshot snapshot;
   final StationRepository? stationRepository;
   final SavedStationsStore? store;
+  final bool showAppBar;
 
   @override
   State<SavedStationsPage> createState() => _SavedStationsPageState();
@@ -150,7 +205,7 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('내 대여소')),
+      appBar: widget.showAppBar ? AppBar(title: const Text('내 대여소')) : null,
       body: FutureBuilder<void>(
         future: _loading,
         builder: (context, loading) {
