@@ -182,6 +182,31 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
   }
 
   Future<void> _add(BikeStation station) async {
+    if (_saved.length >= savedStationsLimit) {
+      final oldest = _stations
+          .where((item) => item.id == _saved.first)
+          .firstOrNull;
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('내 대여소가 가득 찼어요'),
+          content: Text(
+            '${oldest?.name ?? '가장 먼저 저장한 대여소'}을 빼고 ${station.name}을 넣을까요?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('바꾸기'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true || !mounted) return;
+    }
     final saved = await _store.add(station.id);
     if (!mounted) return;
     setState(() {
@@ -271,19 +296,16 @@ class _Content extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
       children: [
-        Text(
-          '자주 가는 곳을\n먼저 확인하세요.',
-          style: Theme.of(context).textTheme.headlineLarge,
-        ),
+        Text('내 대여소', style: context.rideyPageTitle),
         const SizedBox(height: 10),
         Text(
-          '최대 5곳을 이 기기에만 저장해 두고, 지금 피할 번호를 바로 볼 수 있어요.',
+          '자주 가는 곳을 저장하면, 출발 전에 주의 번호를 바로 확인할 수 있어요.',
           style: Theme.of(
             context,
           ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
         ),
         const SizedBox(height: 28),
-        Text('내 대여소', style: Theme.of(context).textTheme.titleLarge),
+        Text('저장한 대여소', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         if (savedStations.isEmpty)
           const _SavedStationsEmpty()

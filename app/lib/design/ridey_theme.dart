@@ -68,20 +68,25 @@ abstract final class RideyTheme {
       ),
       textTheme: textTheme.copyWith(
         displayLarge: textTheme.displayLarge?.copyWith(
-          fontSize: 44,
+          fontSize: 36,
           fontWeight: FontWeight.w800,
-          height: .98,
-          letterSpacing: -2.2,
+          height: 1.04,
+          letterSpacing: -1.6,
         ),
         headlineLarge: textTheme.headlineLarge?.copyWith(
-          fontSize: 30,
+          fontSize: 28,
           fontWeight: FontWeight.w800,
-          height: 1.06,
-          letterSpacing: -1.1,
+          height: 1.12,
+          letterSpacing: -.9,
         ),
         titleLarge: textTheme.titleLarge?.copyWith(
+          fontSize: 22,
           fontWeight: FontWeight.w800,
           letterSpacing: -.6,
+        ),
+        titleMedium: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -.3,
         ),
         bodyLarge: textTheme.bodyLarge?.copyWith(height: 1.5),
         bodyMedium: textTheme.bodyMedium?.copyWith(height: 1.45),
@@ -208,4 +213,10 @@ class RideySemanticColors extends ThemeExtension<RideySemanticColors> {
 extension RideyThemeContext on BuildContext {
   RideySemanticColors get ridey =>
       Theme.of(this).extension<RideySemanticColors>()!;
+
+  /// Use this only for the one decision that defines a journey.
+  TextStyle? get rideyHeroText => Theme.of(this).textTheme.displayLarge;
+
+  /// Standard page titles deliberately stay smaller than hero decisions.
+  TextStyle? get rideyPageTitle => Theme.of(this).textTheme.headlineLarge;
 }

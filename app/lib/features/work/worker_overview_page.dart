@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/widgets/ridey_status.dart';
 
 class WorkerOverviewPage extends StatefulWidget {
   const WorkerOverviewPage({
@@ -77,15 +78,17 @@ class _WorkerOverview extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 130),
         children: [
-          Text('오늘\n처리할 일.', style: theme.textTheme.displayLarge),
-          const SizedBox(height: 12),
-          Text(
-            '현장 확인이 필요한 대여소부터 한 곳씩 처리하세요.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: context.ridey.muted,
-            ),
+          const RideyPageHeading(
+            title: '오늘의 작업',
+            description: '현장 확인이 필요한 대여소부터 한 곳씩 처리하세요.',
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 14),
+          RideyDataConfidence(
+            updatedAt: snapshot.updatedAt,
+            isHealthy: snapshot.feed.isHealthy,
+            ratio: snapshot.feed.ratio,
+          ),
+          const SizedBox(height: 22),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(22),

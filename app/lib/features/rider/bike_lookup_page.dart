@@ -8,6 +8,7 @@ import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
 import 'package:ridey_app/features/rider/bike_ocr_scanner_page.dart';
 import 'package:ridey_app/features/rider/qr_scanner_page.dart';
+import 'package:ridey_app/widgets/ridey_status.dart';
 
 class BikeLookupDestination extends StatefulWidget {
   const BikeLookupDestination({super.key, this.repository});
@@ -70,8 +71,9 @@ class BikeLookupPage extends StatefulWidget {
 
 class _BikeLookupPageState extends State<BikeLookupPage> {
   final _controller = TextEditingController();
+  final _inputFocus = FocusNode();
   late LiveSnapshot _snapshot;
-  String? _message;
+  _LookupOutcome? _outcome;
   bool _refreshing = false;
 
   @override
@@ -83,6 +85,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
   @override
   void dispose() {
     _controller.dispose();
+    _inputFocus.dispose();
     super.dispose();
   }
 
@@ -92,13 +95,16 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       _snapshot = await widget.repository.fetch();
       if (!mounted) return;
       setState(() {
-        _message = null;
+        _outcome = null;
         _refreshing = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _message = '실시간 목록을 새로 불러오지 못했어요.';
+        _outcome = const _LookupOutcome(
+          RideySignalState.uncertain,
+          '실시간 목록을 새로 불러오지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.',
+        );
         _refreshing = false;
       });
     }
@@ -108,21 +114,39 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     FocusScope.of(context).unfocus();
     final bikeId = normalizeBikeId(_controller.text);
     if (bikeId == null) {
-      setState(() => _message = 'SPB-00000 형식의 자전거 번호를 입력해 주세요.');
+      setState(
+        () => _outcome = const _LookupOutcome(
+          RideySignalState.uncertain,
+          'SPB-00000 형식의 자전거 번호를 입력해 주세요.',
+        ),
+      );
       return;
     }
 
     final bike = findBike(_snapshot.bikes, bikeId);
     if (bike == null) {
-      setState(() => _message = '$bikeId의 경보 기록을 찾지 못했어요.');
+      setState(
+        () => _outcome = _LookupOutcome(
+          _snapshot.feed.isHealthy
+              ? RideySignalState.noSignal
+              : RideySignalState.uncertain,
+          _snapshot.feed.isHealthy
+              ? '$bikeId에서 반복 반납 신호를 찾지 못했어요. 안전이 확인된 것은 아니니 브레이크·타이어를 직접 살펴보세요.'
+              : '$bikeId의 판단에 필요한 대여 기록이 늦고 있어요. 새로고침 후 직접 상태를 확인해 주세요.',
+        ),
+      );
       return;
     }
 
-    setState(() => _message = null);
+    setState(() => _outcome = null);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) =>
-            BikeDetailPage(bike: bike, updatedAt: _snapshot.updatedAt),
+            BikeDetailPage(
+              bike: bike,
+              updatedAt: _snapshot.updatedAt,
+              feed: _snapshot.feed,
+            ),
       ),
     );
   }
@@ -131,7 +155,11 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     final bikeId = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(builder: (_) => const QrScannerPage()),
     );
-    if (!mounted || bikeId == null) return;
+    if (!mounted) return;
+    if (bikeId == null) {
+      _inputFocus.requestFocus();
+      return;
+    }
     _controller.text = bikeId;
     _lookup();
   }
@@ -140,7 +168,11 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     final bikeId = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(builder: (_) => const BikeOcrScannerPage()),
     );
-    if (!mounted || bikeId == null) return;
+    if (!mounted) return;
+    if (bikeId == null) {
+      _inputFocus.requestFocus();
+      return;
+    }
     _controller.text = bikeId;
     _lookup();
   }
@@ -174,13 +206,9 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
           children: [
-            Text('번호로\n확인하세요.', style: theme.textTheme.displayLarge),
-            const SizedBox(height: 12),
-            Text(
-              '대여소에서 본 자전거 번호를 입력하면 현재 경보 기록을 찾아요.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: context.ridey.muted,
-              ),
+            const RideyPageHeading(
+              title: '자전거 확인',
+              description: 'QR을 찍거나 번호를 입력하면 반복 반납 신호를 찾아요.',
             ),
             const SizedBox(height: 32),
             Semantics(
@@ -188,6 +216,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
               label: '자전거 번호',
               child: TextField(
                 controller: _controller,
+                focusNode: _inputFocus,
                 autofocus: true,
                 textCapitalization: TextCapitalization.characters,
                 keyboardType: TextInputType.text,
@@ -230,9 +259,9 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
               icon: const Icon(Icons.document_scanner_outlined),
               label: const Text('번호판으로 읽기'),
             ),
-            if (_message != null) ...[
+            if (_outcome != null) ...[
               const SizedBox(height: 22),
-              _LookupMessage(message: _message!),
+              _LookupMessage(outcome: _outcome!),
             ],
             const SizedBox(height: 40),
             Text('알아두세요', style: theme.textTheme.titleLarge),
@@ -280,6 +309,7 @@ class BikeDetailPage extends StatelessWidget {
     super.key,
     required this.bike,
     required this.updatedAt,
+    this.feed,
     this.isWorkContext = false,
     this.fieldRepository,
     this.checkedVerdicts = const {},
@@ -287,6 +317,7 @@ class BikeDetailPage extends StatelessWidget {
 
   final LiveBike bike;
   final DateTime updatedAt;
+  final FeedHealth? feed;
   final bool isWorkContext;
   final FieldVerificationRepository? fieldRepository;
   final Map<FieldVerdict, int> checkedVerdicts;
@@ -294,7 +325,7 @@ class BikeDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final label = bike.isHighAlert ? '타지 마세요.' : '주의하세요.';
+    final label = bike.isHighAlert ? '피하세요.' : '주의해서 확인하세요.';
     final detail = bike.isHighAlert
         ? '서로 다른 사람들이 바로 반납한 기록이 여러 번 이어졌어요.'
         : '바로 반납한 기록이 이어져 경보가 켜졌어요.';
@@ -350,6 +381,12 @@ class BikeDetailPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
+            RideyDataConfidence(
+              updatedAt: updatedAt,
+              isHealthy: feed?.isHealthy ?? true,
+              ratio: feed?.ratio,
+            ),
+            const SizedBox(height: 24),
             Text(
               bike.bike,
               style: theme.textTheme.titleLarge?.copyWith(
@@ -372,7 +409,7 @@ class BikeDetailPage extends StatelessWidget {
               _CheckedVerdictsCard(verdicts: checkedVerdicts),
             ],
             const SizedBox(height: 16),
-            _DataNote(updatedAt: updatedAt),
+            _DataNote(updatedAt: updatedAt, feed: feed),
             const SizedBox(height: 30),
             if (isWorkContext) ...[
               FilledButton.icon(
@@ -388,7 +425,7 @@ class BikeDetailPage extends StatelessWidget {
             ],
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.search_rounded),
+              icon: const Icon(Icons.qr_code_scanner_rounded),
               label: const Text('다른 자전거 확인'),
             ),
           ],
@@ -541,9 +578,10 @@ class _EvidenceLine extends StatelessWidget {
 }
 
 class _DataNote extends StatelessWidget {
-  const _DataNote({required this.updatedAt});
+  const _DataNote({required this.updatedAt, this.feed});
 
   final DateTime updatedAt;
+  final FeedHealth? feed;
 
   @override
   Widget build(BuildContext context) {
@@ -560,7 +598,7 @@ class _DataNote extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: Text(
-        '$freshness 갱신된 대여 기록을 기준으로 했어요. 고장 확정이 아니므로, 직접 상태도 확인해 주세요.',
+        '${feed?.isHealthy == false ? '자료가 지연되고 있어 판단을 보수적으로 해 주세요. ' : ''}$freshness 갱신된 대여 기록을 기준으로 했어요. 고장 확정이 아니므로, 직접 상태도 확인해 주세요.',
         style: Theme.of(
           context,
         ).textTheme.bodyMedium?.copyWith(color: context.ridey.calm),
@@ -570,24 +608,42 @@ class _DataNote extends StatelessWidget {
 }
 
 class _LookupMessage extends StatelessWidget {
-  const _LookupMessage({required this.message});
+  const _LookupMessage({required this.outcome});
 
-  final String message;
+  final _LookupOutcome outcome;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: context.ridey.calmSoft,
-        borderRadius: BorderRadius.circular(18),
+        color: outcome.state == RideySignalState.noSignal
+            ? context.ridey.calmSoft
+            : context.ridey.signalSoft,
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        '$message 경보가 없다고 정상이라는 뜻은 아니에요.',
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: context.ridey.calm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RideySignalBadge(state: outcome.state),
+          const SizedBox(height: 10),
+          Text(
+            outcome.message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: outcome.state == RideySignalState.noSignal
+                  ? context.ridey.calm
+                  : context.ridey.signalText,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _LookupOutcome {
+  const _LookupOutcome(this.state, this.message);
+
+  final RideySignalState state;
+  final String message;
 }

@@ -89,8 +89,22 @@ class _QrScannerPageState extends State<QrScannerPage> {
             child: Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 62),
                 child: _ScannerMessage(message: _message),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  icon: const Icon(Icons.keyboard_outlined),
+                  label: const Text('번호 직접 입력'),
+                ),
               ),
             ),
           ),
@@ -209,7 +223,7 @@ class _ScannerFailure extends StatelessWidget {
                 ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
               ),
               const SizedBox(height: 24),
-              OutlinedButton(onPressed: onClose, child: const Text('번호 직접 입력')),
+              FilledButton(onPressed: onClose, child: const Text('번호 직접 입력')),
             ],
           ),
         ),

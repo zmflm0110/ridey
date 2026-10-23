@@ -10,6 +10,7 @@ import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/features/work/work_queue.dart';
+import 'package:ridey_app/widgets/ridey_status.dart';
 
 class WorkHomePage extends StatefulWidget {
   const WorkHomePage({
@@ -169,15 +170,17 @@ class _WorkQueue extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 130),
         children: [
-          Text('오늘 먼저\n볼 곳.', style: theme.textTheme.displayLarge),
-          const SizedBox(height: 12),
-          Text(
-            '경보 자전거를 대여소 단위로 묶어, 더 많은 헛걸음을 막을 곳부터 보여 줘요.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: context.ridey.muted,
-            ),
+          const RideyPageHeading(
+            title: '다음으로 갈 곳',
+            description: '더 많은 헛걸음을 막을 대여소부터 확인하세요.',
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 14),
+          RideyDataConfidence(
+            updatedAt: data.snapshot.updatedAt,
+            isHealthy: data.snapshot.feed.isHealthy,
+            ratio: data.snapshot.feed.ratio,
+          ),
+          const SizedBox(height: 22),
           _WorkSummary(
             stationCount: tasks.length,
             bikeCount: data.snapshot.bikes.length,
@@ -324,10 +327,8 @@ class _WorkSummary extends StatelessWidget {
             children: [
               Text(
                 '$stationCount',
-                style: theme.textTheme.displayLarge?.copyWith(
+                style: theme.textTheme.headlineLarge?.copyWith(
                   color: context.ridey.signal,
-                  fontSize: 66,
-                  height: .88,
                 ),
               ),
               Padding(
@@ -445,12 +446,30 @@ class _WorkTaskCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${task.task.bikes.length}대 확인 · 연쇄 합 ${task.task.totalChain}명'
+                      '${task.task.bikes.length}대 확인 · 연쇄 ${task.task.totalChain}명'
                       '${checkedBikeCount == 0 ? '' : ' · 현장 확인 $checkedBikeCount대'}'
                       '${distance == null ? '' : ' · ${distance!.round()}m'}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: context.ridey.muted,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        RideySignalBadge(
+                          state: high
+                              ? RideySignalState.avoid
+                              : RideySignalState.uncertain,
+                          compact: true,
+                        ),
+                        if (checkedBikeCount > 0) ...[
+                          const SizedBox(width: 6),
+                          const RideySignalBadge(
+                            state: RideySignalState.completed,
+                            compact: true,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -464,7 +483,7 @@ class _WorkTaskCard extends StatelessWidget {
   }
 }
 
-class _WorkStationDetailPage extends StatelessWidget {
+class _WorkStationDetailPage extends StatefulWidget {
   const _WorkStationDetailPage({
     required this.task,
     required this.distance,
@@ -480,18 +499,46 @@ class _WorkStationDetailPage extends StatelessWidget {
   final CheckedVerdicts checked;
 
   @override
+  State<_WorkStationDetailPage> createState() => _WorkStationDetailPageState();
+}
+
+class _WorkStationDetailPageState extends State<_WorkStationDetailPage> {
+  late CheckedVerdicts _checked;
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = widget.checked;
+  }
+
+  Future<void> _refreshChecked() async {
+    try {
+      final refreshed = await widget.fieldRepository.fetchChecked();
+      if (mounted) setState(() => _checked = refreshed);
+    } catch (_) {
+      // Submitted records can still be queued offline; preserve the current view.
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final checkedCount = widget.task.task.bikes
+        .where((bike) => (_checked[bike.bike] ?? const {}).isNotEmpty)
+        .length;
     return Scaffold(
       appBar: AppBar(title: const Text('대여소 작업')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
         children: [
-          Text(task.task.stationName, style: theme.textTheme.headlineLarge),
+          Text(
+            widget.task.task.stationName,
+            style: theme.textTheme.headlineLarge,
+          ),
           const SizedBox(height: 8),
           Text(
-            '확인할 자전거 ${task.task.bikes.length}대'
-            '${distance == null ? '' : ' · 현재 위치에서 ${distance!.round()}m'}',
+            '현장 확인 $checkedCount/${widget.task.task.bikes.length}대'
+            '${widget.distance == null ? '' : ' · 현재 위치에서 ${widget.distance!.round()}m'}',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: context.ridey.muted,
             ),
@@ -499,7 +546,7 @@ class _WorkStationDetailPage extends StatelessWidget {
           const SizedBox(height: 28),
           Text('확인할 자전거', style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
-          ...task.task.bikes.map(
+          ...widget.task.task.bikes.map(
             (bike) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: ListTile(
@@ -510,14 +557,17 @@ class _WorkStationDetailPage extends StatelessWidget {
                 tileColor: theme.colorScheme.surface,
                 title: Text(bike.bike),
                 subtitle: Text(
-                  _bikeSubtitle(bike, checked[bike.bike] ?? const {}),
+                  _bikeSubtitle(bike, _checked[bike.bike] ?? const {}),
                 ),
                 trailing: TextButton(
-                  onPressed: () => showQuickVerdictSheet(
-                    context,
-                    bikeId: bike.bike,
-                    repository: fieldRepository,
-                  ),
+                  onPressed: () async {
+                    final submission = await showQuickVerdictSheet(
+                      context,
+                      bikeId: bike.bike,
+                      repository: widget.fieldRepository,
+                    );
+                    if (submission != null) await _refreshChecked();
+                  },
                   child: const Text('현장 확인'),
                 ),
                 onTap: () {
@@ -525,10 +575,10 @@ class _WorkStationDetailPage extends StatelessWidget {
                     MaterialPageRoute<void>(
                       builder: (_) => BikeDetailPage(
                         bike: bike,
-                        updatedAt: updatedAt,
+                        updatedAt: widget.updatedAt,
                         isWorkContext: true,
-                        fieldRepository: fieldRepository,
-                        checkedVerdicts: checked[bike.bike] ?? const {},
+                        fieldRepository: widget.fieldRepository,
+                        checkedVerdicts: _checked[bike.bike] ?? const {},
                       ),
                     ),
                   );

@@ -24,6 +24,7 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
   bool _initializing = true;
   bool _processing = false;
   bool _completed = false;
+  bool _torchOn = false;
 
   static const _orientations = <DeviceOrientation, int>{
     DeviceOrientation.portraitUp: 0,
@@ -107,6 +108,18 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
     final controller = _cameraController;
     if (controller == null || controller.value.isStreamingImages) return;
     await controller.startImageStream(_processImage);
+  }
+
+  Future<void> _toggleTorch() async {
+    final controller = _cameraController;
+    if (controller == null) return;
+    final next = !_torchOn;
+    try {
+      await controller.setFlashMode(next ? FlashMode.torch : FlashMode.off);
+      if (mounted) setState(() => _torchOn = next);
+    } on CameraException {
+      if (mounted) setState(() => _hint = '손전등을 사용할 수 없어요.');
+    }
   }
 
   Future<void> _processImage(CameraImage image) async {
@@ -198,14 +211,33 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
                     padding: const EdgeInsets.all(16),
                     child: Align(
                       alignment: Alignment.topRight,
-                      child: IconButton(
-                        tooltip: '카메라 닫기',
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.black.withValues(alpha: .5),
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.close_rounded),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: '손전등 켜기 또는 끄기',
+                            onPressed: _toggleTorch,
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black.withValues(alpha: .5),
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: Icon(
+                              _torchOn
+                                  ? Icons.flash_on_rounded
+                                  : Icons.flash_on_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: '카메라 닫기',
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black.withValues(alpha: .5),
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -214,8 +246,20 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                      child: _OcrHint(hint: _hint),
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _OcrHint(hint: _hint),
+                          const SizedBox(height: 6),
+                          TextButton.icon(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(foregroundColor: Colors.white),
+                            icon: const Icon(Icons.keyboard_outlined),
+                            label: const Text('번호 직접 입력'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -297,7 +341,7 @@ class _OcrFailure extends StatelessWidget {
               ).textTheme.bodyLarge?.copyWith(color: Colors.white),
             ),
             const SizedBox(height: 24),
-            OutlinedButton(onPressed: onClose, child: const Text('번호 직접 입력')),
+            FilledButton(onPressed: onClose, child: const Text('번호 직접 입력')),
           ],
         ),
       ),

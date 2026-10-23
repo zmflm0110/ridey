@@ -28,17 +28,33 @@ class FieldVerificationRecord {
     required this.bikeId,
     required this.verdict,
     required this.day,
+    this.needsAttention = false,
   });
 
   final String bikeId;
   final FieldVerdict verdict;
   final String day;
+  final bool needsAttention;
 
   Map<String, dynamic> toJson() => {
     'bike': bikeId,
     'verdict': verdict.apiValue,
     'day': day,
   };
+
+  Map<String, dynamic> toQueueJson() => {
+    ...toJson(),
+    'needs_attention': needsAttention,
+  };
+
+  FieldVerificationRecord copyWith({bool? needsAttention}) {
+    return FieldVerificationRecord(
+      bikeId: bikeId,
+      verdict: verdict,
+      day: day,
+      needsAttention: needsAttention ?? this.needsAttention,
+    );
+  }
 
   factory FieldVerificationRecord.fromJson(Map<String, dynamic> json) {
     final bike = json['bike'];
@@ -55,6 +71,7 @@ class FieldVerificationRecord {
       bikeId: bike,
       verdict: parsedVerdict,
       day: day,
+      needsAttention: json['needs_attention'] == true,
     );
   }
 }

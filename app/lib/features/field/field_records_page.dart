@@ -15,6 +15,7 @@ class FieldRecordsPage extends StatefulWidget {
 class _FieldRecordsPageState extends State<FieldRecordsPage> {
   late Future<List<FieldVerificationRecord>> _records;
   var _syncing = false;
+  VerificationSyncResult? _lastSync;
 
   @override
   void initState() {
@@ -29,10 +30,11 @@ class _FieldRecordsPageState extends State<FieldRecordsPage> {
 
   Future<void> _sync() async {
     setState(() => _syncing = true);
-    await widget.repository.sync();
+    final result = await widget.repository.sync();
     if (!mounted) return;
     setState(() {
       _syncing = false;
+      _lastSync = result;
       _records = widget.repository.pendingRecords();
     });
   }
@@ -51,6 +53,7 @@ class _FieldRecordsPageState extends State<FieldRecordsPage> {
         return _RecordsContent(
           records: snapshot.requireData,
           syncing: _syncing,
+          lastSync: _lastSync,
           onRefresh: _refresh,
           onSync: _sync,
         );
@@ -63,18 +66,23 @@ class _RecordsContent extends StatelessWidget {
   const _RecordsContent({
     required this.records,
     required this.syncing,
+    required this.lastSync,
     required this.onRefresh,
     required this.onSync,
   });
 
   final List<FieldVerificationRecord> records;
   final bool syncing;
+  final VerificationSyncResult? lastSync;
   final RefreshCallback onRefresh;
   final VoidCallback onSync;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final pending = records.where((record) => !record.needsAttention).toList();
+    final attention =
+        records.where((record) => record.needsAttention).toList();
 
     return RefreshIndicator.adaptive(
       onRefresh: onRefresh,
@@ -82,7 +90,7 @@ class _RecordsContent extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 130),
         children: [
-          Text('현장\n기록.', style: theme.textTheme.displayLarge),
+          Text('현장 기록', style: context.rideyPageTitle),
           const SizedBox(height: 12),
           Text(
             '연결이 끊겼을 때 기기에 보관한 현장 확인 기록이에요.',
@@ -101,10 +109,14 @@ class _RecordsContent extends StatelessWidget {
                   vertical: 10,
                 ),
                 leading: const Icon(Icons.cloud_off_outlined),
-                title: Text('전송 대기 ${records.length}건'),
-                subtitle: const Text('연결되면 자동 전송되며, 지금 다시 시도할 수도 있어요.'),
+                title: Text('전송 대기 ${pending.length}건'),
+                subtitle: Text(
+                  attention.isEmpty
+                      ? '연결되면 자동 전송되며, 지금 다시 시도할 수도 있어요.'
+                      : '확인이 필요한 기록 ${attention.length}건이 있어요.',
+                ),
                 trailing: TextButton(
-                  onPressed: syncing ? null : onSync,
+                  onPressed: pending.isEmpty || syncing ? null : onSync,
                   child: syncing
                       ? const SizedBox.square(
                           dimension: 18,
@@ -116,21 +128,64 @@ class _RecordsContent extends StatelessWidget {
                 ),
               ),
             ),
+            if (lastSync != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                '최근 동기화: 전송 ${lastSync!.sent}건 · 확인 필요 ${lastSync!.rejected}건',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: context.ridey.muted,
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
-            ...records.map(
+            if (attention.isNotEmpty) ...[
+              Text('확인이 필요한 기록', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 8),
+              ...attention.map(
+                (record) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _RecordCard(record: record, needsAttention: true),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            Text('전송 대기', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            ...pending.map(
               (record) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.assignment_outlined),
-                    title: Text(record.bikeId),
-                    subtitle: Text('${record.verdict.label} · ${record.day}'),
-                  ),
-                ),
+                child: _RecordCard(record: record),
               ),
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _RecordCard extends StatelessWidget {
+  const _RecordCard({required this.record, this.needsAttention = false});
+
+  final FieldVerificationRecord record;
+  final bool needsAttention;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          needsAttention
+              ? Icons.error_outline_rounded
+              : Icons.cloud_upload_outlined,
+          color: needsAttention ? context.ridey.signalText : context.ridey.calm,
+        ),
+        title: Text(record.bikeId),
+        subtitle: Text(
+          needsAttention
+              ? '${record.verdict.label} · 전송 형식을 확인해 주세요.'
+              : '${record.verdict.label} · ${record.day}',
+        ),
       ),
     );
   }

@@ -50,7 +50,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('타기 전에,\n확인하세요.'), findsOneWidget);
+    expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
     expect(find.text('번호 확인'), findsOneWidget);
 
     await tester.tap(find.byTooltip('목적 전환'));
@@ -59,12 +59,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('대여소 작업'), findsOneWidget);
-    expect(find.text('오늘\n처리할 일.'), findsOneWidget);
+    expect(find.text('오늘의 작업'), findsOneWidget);
 
     await tester.tap(find.text('대여소 작업'));
     await tester.pumpAndSettle();
 
-    expect(find.text('오늘 먼저\n볼 곳.'), findsOneWidget);
+    expect(find.text('다음으로 갈 곳'), findsOneWidget);
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
 
@@ -104,14 +104,37 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('자전거 번호로 확인'));
+    await tester.tap(find.text('자전거 확인하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-69683');
     await tester.tap(find.text('경보 기록 확인'));
     await tester.pumpAndSettle();
 
-    expect(find.text('타지 마세요.'), findsOneWidget);
+    expect(find.text('피하세요.'), findsOneWidget);
     expect(find.text('왜 경보가 켜졌나요?'), findsOneWidget);
+  });
+
+  testWidgets('labels a missing alert as no repeated-return signal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      RideyApp(
+        liveRepository: _FakeLiveSnapshotRepository(),
+        stationRepository: _FakeStationRepository(),
+        fieldRepository: _emptyFieldRepository(),
+        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('자전거 확인하기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'spb-12345');
+    await tester.tap(find.text('경보 기록 확인'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('반복 반납 신호 없음'), findsOneWidget);
+    expect(find.textContaining('안전이 확인된 것은 아니니'), findsOneWidget);
   });
 
   testWidgets('shows field verification status without changing queue order', (
@@ -154,7 +177,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(purposeStore.value, AppPurpose.worker);
-    expect(find.text('오늘\n처리할 일.'), findsOneWidget);
+    expect(find.text('오늘의 작업'), findsOneWidget);
 
     await tester.tap(find.byTooltip('목적 전환'));
     await tester.pumpAndSettle();
@@ -162,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(purposeStore.value, AppPurpose.rider);
-    expect(find.text('타기 전에,\n확인하세요.'), findsOneWidget);
+    expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
   });
 }
 

@@ -55,7 +55,7 @@ void main() {
   });
 
   test(
-    'drops rejected queued records but retains records that still fail',
+    'keeps rejected queued records for attention and retains records that still fail',
     () async {
       final rejected = record;
       const retry = FieldVerificationRecord(
@@ -77,8 +77,11 @@ void main() {
 
       expect(result.sent, 0);
       expect(result.rejected, 1);
-      expect(result.pending, 1);
-      expect(await queue.load(), [retry]);
+      expect(result.pending, 2);
+      final queued = await queue.load();
+      expect(queued, hasLength(2));
+      expect(queued.first.needsAttention, isTrue);
+      expect(queued.last, retry);
     },
   );
 

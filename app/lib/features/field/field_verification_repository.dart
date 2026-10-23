@@ -45,7 +45,7 @@ class SharedPreferencesFieldVerificationQueue
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(
       _key,
-      jsonEncode(records.map((record) => record.toJson()).toList()),
+      jsonEncode(records.map((record) => record.toQueueJson()).toList()),
     );
   }
 }
@@ -98,8 +98,13 @@ class FieldVerificationRepository {
     final remaining = <FieldVerificationRecord>[];
 
     for (final record in queued) {
+      if (record.needsAttention) {
+        remaining.add(record);
+        continue;
+      }
       if (!_isValidRecord(record)) {
         rejected++;
+        remaining.add(record.copyWith(needsAttention: true));
         continue;
       }
       try {
@@ -107,6 +112,7 @@ class FieldVerificationRepository {
         sent++;
       } on FieldVerificationRejectedException {
         rejected++;
+        remaining.add(record.copyWith(needsAttention: true));
       } catch (_) {
         remaining.add(record);
       }

@@ -4,6 +4,7 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
+import 'package:ridey_app/widgets/ridey_status.dart';
 
 class RiderHomePage extends StatefulWidget {
   const RiderHomePage({super.key, this.repository});
@@ -39,10 +40,14 @@ class _RiderHomePageState extends State<RiderHomePage> {
     );
   }
 
-  void _openDetail(LiveBike bike, DateTime updatedAt) {
+  void _openDetail(LiveBike bike, LiveSnapshot snapshot) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => BikeDetailPage(bike: bike, updatedAt: updatedAt),
+        builder: (_) => BikeDetailPage(
+          bike: bike,
+          updatedAt: snapshot.updatedAt,
+          feed: snapshot.feed,
+        ),
       ),
     );
   }
@@ -71,7 +76,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
             onRefresh: _refresh,
             onLookup: () => _openLookup(snapshot.requireData),
             onBikeSelected: (bike) =>
-                _openDetail(bike, snapshot.requireData.updatedAt),
+                _openDetail(bike, snapshot.requireData),
             onSavedStations: () => _openSavedStations(snapshot.requireData),
           ),
           _ => const _LoadingHome(),
@@ -100,7 +105,6 @@ class _LoadedHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final highAlerts = snapshot.bikes.where((bike) => bike.isHighAlert).length;
     final preview = snapshot.bikes.take(3).toList(growable: false);
 
@@ -108,16 +112,27 @@ class _LoadedHome extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 130),
       children: [
-        Text('타기 전에,\n확인하세요.', style: theme.textTheme.displayLarge),
-        const SizedBox(height: 14),
-        _FreshnessChip(updatedAt: snapshot.updatedAt),
-        const SizedBox(height: 30),
+        const RideyPageHeading(
+          title: '타기 전,\n확인하세요.',
+          description: '번호를 확인하면 반복 반납 신호를 바로 알려 드려요.',
+          hero: true,
+        ),
+        const SizedBox(height: 16),
+        RideyDataConfidence(
+          updatedAt: snapshot.updatedAt,
+          isHealthy: snapshot.feed.isHealthy,
+          ratio: snapshot.feed.ratio,
+        ),
+        const SizedBox(height: 24),
+        _CheckBikeCard(
+          onLookup: onLookup,
+          onSavedStations: onSavedStations,
+        ),
+        const SizedBox(height: 34),
         _AlertSummary(
           count: snapshot.bikes.length,
           highAlertCount: highAlerts,
           onRefresh: onRefresh,
-          onLookup: onLookup,
-          onSavedStations: onSavedStations,
         ),
         if (!snapshot.feed.isHealthy) ...[
           const SizedBox(height: 16),
@@ -148,15 +163,11 @@ class _AlertSummary extends StatelessWidget {
     required this.count,
     required this.highAlertCount,
     required this.onRefresh,
-    required this.onLookup,
-    required this.onSavedStations,
   });
 
   final int count;
   final int highAlertCount;
   final RefreshCallback onRefresh;
-  final VoidCallback onLookup;
-  final VoidCallback onSavedStations;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +183,7 @@ class _AlertSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '지금 서울에서',
+            '서울 전체 RIDEY 신호',
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.surface.withValues(alpha: .76),
             ),
@@ -183,16 +194,14 @@ class _AlertSummary extends StatelessWidget {
             children: [
               Text(
                 '$count',
-                style: theme.textTheme.displayLarge?.copyWith(
+                style: theme.textTheme.headlineLarge?.copyWith(
                   color: context.ridey.signal,
-                  fontSize: 68,
-                  height: .88,
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 8, bottom: 6),
                 child: Text(
-                  '대 피하기',
+                  '대 주의',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.surface,
                   ),
@@ -212,7 +221,7 @@ class _AlertSummary extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
           Container(
             height: 1,
             color: theme.colorScheme.surface.withValues(alpha: .14),
@@ -224,7 +233,44 @@ class _AlertSummary extends StatelessWidget {
               color: theme.colorScheme.surface.withValues(alpha: .76),
             ),
           ),
-          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckBikeCard extends StatelessWidget {
+  const _CheckBikeCard({required this.onLookup, required this.onSavedStations});
+
+  final VoidCallback onLookup;
+  final VoidCallback onSavedStations;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '지금 눈앞의 자전거',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.surface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'QR을 찍거나 번호를 입력해 보세요.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.surface.withValues(alpha: .76),
+            ),
+          ),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -233,18 +279,18 @@ class _AlertSummary extends StatelessWidget {
                 backgroundColor: theme.colorScheme.surface,
                 foregroundColor: theme.colorScheme.onSurface,
               ),
-              icon: const Icon(Icons.search_rounded),
-              label: const Text('자전거 번호로 확인'),
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              label: const Text('자전거 확인하기'),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           TextButton.icon(
             onPressed: onSavedStations,
             style: TextButton.styleFrom(
-              foregroundColor: theme.colorScheme.surface.withValues(alpha: .82),
+              foregroundColor: theme.colorScheme.surface.withValues(alpha: .86),
             ),
             icon: const Icon(Icons.bookmark_outline_rounded),
-            label: const Text('내 대여소 관리'),
+            label: const Text('내 대여소의 주의 번호 보기'),
           ),
         ],
       ),
@@ -340,45 +386,6 @@ class _BikeAlertCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FreshnessChip extends StatelessWidget {
-  const _FreshnessChip({required this.updatedAt});
-
-  final DateTime updatedAt;
-
-  @override
-  Widget build(BuildContext context) {
-    final minutes = DateTime.now()
-        .difference(updatedAt)
-        .inMinutes
-        .clamp(0, 999);
-    final label = minutes == 0 ? '방금 갱신' : '$minutes분 전 갱신';
-
-    return Semantics(
-      label: '실시간 데이터 $label',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: context.ridey.calm,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 7),
-          Text(
-            '실시간 · $label',
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(color: context.ridey.calm),
-          ),
-        ],
       ),
     );
   }
