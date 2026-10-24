@@ -13,13 +13,5 @@ void main() {
       RideyConfig.liveSnapshotUri.toString(),
       '${RideyConfig.supabaseUrl}/rest/v1/live_snapshot?select=at,body',
     );
-    expect(
-      RideyConfig.rescueUri.toString(),
-      '${RideyConfig.supabaseUrl}/rest/v1/rescue',
-    );
-    expect(
-      RideyConfig.checkedUri.toString(),
-      '${RideyConfig.supabaseUrl}/rest/v1/checked?select=bike,verdict,n',
-    );
   });
 }

@@ -3,30 +3,17 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 
-class CheckedVerdictCount {
-  const CheckedVerdictCount({required this.label, required this.count});
-
-  final String label;
-  final int count;
-}
-
 class BikeDetailPage extends StatelessWidget {
   const BikeDetailPage({
     super.key,
     required this.bike,
     required this.updatedAt,
     this.feed,
-    this.checkedVerdicts = const [],
-    this.onFieldCheck,
   });
 
   final LiveBike bike;
   final DateTime updatedAt;
   final FeedHealth? feed;
-  final List<CheckedVerdictCount> checkedVerdicts;
-
-  /// Staff field check. The caller owns the repository and the sheet.
-  final void Function(BuildContext context)? onFieldCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -110,21 +97,9 @@ class BikeDetailPage extends StatelessWidget {
             Text('왜 경보가 켜졌나요?', style: theme.textTheme.titleLarge),
             const SizedBox(height: 14),
             _EvidenceCard(bike: bike),
-            if (checkedVerdicts.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              _CheckedVerdictsCard(verdicts: checkedVerdicts),
-            ],
             const SizedBox(height: 16),
             _DataNote(updatedAt: updatedAt, feed: feed),
             const SizedBox(height: 30),
-            if (onFieldCheck != null) ...[
-              FilledButton.icon(
-                onPressed: () => onFieldCheck!(context),
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('현장에서 확인하기'),
-              ),
-              const SizedBox(height: 10),
-            ],
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.qr_code_scanner_rounded),
@@ -132,42 +107,6 @@ class BikeDetailPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _CheckedVerdictsCard extends StatelessWidget {
-  const _CheckedVerdictsCard({required this.verdicts});
-
-  final List<CheckedVerdictCount> verdicts;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = verdicts.fold(0, (sum, verdict) => sum + verdict.count);
-    final rows = verdicts
-        .map((verdict) => '${verdict.label} ${verdict.count}건')
-        .join(' · ');
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: context.ridey.line),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('현장 확인 $total건', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 6),
-          Text(
-            rows,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: context.ridey.muted),
-          ),
-        ],
       ),
     );
   }

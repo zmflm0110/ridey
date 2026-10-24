@@ -16,8 +16,4 @@ abstract final class RideyConfig {
       Uri.parse('$supabaseUrl/rest/v1/$resource');
 
   static Uri get liveSnapshotUri => rest('live_snapshot?select=at,body');
-
-  static Uri get rescueUri => rest('rescue');
-
-  static Uri get checkedUri => rest('checked?select=bike,verdict,n');
 }

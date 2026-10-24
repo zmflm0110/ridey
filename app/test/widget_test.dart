@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ridey_app/app/app_purpose.dart';
 import 'package:ridey_app/app/ridey_app.dart';
-import 'package:ridey_app/features/field/field_verdict.dart';
-import 'package:ridey_app/features/field/field_verification_repository.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
   @override
@@ -33,57 +31,62 @@ class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
 
 class _FakeStationRepository implements StationRepository {
   @override
-  Future<List<BikeStation>> fetch() async => const [];
+  Future<List<BikeStation>> fetch() async => const [
+    BikeStation(
+      id: '02720',
+      name: '힐스테이트에코',
+      district: '강남구',
+      latitude: 37.5,
+      longitude: 127.0,
+    ),
+  ];
 }
 
+const _staffLabels = ['업무', '현장 기록', '목적 전환', '대여소 작업', '오늘의 작업'];
+
 void main() {
-  testWidgets('changes navigation destinations with the selected purpose', (
-    tester,
-  ) async {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({
+      'app_purpose': 'worker',
+      'field_verification_queue': '[]',
+      'my_stations': ['02720'],
+    });
+  });
+
+  Future<void> pumpRidey(WidgetTester tester) async {
     await tester.pumpWidget(
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
-        fieldRepository: _emptyFieldRepository(),
-        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
       ),
     );
     await tester.pumpAndSettle();
+  }
 
-    expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
+  testWidgets('shows only rider tabs', (tester) async {
+    await pumpRidey(tester);
+
+    expect(find.text('이용하기'), findsOneWidget);
     expect(find.text('번호 확인'), findsOneWidget);
+    expect(find.text('대여소'), findsOneWidget);
+    expect(find.text('더보기'), findsOneWidget);
+    expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
+    for (final label in _staffLabels) {
+      expect(find.text(label), findsNothing);
+    }
 
-    await tester.tap(find.byTooltip('목적 전환'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('업무').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('대여소 작업'), findsOneWidget);
-    expect(find.text('오늘의 작업'), findsOneWidget);
-
-    await tester.tap(find.text('대여소 작업'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('다음으로 갈 곳'), findsOneWidget);
-    await tester.tap(find.text('더보기'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('화면 모드'), findsOneWidget);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('app_purpose'), isNull);
+    expect(preferences.getString('field_verification_queue'), isNull);
+    expect(preferences.getStringList('my_stations'), ['02720']);
   });
 
   testWidgets('changes the app appearance from settings', (tester) async {
-    await tester.pumpWidget(
-      RideyApp(
-        liveRepository: _FakeLiveSnapshotRepository(),
-        stationRepository: _FakeStationRepository(),
-        fieldRepository: _emptyFieldRepository(),
-        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await pumpRidey(tester);
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
 
+    expect(find.text('전송 대기 중인 현장 확인'), findsNothing);
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
@@ -91,18 +94,13 @@ void main() {
       Theme.of(tester.element(find.byType(Switch))).brightness,
       Brightness.dark,
     );
+    for (final label in _staffLabels) {
+      expect(find.text(label), findsNothing);
+    }
   });
 
   testWidgets('opens an alert detail from a bike number', (tester) async {
-    await tester.pumpWidget(
-      RideyApp(
-        liveRepository: _FakeLiveSnapshotRepository(),
-        stationRepository: _FakeStationRepository(),
-        fieldRepository: _emptyFieldRepository(),
-        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await pumpRidey(tester);
 
     await tester.tap(find.text('자전거 확인하기'));
     await tester.pumpAndSettle();
@@ -112,22 +110,15 @@ void main() {
 
     expect(find.text('피하세요.'), findsOneWidget);
     expect(find.text('왜 경보가 켜졌나요?'), findsOneWidget);
+    expect(find.text('현장에서 확인하기'), findsNothing);
   });
 
   testWidgets('labels a missing alert as no repeated-return signal', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      RideyApp(
-        liveRepository: _FakeLiveSnapshotRepository(),
-        stationRepository: _FakeStationRepository(),
-        fieldRepository: _emptyFieldRepository(),
-        purposeStore: _MemoryPurposeStore(AppPurpose.rider),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await pumpRidey(tester);
 
-    await tester.tap(find.text('자전거 확인하기'));
+    await tester.tap(find.text('번호 확인'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-12345');
     await tester.tap(find.text('경보 기록 확인'));
@@ -137,93 +128,15 @@ void main() {
     expect(find.textContaining('안전이 확인된 것은 아니니'), findsOneWidget);
   });
 
-  testWidgets('shows field verification status without changing queue order', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      RideyApp(
-        liveRepository: _FakeLiveSnapshotRepository(),
-        stationRepository: _FakeStationRepository(),
-        fieldRepository: FieldVerificationRepository(
-          remote: _FakeFieldRemote(),
-          queue: _MemoryFieldQueue(),
-        ),
-        purposeStore: _MemoryPurposeStore(AppPurpose.worker),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('대여소 작업'));
+  testWidgets('opens saved stations from the rider tab', (tester) async {
+    await pumpRidey(tester);
+    await tester.tap(find.text('대여소'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('현장 확인 1대'), findsOneWidget);
+    expect(find.text('내 대여소'), findsOneWidget);
+    expect(find.text('힐스테이트에코'), findsOneWidget);
+    for (final label in _staffLabels) {
+      expect(find.text(label), findsNothing);
+    }
   });
-
-  testWidgets('stores an onboarding purpose and lets users change it later', (
-    tester,
-  ) async {
-    final purposeStore = _MemoryPurposeStore(null);
-    await tester.pumpWidget(
-      RideyApp(
-        liveRepository: _FakeLiveSnapshotRepository(),
-        stationRepository: _FakeStationRepository(),
-        fieldRepository: _emptyFieldRepository(),
-        purposeStore: purposeStore,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('타기 전,\n한 번 확인하세요.'), findsOneWidget);
-    await tester.tap(find.text('업무 화면 보기').first);
-    await tester.pumpAndSettle();
-
-    expect(purposeStore.value, AppPurpose.worker);
-    expect(find.text('오늘의 작업'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('목적 전환'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('이용자').last);
-    await tester.pumpAndSettle();
-
-    expect(purposeStore.value, AppPurpose.rider);
-    expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
-  });
-}
-
-class _MemoryPurposeStore implements AppPurposeStore {
-  _MemoryPurposeStore(this.value);
-
-  AppPurpose? value;
-
-  @override
-  Future<AppPurpose?> load() async => value;
-
-  @override
-  Future<void> save(AppPurpose purpose) async {
-    value = purpose;
-  }
-}
-
-FieldVerificationRepository _emptyFieldRepository() {
-  return FieldVerificationRepository(
-    remote: _FakeFieldRemote(),
-    queue: _MemoryFieldQueue(),
-  );
-}
-
-class _FakeFieldRemote implements FieldVerificationRemote {
-  @override
-  Future<CheckedVerdicts> fetchChecked() async => {
-    'SPB-69683': {FieldVerdict.tire: 1},
-  };
-
-  @override
-  Future<void> record(FieldVerificationRecord record) async {}
-}
-
-class _MemoryFieldQueue implements FieldVerificationQueue {
-  @override
-  Future<List<FieldVerificationRecord>> load() async => const [];
-
-  @override
-  Future<void> save(List<FieldVerificationRecord> records) async {}
 }
