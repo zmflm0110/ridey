@@ -1,0 +1,26 @@
+# Flutter 앱(app/): 분석 + 단위 테스트. 플랫폼 분리 개편의 기준선 (Flutter 3.47.7 stable).
+name: flutter
+on:
+  push:
+    branches: [master]   # live-data 는 검사하지 않음
+    paths: ["app/**", ".github/workflows/flutter.yml"]
+  pull_request:
+    paths: ["app/**", ".github/workflows/flutter.yml"]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
