@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/habits/lookup_habits.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
 import 'package:ridey_app/features/rider/bike_ocr_scanner_page.dart';
 import 'package:ridey_app/features/rider/qr_scanner_page.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 
 class BikeLookupDestination extends StatefulWidget {
-  const BikeLookupDestination({super.key, this.repository});
+  const BikeLookupDestination({super.key, this.repository, this.readLocation});
 
   final LiveSnapshotRepository? repository;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<BikeLookupDestination> createState() => _BikeLookupDestinationState();
@@ -45,6 +48,7 @@ class _BikeLookupDestinationState extends State<BikeLookupDestination> {
           snapshot: snapshot.requireData,
           repository: _repository,
           showAppBar: false,
+          readLocation: widget.readLocation,
         );
       },
     );
@@ -57,11 +61,13 @@ class BikeLookupPage extends StatefulWidget {
     required this.snapshot,
     required this.repository,
     this.showAppBar = true,
+    this.readLocation,
   });
 
   final LiveSnapshot snapshot;
   final LiveSnapshotRepository repository;
   final bool showAppBar;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<BikeLookupPage> createState() => _BikeLookupPageState();
@@ -108,7 +114,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     }
   }
 
-  void _lookup() {
+  void _lookup([LookupKind kind = LookupKind.number]) {
     FocusScope.of(context).unfocus();
     final bikeId = normalizeBikeId(_controller.text);
     if (bikeId == null) {
@@ -121,6 +127,11 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       return;
     }
 
+    rememberLookup(
+      kind: kind,
+      subject: bikeId,
+      readLocation: widget.readLocation,
+    );
     final bike = findBike(_snapshot.bikes, bikeId);
     if (bike == null) {
       setState(
@@ -158,7 +169,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       return;
     }
     _controller.text = bikeId;
-    _lookup();
+    _lookup(LookupKind.qr);
   }
 
   Future<void> _scanNumberPlate() async {
@@ -171,7 +182,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       return;
     }
     _controller.text = bikeId;
-    _lookup();
+    _lookup(LookupKind.ocr);
   }
 
   @override
@@ -243,7 +254,10 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
               ),
             ),
             const SizedBox(height: 12),
-            FilledButton(onPressed: _lookup, child: const Text('경보 기록 확인')),
+            FilledButton(
+              onPressed: () => _lookup(),
+              child: const Text('경보 기록 확인'),
+            ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: _scanQr,

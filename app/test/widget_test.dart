@@ -86,6 +86,37 @@ void main() {
     expect(preferences.getStringList('my_stations'), ['02720']);
   });
 
+  testWidgets('keeps a bike lookup in on-device history', (tester) async {
+    await pumpRidey(tester);
+    await tester.tap(find.text('자전거 확인하기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'spb-69683');
+    await tester.tap(find.text('경보 기록 확인'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('피하세요.'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('더보기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('조회 기록'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('번호 조회'), findsOneWidget);
+    expect(find.textContaining('SPB-69683'), findsOneWidget);
+    expect(find.textContaining('위치 없음'), findsOneWidget);
+
+    await tester.tap(find.text('기록 지우기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('지우기'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('아직 조회 기록이 없어요.'), findsOneWidget);
+    expect(find.text('번호 조회'), findsNothing);
+  });
+
   testWidgets('changes the app appearance from settings', (tester) async {
     await pumpRidey(tester);
     await tester.tap(find.text('더보기'));

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
@@ -11,33 +11,6 @@ import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
-
-typedef DeviceLocation = ({double latitude, double longitude});
-
-Future<DeviceLocation?> readDeviceLocation() {
-  return _readDeviceLocation().timeout(
-    const Duration(seconds: 4),
-    onTimeout: () => null,
-  );
-}
-
-Future<DeviceLocation?> _readDeviceLocation() async {
-  try {
-    if (!await Geolocator.isLocationServiceEnabled()) return null;
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return null;
-    }
-    final position = await Geolocator.getCurrentPosition();
-    return (latitude: position.latitude, longitude: position.longitude);
-  } catch (_) {
-    return null;
-  }
-}
 
 class RiderHomePage extends StatefulWidget {
   const RiderHomePage({
@@ -76,8 +49,11 @@ class _RiderHomePageState extends State<RiderHomePage> {
   Future<void> _openLookup(LiveSnapshot snapshot) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            BikeLookupPage(snapshot: snapshot, repository: _repository),
+        builder: (_) => BikeLookupPage(
+          snapshot: snapshot,
+          repository: _repository,
+          readLocation: widget.readLocation,
+        ),
       ),
     );
   }
@@ -97,7 +73,10 @@ class _RiderHomePageState extends State<RiderHomePage> {
   Future<void> _openSavedStations(LiveSnapshot snapshot) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => SavedStationsPage(snapshot: snapshot),
+        builder: (_) => SavedStationsPage(
+          snapshot: snapshot,
+          readLocation: widget.readLocation,
+        ),
       ),
     );
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/app/legacy_preferences.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/habits/lookup_habits_page.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
@@ -131,11 +133,13 @@ class _RideyShellState extends State<RideyShell> {
     BikeLookupDestination(
       key: const ValueKey('bike-lookup'),
       repository: widget.liveRepository,
+      readLocation: widget.readLocation,
     ),
     SavedStationsDestination(
       key: const ValueKey('saved-stations'),
       liveRepository: widget.liveRepository,
       stationRepository: widget.stationRepository,
+      readLocation: widget.readLocation,
     ),
     _MorePage(
       key: const ValueKey('more'),
@@ -193,7 +197,7 @@ class _MorePage extends StatelessWidget {
         Text('더보기', style: theme.textTheme.displayLarge),
         const SizedBox(height: 12),
         Text(
-          '시연, 내 기록, 설정은 실제 기능이 연결되는 순서에 맞춰 추가해요.',
+          '화면 모드와 이 폰에 남은 조회 기록을 관리해요.',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: context.ridey.muted,
           ),
@@ -216,6 +220,26 @@ class _MorePage extends StatelessWidget {
                 onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
               },
             ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            leading: const Icon(Icons.history_rounded),
+            title: const Text('조회 기록'),
+            subtitle: const Text('최근 14일, 이 폰에만 저장돼요.'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const LookupHabitsPage(),
+                ),
+              );
+            },
           ),
         ),
       ],

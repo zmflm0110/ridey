@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/habits/lookup_habits.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/saved_stations.dart';
@@ -13,10 +15,12 @@ class SavedStationsDestination extends StatefulWidget {
     super.key,
     this.liveRepository,
     this.stationRepository,
+    this.readLocation,
   });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<SavedStationsDestination> createState() =>
@@ -54,6 +58,7 @@ class _SavedStationsDestinationState extends State<SavedStationsDestination> {
           snapshot: snapshot.requireData,
           stationRepository: widget.stationRepository,
           showAppBar: false,
+          readLocation: widget.readLocation,
         );
       },
     );
@@ -67,12 +72,14 @@ class SavedStationsPage extends StatefulWidget {
     this.stationRepository,
     this.store,
     this.showAppBar = true,
+    this.readLocation,
   });
 
   final LiveSnapshot snapshot;
   final StationRepository? stationRepository;
   final SavedStationsStore? store;
   final bool showAppBar;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<SavedStationsPage> createState() => _SavedStationsPageState();
@@ -93,7 +100,13 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
     super.initState();
     _stationRepository = widget.stationRepository ?? BundledStationRepository();
     _store = widget.store ?? SavedStationsStore();
-    _loading = _load();
+    _loading = _load().then((_) {
+      return rememberLookup(
+        kind: LookupKind.station,
+        subject: _saved.isEmpty ? null : _saved.first,
+        readLocation: widget.readLocation,
+      );
+    });
   }
 
   Future<void> _load() async {
@@ -208,6 +221,11 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
       if (replace != true || !mounted) return;
     }
     final saved = await _store.add(station.id);
+    await rememberLookup(
+      kind: LookupKind.station,
+      subject: station.id,
+      readLocation: widget.readLocation,
+    );
     if (!mounted) return;
     setState(() {
       _saved = saved;
