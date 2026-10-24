@@ -4,6 +4,7 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/habits/lookup_habits_page.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/notifications/notification_settings_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
@@ -197,7 +198,7 @@ class _MorePage extends StatelessWidget {
         Text('더보기', style: theme.textTheme.displayLarge),
         const SizedBox(height: 12),
         Text(
-          '화면 모드와 이 폰에 남은 조회 기록을 관리해요.',
+          '화면 모드, 조회 기록, 알림을 여기서 관리해요.',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: context.ridey.muted,
           ),
@@ -237,6 +238,26 @@ class _MorePage extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const LookupHabitsPage(),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            leading: const Icon(Icons.notifications_none_rounded),
+            title: const Text('알림'),
+            subtitle: const Text('자주 확인하는 시간대에만, 하루 한 번'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NotificationSettingsPage(),
                 ),
               );
             },

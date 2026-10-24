@@ -30,6 +30,14 @@
 	<string>따릉이 QR을 읽어 고장 의심 자전거인지 확인하려고 카메라를 사용합니다.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>가까운 따릉이 대여소를 찾아 내 대여소에 저장하려고 현재 위치를 사용합니다.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>ridey.habit-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
