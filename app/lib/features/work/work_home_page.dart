@@ -6,7 +6,7 @@ import 'package:ridey_app/features/field/field_verification_repository.dart';
 import 'package:ridey_app/features/field/quick_verdict_sheet.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
-import 'package:ridey_app/features/rider/bike_lookup_page.dart';
+import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/features/work/work_queue.dart';
@@ -576,9 +576,21 @@ class _WorkStationDetailPageState extends State<_WorkStationDetailPage> {
                       builder: (_) => BikeDetailPage(
                         bike: bike,
                         updatedAt: widget.updatedAt,
-                        isWorkContext: true,
-                        fieldRepository: widget.fieldRepository,
-                        checkedVerdicts: _checked[bike.bike] ?? const {},
+                        checkedVerdicts: [
+                          for (final verdict in FieldVerdict.values)
+                            if ((_checked[bike.bike]?[verdict] ?? 0) > 0)
+                              CheckedVerdictCount(
+                                label: verdict.label,
+                                count: _checked[bike.bike]![verdict]!,
+                              ),
+                        ],
+                        onFieldCheck: (detailContext) {
+                          showQuickVerdictSheet(
+                            detailContext,
+                            bikeId: bike.bike,
+                            repository: widget.fieldRepository,
+                          );
+                        },
                       ),
                     ),
                   );

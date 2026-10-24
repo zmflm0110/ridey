@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
@@ -75,8 +76,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
             snapshot: snapshot.requireData,
             onRefresh: _refresh,
             onLookup: () => _openLookup(snapshot.requireData),
-            onBikeSelected: (bike) =>
-                _openDetail(bike, snapshot.requireData),
+            onBikeSelected: (bike) => _openDetail(bike, snapshot.requireData),
             onSavedStations: () => _openSavedStations(snapshot.requireData),
           ),
           _ => const _LoadingHome(),
@@ -124,10 +124,7 @@ class _LoadedHome extends StatelessWidget {
           ratio: snapshot.feed.ratio,
         ),
         const SizedBox(height: 24),
-        _CheckBikeCard(
-          onLookup: onLookup,
-          onSavedStations: onSavedStations,
-        ),
+        _CheckBikeCard(onLookup: onLookup, onSavedStations: onSavedStations),
         const SizedBox(height: 34),
         _AlertSummary(
           count: snapshot.bikes.length,
