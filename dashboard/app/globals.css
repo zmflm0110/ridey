@@ -1,0 +1,161 @@
+@font-face {
+  font-family: "Unbounded";
+  src: url("/fonts/unbounded-ridey.woff2") format("woff2");
+  font-weight: 500 900;
+  font-display: swap;
+}
+
+:root {
+  --bg: #f7f5f0;
+  --card: #ffffff;
+  --fill: #efece5;
+  --line: #e2dfd7;
+  --ink: #111317;
+  --body: #474b53;
+  --sub: #63676f;
+  --on-ink: #f7f5f0;
+  --signal: #ff4f1f;
+  --signal-ink: #b82d07;
+  --signal-soft: #ffe4d9;
+  --on-signal: #111317;
+  --calm: #2d5bff;
+  --calm-ink: #2149d6;
+  --calm-soft: #e4eaff;
+  --accent: var(--signal);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --glass: rgba(247, 245, 240, 0.9);
+  --num: "Unbounded", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0f12;
+    --card: #16191e;
+    --fill: #1e2228;
+    --line: #262a31;
+    --ink: #f3f1ec;
+    --body: #b3b7be;
+    --sub: #8a8f98;
+    --on-ink: #111317;
+    --signal: #ff5c2e;
+    --signal-ink: #ff7a52;
+    --signal-soft: #3a1c12;
+    --calm: #7c9bff;
+    --calm-ink: #7c9bff;
+    --calm-soft: #17204a;
+    --glass: rgba(13, 15, 18, 0.9);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; }
+:focus-visible { outline: 2.5px solid var(--signal); outline-offset: 2px; }
+
+.shell { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 232px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 14px;
+  border-right: 1px solid var(--line);
+  background: var(--card);
+}
+.wordmark {
+  margin: 4px 10px 18px;
+  font-family: var(--num);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  font-size: 22px;
+}
+.wordmark i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-radius: 99px;
+  background: var(--signal);
+}
+.nav-link {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--body);
+}
+.nav-link[aria-current="page"], .tab[aria-current="page"] {
+  background: var(--fill);
+  color: var(--ink);
+  font-weight: 650;
+}
+.content { flex: 1; min-width: 0; padding: 32px 28px 40px; }
+.content h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: -0.04em; }
+.content p { margin: 0; color: var(--sub); max-width: 42rem; }
+.menu-button, .tabbar, .backdrop { display: none; }
+
+/* 768–1279px: sidebar starts collapsed. shell.ts shellMode */
+@media (max-width: 1279px) {
+  .menu-button { display: inline-flex; }
+  .sidebar {
+    position: fixed;
+    z-index: 20;
+    inset: 0 auto 0 0;
+    transform: translateX(-105%);
+    transition: transform 180ms var(--ease);
+  }
+  .shell[data-open="true"] .sidebar { transform: none; }
+  .shell[data-open="true"] .backdrop { display: block; }
+  .content { padding-top: 72px; }
+}
+
+/* under 768px: bottom tabs, no sidebar. shell.ts shellMode */
+@media (max-width: 767px) {
+  .menu-button, .sidebar, .backdrop { display: none; }
+  .shell[data-open="true"] .sidebar { display: none; }
+  .tabbar {
+    display: flex;
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    background: var(--glass);
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+  }
+  .tab { flex: none; padding: 8px 12px; border-radius: 999px; color: var(--body); }
+  .content { padding: 24px 18px 96px; }
+}
+
+.menu-button {
+  position: fixed;
+  z-index: 21;
+  top: 16px;
+  left: 16px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  border: 0;
+  background: rgba(17, 19, 23, 0.28);
+}
