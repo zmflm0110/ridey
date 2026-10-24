@@ -248,6 +248,10 @@ th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--li
   line-height: 22px;
   font-size: 12px;
 }
+.file, .stack label { display: grid; gap: 6px; }
+.stack input { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); color: var(--ink); }
+.verdicts button { min-height: 48px; }
+.bad { background: var(--signal-soft); color: var(--signal-ink); }
 @media print {
   .sidebar, .tabbar, .menu-button, .backdrop, .print-hide, .logout { display: none !important; }
   .content { padding: 0; }
