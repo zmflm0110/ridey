@@ -1,4 +1,4 @@
--- RIDEY 직원 명단. 기존 rescue·survey 정책은 여기서 바꾸지 않는다.
+-- RIDEY 직원 명단과 현장 기록 권한.
 -- 적용: schema.sql 다음, 분석 SQL(model·live·ev·calib) 전. 여러 번 돌려도 된다.
 -- ops 스키마는 PostgREST 에 노출하지 않는다. 앱이 부르는 함수만 public RPC 다.
 -- 개발자 등록은 staff_seed.example.sql (실제 이메일은 커밋하지 않는다).
@@ -110,14 +110,63 @@ begin
 end $$;
 
 revoke all on schema ops from public, anon, authenticated;
+grant usage on schema ops to authenticated;
 revoke all on all tables in schema ops from public, anon, authenticated;
 revoke all on function ops.normalize_staff() from public;
 revoke all on function ops.link_staff_user() from public;
 revoke all on function ops.has_role(text[]) from public;
 revoke all on function ops.is_staff() from public;
+grant execute on function ops.is_staff() to authenticated;
 revoke all on function public.staff_me() from public;
 revoke all on function public.staff_list() from public;
 revoke all on function public.staff_set_active(text, boolean) from public;
 grant execute on function public.staff_me() to authenticated;
 grant execute on function public.staff_list() to authenticated;
 grant execute on function public.staff_set_active(text, boolean) to authenticated;
+
+alter table public.rescue add column if not exists created_by uuid default auth.uid();
+alter table public.survey add column if not exists created_by uuid default auth.uid();
+
+grant select, insert on public.rescue, public.survey to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+
+drop policy if exists "직원 기록 보기" on public.rescue;
+drop policy if exists "직원 기록 넣기" on public.rescue;
+drop policy if exists "직원 기록 보기" on public.survey;
+drop policy if exists "직원 기록 넣기" on public.survey;
+create policy "직원 기록 보기" on public.rescue for select to authenticated using (ops.is_staff());
+create policy "직원 기록 넣기" on public.rescue for insert to authenticated with check (ops.is_staff());
+create policy "직원 기록 보기" on public.survey for select to authenticated using (ops.is_staff());
+create policy "직원 기록 넣기" on public.survey for insert to authenticated with check (ops.is_staff());
+
+create or replace view public.checked with (security_invoker = true) as
+  select bike, v as verdict, count(*)::int as n
+  from (
+    select bike, verdict as v from public.rescue
+    union all
+    select bike, status from public.survey
+  ) x
+  group by bike, v;
+revoke all on public.checked from public, anon, authenticated;
+grant select on public.checked to authenticated;
+
+create or replace view public.field_records with (security_invoker = true) as
+  select id, at, created_at, created_by, station, bike, status, note, lat, lon, photo
+  from public.survey;
+revoke all on public.field_records from public, anon, authenticated;
+grant select on public.field_records to authenticated;
+
+grant usage on schema storage to authenticated;
+revoke insert, select on storage.objects from anon;
+grant insert, select on storage.objects to authenticated;
+drop policy if exists "직원 조사 사진 올리기" on storage.objects;
+drop policy if exists "직원 조사 사진 보기" on storage.objects;
+create policy "직원 조사 사진 올리기" on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'survey-photos'
+    and name ~ '^[0-9a-f]{16}\.jpg$'
+    and ops.is_staff()
+  );
+create policy "직원 조사 사진 보기" on storage.objects for select to authenticated
+  using (bucket_id = 'survey-photos' and ops.is_staff());
+

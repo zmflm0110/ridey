@@ -175,7 +175,7 @@ security add-generic-password -a bike-doctor -s datagokr -w           # 공공�
 security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase DB 비밀번호
 ```
 
-1. Supabase 프로젝트에 `supabase/schema.sql`(쓰기 표·권한) → `supabase/model.sql`(AI 식) → `supabase/live.sql`(5분 작업) → `supabase/ev.sql`(충전기, 선택) 순서로 적용.
+1. Supabase 프로젝트에 `supabase/schema.sql`(쓰기 표) → `supabase/staff.sql`(직원 명단·권한) → `supabase/model.sql`(AI 식) → `supabase/live.sql`(5분 작업) → `supabase/ev.sql`(충전기) → `supabase/calib.sql`(보정) 순서로 적용. 클라우드 적용은 DB 비밀번호로 psql 에서 직접 한다.
 2. Vault 에 `seoul_openapi`(·`datagokr`), 처음 채우기 `tools/supabase_live_load.py --stations --backfill 8`.
 3. 앱의 공개(publishable) 키를 `web/cloud.js`·`ios/Core/Sources/HeotgeoleumCore/Cloud.swift` 에.
 

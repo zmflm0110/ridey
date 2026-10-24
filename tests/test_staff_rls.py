@@ -1,4 +1,4 @@
-"""ops.staff 명단, 가입 연결, 비활성화, developer 보호. 기존 쓰기 정책은 아직 그대로다.
+"""ops.staff 명단과 rescue·survey·사진·checked 의 직원 전용 권한.
 
     PG_TEST_DSN="host=localhost port=5432 user=postgres password=postgres" python -m pytest -q tests/test_staff_rls.py
 """
@@ -150,3 +150,73 @@ def test_only_admin_or_developer_can_change_the_allowlist(database):
 
     as_user(DEV, "authenticated", "select public.staff_set_active('staff@example.com', true);")
     assert "staff" in as_user(STAFF, "authenticated", "select public.staff_me();").stdout
+
+
+def test_only_active_staff_can_write_and_read_field_records(database):
+    photo = "0123456789abcdef.jpg"
+    written = as_user(
+        STAFF,
+        "authenticated",
+        "insert into public.rescue (bike, verdict) values ('SPB-69683', '브레이크');\n"
+        "insert into public.survey (bike, status, note) values ('SPB-69683', '브레이크', '앞 브레이크');\n"
+        f"insert into storage.objects (bucket_id, name) values ('survey-photos', '{photo}');\n"
+        "select created_by::text from public.rescue where bike = 'SPB-69683';",
+    )
+    assert written.stdout.strip() == STAFF
+    assert "브레이크" in as_user(
+        ADMIN, "authenticated", "select verdict from public.checked where bike = 'SPB-69683';"
+    ).stdout
+    assert "앞 브레이크" in as_user(
+        DEV, "authenticated", "select note from public.field_records where bike = 'SPB-69683';"
+    ).stdout
+
+    for uid, role in ((OUTSIDER, "authenticated"), (PAUSED, "authenticated"), (None, "anon")):
+        for statement in (
+            "insert into public.rescue (bike, verdict) values ('SPB-11111', '타이어');",
+            f"insert into storage.objects (bucket_id, name) values ('survey-photos', '{photo}');",
+        ):
+            denied = as_user(uid, role, statement, ok=False)
+            assert denied.returncode != 0, (uid, role, denied.stderr[-500:])
+
+    assert as_user(
+        OUTSIDER, "authenticated", "select count(*)::text from public.rescue;"
+    ).stdout.strip() == "0"
+    assert as_user(None, "anon", "select * from public.rescue;", ok=False).returncode != 0
+    assert as_user(None, "anon", "select * from public.checked;", ok=False).returncode != 0
+    assert as_user(None, "anon", "select * from public.field_records;", ok=False).returncode != 0
+    assert as_user(
+        STAFF,
+        "authenticated",
+        "insert into storage.objects (bucket_id, name) values ('survey-photos', 'nope.jpg');",
+        ok=False,
+    ).returncode != 0
+
+
+def test_anon_can_still_read_the_public_views(database):
+    import re
+
+    live_stubs = """
+    create schema if not exists cron;
+    create table if not exists cron.job (jobid bigserial, jobname text, schedule text, command text);
+    create or replace function cron.schedule(n text, s text, c text) returns bigint language sql as $f$
+      insert into cron.job(jobname, schedule, command) values (n, s, c) returning jobid $f$;
+    create or replace function cron.unschedule(j bigint) returns boolean language sql as $f$
+      delete from cron.job where jobid = j returning true $f$;
+    create schema if not exists net;
+    create table if not exists net._http_response (id bigint primary key, status_code int, content text);
+    create sequence if not exists net.req_seq;
+    create or replace function net.http_get(url text, params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000)
+      returns bigint language sql as $f$ select nextval('net.req_seq') $f$;
+    create schema if not exists vault;
+    create table if not exists vault.decrypted_secrets (name text, decrypted_secret text);
+    """
+    psql(live_stubs)
+    portable = lambda sql: "\n".join(
+        line for line in sql.splitlines() if not re.match(r"\s*create extension", line)
+    )
+    psql(portable((ROOT / "supabase" / "model.sql").read_text()))
+    psql(portable((ROOT / "supabase" / "live.sql").read_text()))
+    for view in ("live_snapshot", "ops_lists", "ops_scores", "ops_alarm_days"):
+        result = as_user(None, "anon", f"select count(*)::text from public.{view};")
+        assert result.stdout.strip() == "0"
+
