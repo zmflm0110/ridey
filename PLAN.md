@@ -2,6 +2,8 @@
 
 > 사람들이 귀찮아서 안 하는 고장 신고를, 앞사람들의 헛걸음 기록이 대신한다.
 
+- **플랫폼 분리(2026-10-25, 로컬 구현).** 이용자는 `app/` Flutter만 본다. 직원은 `dashboard/`(RIDEY Operations)에서 보고, 로그인·`ops.staff`·RLS가 세 번 확인한다. 분석 엔진과 `live.sql`·`model.sql`·`calib.sql`·`ev.sql`은 안 바꿨다. 새 cron도 없다. `supabase/staff.sql`은 저장소에만 있고, 클라우드 적용은 psql로 직접 하기 전이다. 적용 전 웹의 익명 쓰기는 그대로다. `web/`·`site/`·루트 `ios/`·`android-app/`은 나중에 지우고, 그때 `test.yml`·`pages.yml`·`ios.yml`도 정리한다. 설정 순서는 [`dashboard/README.md`](dashboard/README.md).
+
 근거(초안 단계, `~/ideas/drafts/04-bike-doctor`): 서로 다른 두 사람이 연달아 빌리자마자 반납한 자전거는 다음 사람도 34% 가 헛걸음(평소 2.5%, 약 14배).
 서울 1·3·6월 + 대전 타슈 5·10월 재현, 경보가 고장 신고보다 중앙값 20시간 먼저, 그 사이 평균 4.4명 헛걸음, 서울 하루 84\~223명 예방 가능.
 

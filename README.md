@@ -208,12 +208,27 @@ python tools/live_sql_compare.py --old <커밋>                                 
 대회 제출 zip: `python tools/make_submission.py --id <학번> --name <이름>` (APK·소스·출처·영상·보고서·발표를 규칙대로 한 파일로).
 </details>
 
+## 이용자 앱과 운영 화면
+
+이용자가 보는 앱과 직원이 보는 화면을 나눴다. 고장 판단 엔진(`engine/`)과 분석 SQL(`supabase/live.sql`, `model.sql`, `calib.sql`, `ev.sql`)은 그대로다.
+
+| | 어디 | 누가 |
+|---|---|---|
+| 이용자 | [`app/`](app/README.md) Flutter. 홈, 번호·QR·OCR 조회, 대여소, 상세(판단 근거·주변 의심 자전거). 조회 습관과 알림은 이 폰 안에만 있다. | 누구나. 직원 화면은 없다. |
+| 운영 | [`dashboard/`](dashboard/README.md) Next.js, RIDEY Operations. 개요, 우선순위, 자치구, 근무 경로, 현장 점검, 기록·아침 목록 CSV, 직원 명단. | 초대한 직원만. 세션과 `ops.staff`, RLS가 같이 막는다. |
+
+공개로 남는 읽기 뷰는 `live_snapshot`, `ops_lists`, `ops_scores`, `ops_alarm_days` 네 개다. `rescue`·`survey`·사진·`checked`·`field_records`는 활성 직원만 읽고 쓴다. 직원 명단 스키마 `ops`는 API에 열어 두지 않는다. 클라우드에 `staff.sql`을 적용하는 일은 개발자가 psql로 한다. 적용 전에는 기존 웹의 익명 쓰기가 그대로다.
+
+`web/`, `site/`, 루트 `ios/`, `android-app/`은 아직 지우지 않았다. 지울 때 `test.yml`, `pages.yml`, `ios.yml`도 같이 정리한다. 대여소 목록을 다시 만들면 `analysis/export_web.py`가 `web/data/stations.json`을 쓰고, 그 파일을 `app/assets/data/stations.json`과 `dashboard/data/stations.json`에 복사한다.
+
 ## 폴더
 
 | 폴더 | 내용 |
 |---|---|
 | [`engine/`](engine) | 헛대여·연쇄·경보 규칙(`core.py`), 아침 목록(`morning.py`), 충전기 헛충전(`ev.py`) |
-| [`supabase/`](supabase) | 클라우드 5분 작업(`live.sql`), AI 식(`model.sql`), 충전기(`ev.sql`), 쓰기 표·권한(`schema.sql`) |
+| [`supabase/`](supabase) | 클라우드 5분 작업(`live.sql`), AI 식(`model.sql`), 충전기(`ev.sql`), 쓰기 표(`schema.sql`), 직원 명단(`staff.sql`) |
+| [`app/`](app/README.md) | 이용자 Flutter 앱. 직원 기능은 없다. |
+| [`dashboard/`](dashboard/README.md) | 직원용 RIDEY Operations (Next.js). 로그인 없이는 화면이 열리지 않는다. |
 | [`analysis/`](analysis) | 검증 스크립트 — 기준 선택, 실시간 대조, AI 학습·비교, 공단 순회 효과, 그림 |
 | [`web/`](web) | 웹앱 — 지금 목록·조회(QR)·현장 확인·하루 재생·현장 조사, 오프라인 동작 |
 | [`ios/`](ios/README.md) | 아이폰 앱(SwiftUI) — 엔진 패키지 `Core/`, 화면 `App/` |

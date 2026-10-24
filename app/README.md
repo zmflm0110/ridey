@@ -1,16 +1,23 @@
-# ridey_app
+# RIDEY 이용자 앱
 
-A new Flutter project.
+따릉이를 타기 전에 고장 의심 자전거를 보는 Flutter 앱이다. 직원용 화면은 없다. 운영은 [RIDEY Operations](../dashboard/README.md)에서 한다.
 
-## Getting Started
+## 화면
 
-This project is a starting point for a Flutter application.
+홈, 번호 조회, QR, OCR, 대여소, 자전거 상세. 상세에는 판단 근거와 같은 대여소의 다른 의심 자전거가 있다. 홈에는 내 주변 대여소별 의심 대수가 있고, 위치를 쓸 수 없으면 저장해 둔 대여소를 보여 준다.
 
-A few resources to get you started if this is your first Flutter project:
+조회 기록은 이 폰에만 남는다. 최근 14일, 위치는 약 500m 격자로 줄인다. 알림도 이 폰 안에서만 만들고, 사용자가 켜야 한다. 하루 한 번, 습관 시간 15분 전부터 그 시간이 끝날 때까지, 습관 위치 1km 안에 의심 자전거가 있을 때만 보낸다.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 실행
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+cd app
+flutter pub get
+flutter analyze
+flutter test
+flutter run
+```
+
+Supabase 주소와 publishable 키는 앱 설정을 따른다. secret 키는 넣지 않는다. 대여소 좌표는 `assets/data/stations.json`에 들어 있다. 다시 만들려면 저장소 루트에서 `analysis/export_web.py`로 `web/data/stations.json`을 만든 뒤 이 파일로 복사한다.
+
+Android 릴리스 매니페스트에는 `INTERNET`이 있다. 알림을 쓰려면 알림 권한과, Android에서는 부팅 뒤 예약을 위한 `RECEIVE_BOOT_COMPLETED`가 필요하다. iOS 배경 갱신 시각은 기기가 정한다.
