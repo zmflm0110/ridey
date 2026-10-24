@@ -70,6 +70,59 @@ export async function loadInspectionCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
+export async function loadScore(day: string): Promise<{ listed: number; rode: number; firstDud: number } | null> {
+  const supabase = await createClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("ops_scores").select("listed, rode, first_dud").eq("day", day).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return { listed: Number(data.listed) || 0, rode: Number(data.rode) || 0, firstDud: Number(data.first_dud) || 0 };
+}
+
+export type FieldRecord = {
+  id: number;
+  at: string;
+  station: string | null;
+  bike: string;
+  status: string;
+  note: string | null;
+  lat: number | null;
+  lon: number | null;
+  photo: string | null;
+};
+
+export async function loadFieldRecords(): Promise<FieldRecord[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("field_records")
+    .select("id, at, station, bike, status, note, lat, lon, photo")
+    .order("at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id: Number(row.id),
+    at: String(row.at),
+    station: row.station ? String(row.station) : null,
+    bike: String(row.bike),
+    status: String(row.status),
+    note: row.note ? String(row.note) : null,
+    lat: row.lat == null ? null : Number(row.lat),
+    lon: row.lon == null ? null : Number(row.lon),
+    photo: row.photo ? String(row.photo) : null,
+  }));
+}
+
+export async function signPhotos(names: string[]): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  if (!supabase) return {};
+  const pairs = await Promise.all(names.map(async (name) => {
+    const signed = await supabase.storage.from("survey-photos").createSignedUrl(name, 60 * 30);
+    return [name, signed.data?.signedUrl ?? ""] as const;
+  }));
+  return Object.fromEntries(pairs.filter(([, url]) => url));
+}
+
 export async function loadWorkBikes(query: { source?: string; day?: string }): Promise<{
   source: "live" | "morning";
   day: string | null;
