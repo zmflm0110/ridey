@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStaffProfile, staffAccess, staffRedirect, type StaffProfile } from "../lib/auth/access";
+import { parseStaffProfile, staffAccess, staffRedirect, canManageStaff, canDeactivate, type StaffProfile } from "../lib/auth/access";
 
 const staff: StaffProfile = {
   email: "staff@example.com",
@@ -24,6 +24,11 @@ describe("staff access", () => {
     expect(staffRedirect(staffAccess({ id: "user" }, staff), "/login")).toBe("/overview");
     expect(staffRedirect(staffAccess(null, null), "/forbidden")).toBe("/login");
     expect(staffRedirect(staffAccess({ id: "user" }, staff), "/forbidden")).toBe("/overview");
+    expect(canManageStaff("admin")).toBe(true);
+    expect(canManageStaff("developer")).toBe(true);
+    expect(canManageStaff("staff")).toBe(false);
+    expect(canDeactivate("developer")).toBe(false);
+    expect(canDeactivate("staff")).toBe(true);
   });
 
   it("ignores a staff_me payload that is not an active profile", () => {

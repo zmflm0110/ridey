@@ -56,3 +56,11 @@ export function staffRedirect(
   if (access.status === "forbidden") return "/forbidden";
   return null;
 }
+
+export function canManageStaff(role: string): boolean {
+  return role === "admin" || role === "developer";
+}
+
+export function canDeactivate(role: string): boolean {
+  return role !== "developer";
+}
