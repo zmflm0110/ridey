@@ -177,3 +177,60 @@ button, input { font: inherit; }
   color: var(--ink);
 }
 .login-form button, .gate .logout { background: var(--ink); color: var(--on-ink); cursor: pointer; }
+
+.stack { display: grid; gap: 18px; }
+.stack h1 { margin-bottom: 0; }
+.hint, .note { color: var(--sub); }
+.note { padding: 12px 14px; border-radius: 12px; background: var(--signal-soft); color: var(--signal-ink); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.kpis article, .compare article {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+}
+.kpis b { display: block; font-family: var(--num); font-size: 32px; letter-spacing: -0.05em; }
+.kpis span, .compare span { display: block; color: var(--sub); }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding-top: 22px; }
+.bar {
+  position: relative;
+  flex: 1;
+  height: var(--h);
+  min-height: 4px;
+  border-radius: 8px 8px 0 0;
+  background: var(--signal);
+}
+.bar i { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 12px; }
+.filters, .split { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.filters label { display: grid; gap: 6px; color: var(--body); }
+.filters select, .filters button, .text-button, .drawer button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.filters button, .text-button { cursor: pointer; }
+.split { align-items: start; }
+.table-wrap { flex: 1; min-width: 260px; overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+table { width: 100%; border-collapse: collapse; }
+caption { text-align: left; padding: 12px 14px 0; font-weight: 650; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.map-frame { height: 420px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--fill); }
+.drawer {
+  position: fixed;
+  z-index: 30;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  overflow: auto;
+  padding: 20px;
+  background: var(--card);
+  border-left: 1px solid var(--line);
+}
+@media (max-width: 767px) {
+  .map-frame { height: 280px; }
+  .drawer { top: auto; height: 70vh; border-left: 0; border-top: 1px solid var(--line); }
+}
