@@ -91,7 +91,7 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
   @override
   void initState() {
     super.initState();
-    _stationRepository = widget.stationRepository ?? GitHubStationRepository();
+    _stationRepository = widget.stationRepository ?? BundledStationRepository();
     _store = widget.store ?? SavedStationsStore();
     _loading = _load();
   }

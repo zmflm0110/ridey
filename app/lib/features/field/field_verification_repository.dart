@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:ridey_app/config/ridey_config.dart';
 import 'package:ridey_app/features/field/field_verdict.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -138,19 +139,15 @@ class SupabaseFieldVerificationRemote implements FieldVerificationRemote {
   SupabaseFieldVerificationRemote({http.Client? client})
     : _client = client ?? http.Client();
 
-  static const _baseUrl = 'https://iqvquwvoljzuvdgtbpnu.supabase.co';
-  static const _publishableKey =
-      'sb_publishable_YFBKlBvyPFAhBpLdS3o8_A_xIeUmTVE';
-
   final http.Client _client;
 
   @override
   Future<void> record(FieldVerificationRecord record) async {
     final response = await _client
         .post(
-          Uri.parse('$_baseUrl/rest/v1/rescue'),
+          RideyConfig.rescueUri,
           headers: const {
-            'apikey': _publishableKey,
+            ...RideyConfig.apiHeaders,
             'Content-Type': 'application/json',
             'Prefer': 'return=minimal',
           },
@@ -163,10 +160,7 @@ class SupabaseFieldVerificationRemote implements FieldVerificationRemote {
   @override
   Future<CheckedVerdicts> fetchChecked() async {
     final response = await _client
-        .get(
-          Uri.parse('$_baseUrl/rest/v1/checked?select=bike,verdict,n'),
-          headers: const {'apikey': _publishableKey},
-        )
+        .get(RideyConfig.checkedUri, headers: RideyConfig.apiHeaders)
         .timeout(const Duration(seconds: 12));
     _throwForStatus(response.statusCode);
 

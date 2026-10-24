@@ -41,7 +41,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
   void initState() {
     super.initState();
     _liveRepository = widget.liveRepository ?? SupabaseLiveSnapshotRepository();
-    _stationRepository = widget.stationRepository ?? GitHubStationRepository();
+    _stationRepository = widget.stationRepository ?? BundledStationRepository();
     _fieldRepository = widget.fieldRepository ?? FieldVerificationRepository();
     _loading = _load();
   }
