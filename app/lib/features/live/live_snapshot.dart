@@ -49,6 +49,19 @@ class LiveSnapshot {
       value is Map ? Map<String, dynamic>.from(value) : const {};
 }
 
+class AlertReason {
+  const AlertReason({required this.text, this.deltaPoints});
+
+  final String text;
+  final int? deltaPoints;
+
+  String get deltaLabel {
+    final points = deltaPoints;
+    if (points == null) return '';
+    return points > 0 ? '+$points%p' : '$points%p';
+  }
+}
+
 class LiveBike {
   const LiveBike({
     required this.bike,
@@ -58,6 +71,7 @@ class LiveBike {
     required this.isHighAlert,
     required this.lastDud,
     required this.probability,
+    this.reasons = const [],
   });
 
   final String bike;
@@ -67,6 +81,7 @@ class LiveBike {
   final bool isHighAlert;
   final String lastDud;
   final int? probability;
+  final List<AlertReason> reasons;
 
   factory LiveBike.fromJson(Map<String, dynamic> json) {
     return LiveBike(
@@ -77,7 +92,24 @@ class LiveBike {
       isHighAlert: json['level'] == '빨강',
       lastDud: json['last_dud'] as String? ?? '',
       probability: (json['p_next'] as num?)?.toInt(),
+      reasons: _reasons(json['why']),
     );
+  }
+
+  static List<AlertReason> _reasons(Object? value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) {
+          final text = item['t'];
+          if (text is! String || text.trim().isEmpty) return null;
+          return AlertReason(
+            text: text.trim(),
+            deltaPoints: (item['d'] as num?)?.toInt(),
+          );
+        })
+        .whereType<AlertReason>()
+        .toList(growable: false);
   }
 }
 

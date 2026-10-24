@@ -9,10 +9,16 @@ import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/liquid_navigation.dart';
 
 class RideyApp extends StatefulWidget {
-  const RideyApp({super.key, this.liveRepository, this.stationRepository});
+  const RideyApp({
+    super.key,
+    this.liveRepository,
+    this.stationRepository,
+    this.readLocation,
+  });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<RideyApp> createState() => _RideyAppState();
@@ -45,6 +51,7 @@ class _RideyAppState extends State<RideyApp> {
           return RideyShell(
             liveRepository: widget.liveRepository,
             stationRepository: widget.stationRepository,
+            readLocation: widget.readLocation,
             themeMode: _themeMode,
             onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
           );
@@ -59,12 +66,14 @@ class RideyShell extends StatefulWidget {
     super.key,
     required this.liveRepository,
     required this.stationRepository,
+    required this.readLocation,
     required this.themeMode,
     required this.onThemeModeChanged,
   });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final Future<DeviceLocation?> Function()? readLocation;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
@@ -116,6 +125,8 @@ class _RideyShellState extends State<RideyShell> {
     RiderHomePage(
       key: const ValueKey('rider-home'),
       repository: widget.liveRepository,
+      stationRepository: widget.stationRepository,
+      readLocation: widget.readLocation,
     ),
     BikeLookupDestination(
       key: const ValueKey('bike-lookup'),

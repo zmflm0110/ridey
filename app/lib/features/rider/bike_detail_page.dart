@@ -97,6 +97,10 @@ class BikeDetailPage extends StatelessWidget {
             Text('왜 경보가 켜졌나요?', style: theme.textTheme.titleLarge),
             const SizedBox(height: 14),
             _EvidenceCard(bike: bike),
+            if (bike.reasons.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _ReasonCard(reasons: bike.reasons),
+            ],
             const SizedBox(height: 16),
             _DataNote(updatedAt: updatedAt, feed: feed),
             const SizedBox(height: 30),
@@ -161,6 +165,53 @@ class _EvidenceCard extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReasonCard extends StatelessWidget {
+  const _ReasonCard({required this.reasons});
+
+  final List<AlertReason> reasons;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border.all(color: context.ridey.line),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('판단 근거', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 12),
+          for (final reason in reasons) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 58,
+                  child: Text(
+                    reason.deltaLabel,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: (reason.deltaPoints ?? 0) < 0
+                          ? context.ridey.calm
+                          : context.ridey.signalText,
+                    ),
+                  ),
+                ),
+                Expanded(child: Text(reason.text)),
+              ],
+            ),
+            if (reason != reasons.last) const SizedBox(height: 10),
           ],
         ],
       ),

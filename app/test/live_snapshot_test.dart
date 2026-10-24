@@ -17,6 +17,11 @@ void main() {
             'level': '빨강',
             'last_dud': '10-20 14:58',
             'p_next': 48,
+            'why': [
+              {'t': '서로 다른 3명이 연달아 반납', 'd': 12},
+              {'t': ' ', 'd': 4},
+              'skip',
+            ],
           },
         ],
       },
@@ -28,5 +33,7 @@ void main() {
     expect(snapshot.bikes.single.bike, 'SPB-69683');
     expect(snapshot.bikes.single.isHighAlert, isTrue);
     expect(snapshot.bikes.single.probability, 48);
+    expect(snapshot.bikes.single.reasons.single.text, '서로 다른 3명이 연달아 반납');
+    expect(snapshot.bikes.single.reasons.single.deltaLabel, '+12%p');
   });
 }

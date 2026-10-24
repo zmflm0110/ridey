@@ -15,7 +15,7 @@ void main() {
       MaterialApp(
         theme: RideyTheme.light(),
         home: BikeDetailPage(
-          bike: const LiveBike(
+          bike: LiveBike(
             bike: 'SPB-69683',
             station: '02720',
             stationName: '힐스테이트에코',
@@ -23,6 +23,9 @@ void main() {
             isHighAlert: true,
             lastDud: '10-20 14:58',
             probability: 48,
+            reasons: [
+              AlertReason(text: '서로 다른 3명이 연달아 반납', deltaPoints: 12),
+            ],
           ),
           updatedAt: DateTime.now(),
         ),
@@ -30,6 +33,9 @@ void main() {
     );
 
     expect(find.text('피하세요.'), findsOneWidget);
+    expect(find.text('판단 근거'), findsOneWidget);
+    expect(find.text('서로 다른 3명이 연달아 반납'), findsOneWidget);
+    expect(find.text('+12%p'), findsOneWidget);
     expect(find.text('현장에서 확인하기'), findsNothing);
     expect(find.textContaining('현장 확인'), findsNothing);
   });

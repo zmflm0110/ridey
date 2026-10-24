@@ -1,16 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
+import 'package:ridey_app/features/rider/nearby_stations.dart';
+import 'package:ridey_app/features/stations/bike_station.dart';
+import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
+import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 
+typedef DeviceLocation = ({double latitude, double longitude});
+
+Future<DeviceLocation?> readDeviceLocation() {
+  return _readDeviceLocation().timeout(
+    const Duration(seconds: 4),
+    onTimeout: () => null,
+  );
+}
+
+Future<DeviceLocation?> _readDeviceLocation() async {
+  try {
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+    final position = await Geolocator.getCurrentPosition();
+    return (latitude: position.latitude, longitude: position.longitude);
+  } catch (_) {
+    return null;
+  }
+}
+
 class RiderHomePage extends StatefulWidget {
-  const RiderHomePage({super.key, this.repository});
+  const RiderHomePage({
+    super.key,
+    this.repository,
+    this.stationRepository,
+    this.savedStationsStore,
+    this.readLocation,
+  });
 
   final LiveSnapshotRepository? repository;
+  final StationRepository? stationRepository;
+  final SavedStationsStore? savedStationsStore;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<RiderHomePage> createState() => _RiderHomePageState();
@@ -74,6 +115,11 @@ class _RiderHomePageState extends State<RiderHomePage> {
           ),
           ConnectionState.done => _LoadedHome(
             snapshot: snapshot.requireData,
+            stationRepository:
+                widget.stationRepository ?? BundledStationRepository(),
+            savedStationsStore:
+                widget.savedStationsStore ?? SavedStationsStore(),
+            readLocation: widget.readLocation ?? readDeviceLocation,
             onRefresh: _refresh,
             onLookup: () => _openLookup(snapshot.requireData),
             onBikeSelected: (bike) => _openDetail(bike, snapshot.requireData),
@@ -91,6 +137,9 @@ class _RiderHomePageState extends State<RiderHomePage> {
 class _LoadedHome extends StatelessWidget {
   const _LoadedHome({
     required this.snapshot,
+    required this.stationRepository,
+    required this.savedStationsStore,
+    required this.readLocation,
     required this.onRefresh,
     required this.onLookup,
     required this.onBikeSelected,
@@ -98,6 +147,9 @@ class _LoadedHome extends StatelessWidget {
   });
 
   final LiveSnapshot snapshot;
+  final StationRepository stationRepository;
+  final SavedStationsStore savedStationsStore;
+  final Future<DeviceLocation?> Function() readLocation;
   final RefreshCallback onRefresh;
   final VoidCallback onLookup;
   final ValueChanged<LiveBike> onBikeSelected;
@@ -135,6 +187,14 @@ class _LoadedHome extends StatelessWidget {
           const SizedBox(height: 16),
           _FeedDelayNotice(feed: snapshot.feed),
         ],
+        const SizedBox(height: 40),
+        _NearbyStationsSection(
+          snapshot: snapshot,
+          stationRepository: stationRepository,
+          savedStationsStore: savedStationsStore,
+          readLocation: readLocation,
+          onBikeSelected: onBikeSelected,
+        ),
         const SizedBox(height: 40),
         _SectionTitle(title: '지금 피할 자전거', description: '경보가 먼저 켜진 순서예요.'),
         const SizedBox(height: 12),
@@ -513,6 +573,191 @@ class _NoAlerts extends StatelessWidget {
         style: Theme.of(
           context,
         ).textTheme.bodyMedium?.copyWith(color: context.ridey.muted),
+      ),
+    );
+  }
+}
+
+class _NearbyStationsSection extends StatefulWidget {
+  const _NearbyStationsSection({
+    required this.snapshot,
+    required this.stationRepository,
+    required this.savedStationsStore,
+    required this.readLocation,
+    required this.onBikeSelected,
+  });
+
+  final LiveSnapshot snapshot;
+  final StationRepository stationRepository;
+  final SavedStationsStore savedStationsStore;
+  final Future<DeviceLocation?> Function() readLocation;
+  final ValueChanged<LiveBike> onBikeSelected;
+
+  @override
+  State<_NearbyStationsSection> createState() => _NearbyStationsSectionState();
+}
+
+class _NearbyPlace {
+  const _NearbyPlace({required this.usingLocation, required this.groups});
+
+  final bool usingLocation;
+  final List<StationAlertGroup> groups;
+}
+
+class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
+  late Future<_NearbyPlace> _place;
+
+  @override
+  void initState() {
+    super.initState();
+    _place = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _NearbyStationsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.snapshot != widget.snapshot) _place = _load();
+  }
+
+  Future<_NearbyPlace> _load() async {
+    final results = await Future.wait([
+      widget.stationRepository.fetch(),
+      widget.savedStationsStore.load(),
+      widget.readLocation(),
+    ]);
+    final stations = results[0] as List<BikeStation>;
+    final savedIds = results[1] as List<String>;
+    final location = results[2] as DeviceLocation?;
+    if (location != null) {
+      return _NearbyPlace(
+        usingLocation: true,
+        groups: nearestAlertStations(
+          groups: stationAlertGroups(
+            bikes: widget.snapshot.bikes,
+            stations: stations,
+          ),
+          latitude: location.latitude,
+          longitude: location.longitude,
+        ),
+      );
+    }
+    return _NearbyPlace(
+      usingLocation: false,
+      groups: savedStationAlerts(
+        bikes: widget.snapshot.bikes,
+        stations: stations,
+        savedIds: savedIds,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_NearbyPlace>(
+      future: _place,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const LinearProgressIndicator();
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+        final place = snapshot.requireData;
+        final radiusKm = (nearbyAlertRadiusMeters / 1000).round();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionTitle(
+              title: place.usingLocation ? '내 주변 대여소' : '내 대여소',
+              description: place.usingLocation
+                  ? '${radiusKm}km 안에서 고장 의심 자전거가 있는 대여소예요.'
+                  : '위치를 쓸 수 없어 저장한 대여소를 보여 드려요.',
+            ),
+            const SizedBox(height: 12),
+            if (place.groups.isEmpty)
+              Text(
+                place.usingLocation
+                    ? '${radiusKm}km 안에 고장 의심 자전거가 없어요.'
+                    : '저장한 대여소가 없어요. 대여소 탭에서 추가할 수 있어요.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: context.ridey.muted),
+              )
+            else
+              ...place.groups.map(
+                (group) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _NearbyStationCard(
+                    group: group,
+                    onTap: () {
+                      final bike = firstBikeAt(widget.snapshot.bikes, group.id);
+                      if (bike != null) widget.onBikeSelected(bike);
+                    },
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NearbyStationCard extends StatelessWidget {
+  const _NearbyStationCard({required this.group, required this.onTap});
+
+  final StationAlertGroup group;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final distance = group.meters;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: group.count == 0 ? null : onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: Border.all(color: context.ridey.line),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(group.name, style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (distance != null) formatDistance(distance),
+                        if (group.highAlertCount > 0)
+                          '강한 경보 ${group.highAlertCount}대',
+                        if (group.count == 0) '고장 의심 없음',
+                      ].join(' · '),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: context.ridey.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${group.count}대',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: group.count == 0
+                      ? context.ridey.muted
+                      : context.ridey.signalText,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

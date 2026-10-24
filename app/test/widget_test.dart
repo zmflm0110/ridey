@@ -58,6 +58,7 @@ void main() {
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
+        readLocation: () async => null,
       ),
     );
     await tester.pumpAndSettle();
@@ -71,6 +72,10 @@ void main() {
     expect(find.text('대여소'), findsOneWidget);
     expect(find.text('더보기'), findsOneWidget);
     expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('내 대여소'), 400);
+    expect(find.text('내 대여소'), findsOneWidget);
+    expect(find.text('힐스테이트에코'), findsOneWidget);
+    expect(find.text('1대'), findsOneWidget);
     for (final label in _staffLabels) {
       expect(find.text(label), findsNothing);
     }
