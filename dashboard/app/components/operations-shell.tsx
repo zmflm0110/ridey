@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { LogoutButton } from "@/app/components/logout-button";
 import { shellNav } from "@/lib/shell";
 
 export function OperationsShell({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,7 @@ export function OperationsShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+        <LogoutButton />
       </aside>
       <main className="content">{children}</main>
       <nav className="tabbar" aria-label="운영 탭">

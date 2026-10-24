@@ -152,10 +152,28 @@ button, input { font: inherit; }
   border-radius: 999px;
   padding: 8px 14px;
 }
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 19;
-  border: 0;
-  background: rgba(17, 19, 23, 0.28);
+.logout {
+  margin-top: auto;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--body);
+  border-radius: 999px;
+  padding: 8px 14px;
 }
+.gate {
+  max-width: 420px;
+  margin: 12vh auto;
+  padding: 0 20px;
+}
+.gate h1 { margin: 0 0 8px; letter-spacing: -0.04em; }
+.gate p { color: var(--sub); }
+.login-form { display: grid; gap: 14px; margin-top: 24px; }
+.login-form label { display: grid; gap: 6px; color: var(--body); }
+.login-form input, .login-form button, .gate .logout {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  color: var(--ink);
+}
+.login-form button, .gate .logout { background: var(--ink); color: var(--on-ink); cursor: pointer; }

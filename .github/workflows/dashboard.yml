@@ -1,4 +1,4 @@
-# RIDEY Operations dashboard (lint, typecheck, unit tests, build).
+# RIDEY Operations dashboard (lint, typecheck, unit tests, build, unauthenticated e2e).
 name: dashboard
 on:
   push:
@@ -26,3 +26,5 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
