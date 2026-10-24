@@ -234,3 +234,22 @@ th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--li
   .map-frame { height: 280px; }
   .drawer { top: auto; height: 70vh; border-left: 0; border-top: 1px solid var(--line); }
 }
+.choice { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.choice button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+.choice input { width: 88px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); color: var(--ink); }
+.route-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.route-list li { display: grid; gap: 2px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+.route-list span { color: var(--sub); }
+.route-num {
+  background: var(--ink);
+  color: var(--on-ink);
+  border-radius: 99px;
+  text-align: center;
+  line-height: 22px;
+  font-size: 12px;
+}
+@media print {
+  .sidebar, .tabbar, .menu-button, .backdrop, .print-hide, .logout { display: none !important; }
+  .content { padding: 0; }
+  .shell { display: block; }
+}
