@@ -31,16 +31,16 @@ TEXTS = {
                          "앱이 인터넷으로 타일을 불러와 보여 주며, 지도 오른쪽 아래에 출처를 표시한다. 파일로 넣은 것은 없다.\n",
     "flutter.txt": "이용자 앱(app/): Flutter SDK(BSD-3, https://flutter.dev) 하나로 안드로이드·아이폰을 만든다. 상용 엔진 없음.\n"
                    "앱이 쓰는 패키지는 pub.dev 에서 받은 원본을 pub/ 에 그대로 넣었다(버전·sha256 은 4_소스/app/pubspec.lock).\n"
-                   "운영 대시보드(dashboard/): Next.js·React·Supabase JS·Leaflet — npm 에서 받은 원본을 npm/ 에 넣었다(버전·받은 주소·무결성 값은 4_소스/dashboard/package-lock.json).\n",
-    "공공데이터.txt": "서울 열린데이터광장(https://data.seoul.go.kr): 따릉이 대여이력 OA-15182(실시간 API tbCycleRentData), 고장신고 OA-15644, 대여소 정보 — 공공누리 제1유형(출처 표시)\n"
-                     "공공데이터포털(https://www.data.go.kr): 대전 타슈 대여이력, 한국환경공단 전기자동차 충전소 정보 — 공공누리 제1유형\n"
+                   "운영 대시보드(dashboard/): Next.js, React, Supabase JS, Leaflet. npm 에서 받은 원본을 npm/ 에 넣었다(버전·받은 주소·무결성 값은 4_소스/dashboard/package-lock.json).\n",
+    "공공데이터.txt": "서울 열린데이터광장(https://data.seoul.go.kr): 따릉이 대여이력 OA-15182(실시간 API tbCycleRentData), 고장신고 OA-15644, 대여소 정보. 공공누리 제1유형(출처 표시)\n"
+                     "공공데이터포털(https://www.data.go.kr): 대전 타슈 대여이력, 한국환경공단 전기자동차 충전소 정보. 공공누리 제1유형\n"
                      "앱 안(web/data)에는 가공 결과(자전거 번호·대여소·시각)만 있고 이용자 정보(생년·성별)는 없다.\n",
-    "클라우드.txt": "Supabase(무료 요금제) — 5분마다 서울 API 로 대여이력을 받아 경보 계산·채점(pg_cron, supabase/live.sql), 구조대 확인·현장 조사 저장 (supabase/schema.sql)\n"
-                   "GitHub Actions(무료, 공개 저장소) — 백업·전기차 충전기 자료 모으기 (.github/workflows/cloud.yml)\n",
+    "클라우드.txt": "Supabase(무료 요금제): 5분마다 서울 API 로 대여이력을 받아 경보 계산·채점(pg_cron, supabase/live.sql), 구조대 확인·현장 조사 저장 (supabase/schema.sql)\n"
+                   "GitHub Actions(무료, 공개 저장소): 백업, 전기차 충전기 자료 모으기(.github/workflows/cloud.yml), 앱 빌드(.github/workflows/flutter.yml)\n",
     "직접만든것.txt": "앱 아이콘·시작 화면·색·화면 디자인, 엔진·서버·분석 코드, 자체 모델(analysis/train_model.py 로 학습 → supabase/model.sql)은 모두 직접 만들었다.\n"
-                    "분석·학습 도구: Python pandas·NumPy·scikit-learn(BSD, 무료) — 앱에는 들어가지 않는다.\n"
+                    "분석·학습 도구: Python pandas·NumPy·scikit-learn(BSD, 무료). 앱에는 들어가지 않는다.\n"
                     "로고·아이콘(RIDEY. 워드마크·R. 아이콘)은 tools/make_brand.py 가 코드로 그림(docs/brand.md). 앱 아이콘·시작 화면 PNG 는 tools/make_flutter_assets.js 가 만듦.\n"
-                    "글꼴: Unbounded(SIL OFL 1.1, Google Fonts)에서 숫자·대문자·기호만 잘라 넣음 — web/fonts·app/assets/fonts·dashboard/public/fonts, 라이선스 OFL-Unbounded.txt 가 같은 폴더에. 한글은 기기 기본 글꼴.\n"
+                    "글꼴: Unbounded(SIL OFL 1.1, Google Fonts)에서 숫자·대문자·기호만 잘라 넣었다. web/fonts, app/assets/fonts, dashboard/public/fonts 에 있고 라이선스 OFL-Unbounded.txt 가 같은 폴더에 있다. 한글은 기기 기본 글꼴.\n"
                     "상용 엔진: 사용하지 않음.\n",
 }
 SKIP_SOURCE = ("docs/demo/", "docs/shots/")   # 큰 파일은 다른 폴더에 이미 들어감
@@ -128,15 +128,15 @@ def main(argv=None):
         put(ROOT / "docs/credits.md", "5_출처/출처_목록.md")
         put(need["발표 PDF"], "6_발표자료/RIDEY_발표.pdf")
         z.writestr(f"{name}/읽어보세요.txt",
-                   "RIDEY — 따릉이 고장을 대여기록으로 먼저 찾는 앱 (2026 디지털콘텐츠개발대회 생활 부문)\n\n"
+                   "RIDEY: 따릉이 고장을 대여 기록으로 먼저 찾는 앱 (2026 디지털콘텐츠개발대회 생활 부문)\n\n"
                    "1_작품설명서  작품 설명서·보고서\n2_시연영상  시연 영상\n3_설치파일  안드로이드 APK·설치 방법\n"
                    "4_소스  전체 소스(엔진·서버·이용자 앱 app/·운영 대시보드 dashboard/·웹 데모 web/). 처음 볼 곳: README.md\n5_출처  라이브러리 원본·라이선스, 지도·자료 출처\n6_발표자료  발표 자료\n\n"
                    "1분 둘러보기 (APK 설치 뒤)\n"
-                   "1. 이용하기 — 클라우드가 5분마다 서울 대여기록으로 만든 지금의 경보 수와 주변 대여소별 고장 의심 자전거.\n"
-                   "2. 번호 확인 — QR 이나 번호판을 찍거나 번호를 넣으면 '피하기'·서로 다른 몇 명이 바로 반납했는지·다음 사람도 반납할 확률.\n"
-                   "3. 대여소 — 자주 가는 대여소를 저장하면 그곳의 피할 번호. 더보기 — 조회 기록(이 폰에만)·습관 시간 알림.\n"
-                   "운영(정비 직원) 화면: RIDEY Operations(4_소스/dashboard) — 우선순위 지도·근무 시간 안 동선·자치구 현황·현장 기록. 시연 영상에 나오고, 직접 보려면 dashboard/README.md 의 '둘러보기'.\n"
-                   "하루 다시 보기: 웹 데모(https://zmflm0110.github.io/ridey/app/)의 '재생' — 2026년 6월 15일, 경보가 고장 신고보다 먼저 켜지는 하루.\n")
+                   "1. 이용하기: 클라우드가 5분마다 서울 대여 기록으로 계산한 지금의 고장 의심 대수, 구별 목록, 주변 대여소.\n"
+                   "2. 번호 확인: QR 이나 번호판을 찍거나 번호를 넣으면 경보가 켜졌는지, 서로 다른 몇 명이 바로 반납했는지, 다음 사람도 반납할 확률이 나온다.\n"
+                   "3. 대여소: 자주 가는 대여소를 저장하면 그곳의 피할 번호가 나온다. 더보기에는 조회 기록(이 폰에만 저장)과 습관 시간 알림이 있다.\n"
+                   "운영(정비 직원) 화면: RIDEY Operations(4_소스/dashboard). 우선순위 지도, 근무 시간 안 동선, 자치구 현황, 현장 기록. 시연 영상에 나오고, 직접 보려면 dashboard/README.md 의 '둘러보기'를 따라 하면 된다.\n"
+                   "하루 다시 보기: 웹 데모(https://zmflm0110.github.io/ridey/app/)의 '재생' 탭. 2026년 6월 15일 하루 동안 경보가 고장 신고보다 먼저 켜지는 모습을 빠르게 돌려 본다.\n")
     print(f"→ {out} ({out.stat().st_size / 1e6:.1f}MB)")
     return 0
 
