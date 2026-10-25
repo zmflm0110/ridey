@@ -1,4 +1,5 @@
 import { FieldDesk } from "@/app/components/field-desk";
+import { demoMode } from "@/lib/demo";
 import { loadWorkBikes } from "@/lib/ops-data";
 
 export default async function Page() {
@@ -14,7 +15,7 @@ export default async function Page() {
       <h1>현장</h1>
       <p>대여소에 서 있는 자전거를 보고 판정해요. 인터넷이 끊겨도 누른 시각 그대로 이 브라우저에 남았다가 다시 보내요.</p>
       {problem ? <p role="alert">{problem}</p> : null}
-      <FieldDesk bikes={bikes} />
+      <FieldDesk bikes={bikes} demo={demoMode()} />
     </section>
   );
 }

@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!-- 시작 화면: 잉크 바탕 가운데 'RIDEY.' (tools/make_flutter_assets.js) -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
-
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+    <item android:drawable="@color/ic_launcher_background" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/splash_wordmark" />
+    </item>
 </layer-list>

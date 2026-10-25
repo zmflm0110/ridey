@@ -6,12 +6,26 @@ class LiveSnapshot {
     required this.date,
     required this.bikes,
     required this.feed,
+    this.isOffline = false,
   });
 
   final DateTime updatedAt;
   final String date;
   final List<LiveBike> bikes;
   final FeedHealth feed;
+
+  /// True when this is the phone's last saved copy, not a fresh download.
+  final bool isOffline;
+
+  /// The saved copy can't vouch for bikes it doesn't list, so it reports an
+  /// unhealthy feed: the UI then says "판단 어려움" instead of "경보 없음".
+  LiveSnapshot asOffline() => LiveSnapshot(
+    updatedAt: updatedAt,
+    date: date,
+    bikes: bikes,
+    feed: FeedHealth(isHealthy: false, since: feed.since),
+    isOffline: true,
+  );
 
   factory LiveSnapshot.fromRow(Map<String, dynamic> row) {
     final body = _body(row['body']);

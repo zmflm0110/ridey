@@ -33,6 +33,13 @@ export type ValuedStop = {
 
 const emptyChecked: Checked = { total: 0, broken: 0 };
 
+/** 엔진의 단계 값(빨강·노랑)을 화면 말로. 브랜드는 색 이름 대신 경보의 세기로 부른다(docs/brand.md). */
+export function levelLabel(level: string): string {
+  if (level === "빨강") return "강한 경보";
+  if (level === "노랑") return "경보";
+  return level;
+}
+
 export function normalizeBike(raw: string): string | null {
   const match = String(raw).toUpperCase().match(/SPB-?\s?(\d{3,6})/);
   return match ? `SPB-${match[1].padStart(5, "0")}` : null;

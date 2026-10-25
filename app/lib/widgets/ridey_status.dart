@@ -19,7 +19,7 @@ class RideySignalBadge extends StatelessWidget {
         context.ridey.signalSoft,
       ),
       RideySignalState.noSignal => (
-        '반복 반납 신호 없음',
+        '경보 없음',
         Icons.remove_circle_outline_rounded,
         context.ridey.calm,
         context.ridey.calmSoft,
@@ -64,6 +64,15 @@ class RideySignalBadge extends StatelessWidget {
   }
 }
 
+/// '방금', '12분 전', '3시간 전', '2일 전' — how old the live data is.
+String rideyAgo(DateTime updatedAt, {DateTime? now}) {
+  final minutes = (now ?? DateTime.now()).difference(updatedAt).inMinutes;
+  if (minutes <= 0) return '방금';
+  if (minutes < 60) return '$minutes분 전';
+  if (minutes < 60 * 24) return '${minutes ~/ 60}시간 전';
+  return '${minutes ~/ (60 * 24)}일 전';
+}
+
 class RideyDataConfidence extends StatelessWidget {
   const RideyDataConfidence({
     super.key,
@@ -71,28 +80,32 @@ class RideyDataConfidence extends StatelessWidget {
     required this.isHealthy,
     this.ratio,
     this.compact = false,
+    this.isOffline = false,
   });
 
   final DateTime updatedAt;
   final bool isHealthy;
   final double? ratio;
   final bool compact;
+  final bool isOffline;
 
   @override
   Widget build(BuildContext context) {
-    final minutes = DateTime.now()
-        .difference(updatedAt)
-        .inMinutes
-        .clamp(0, 999);
-    final fresh = minutes == 0 ? '방금 갱신' : '$minutes분 전 갱신';
+    final fresh = '${rideyAgo(updatedAt)} 갱신';
     final state = isHealthy ? RideySignalState.noSignal : RideySignalState.uncertain;
-    final message = isHealthy
+    final message = isOffline
+        ? '연결 안 됨 · 마지막 기록 $fresh'
+        : isHealthy
         ? '대여 기록 $fresh'
         : ratio == null
         ? '자료 지연 · $fresh'
         : '자료 지연 ${((ratio ?? 0) * 100).round()}% · $fresh';
     return Semantics(
-      label: isHealthy ? '실시간 자료, $fresh' : '자료 지연, $fresh',
+      label: isOffline
+          ? '인터넷 연결 안 됨, 마지막 기록 $fresh'
+          : isHealthy
+          ? '실시간 자료, $fresh'
+          : '자료 지연, $fresh',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

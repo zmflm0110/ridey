@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { StationMap, type MapGroup } from "@/app/components/station-map";
-import { groupByStation, type Bike } from "@/lib/priority";
+import { groupByStation, levelLabel, type Bike } from "@/lib/priority";
 import { checkedCounts, type CheckedDetail } from "@/lib/snapshot";
 import type { Station } from "@/lib/stations";
 
@@ -80,11 +80,11 @@ export function PriorityBoard({
           </select>
         </label>
         <label>
-          등급
+          단계
           <select value={level} onChange={(event) => setLevel(event.target.value)}>
             <option value="">전체</option>
-            <option value="빨강">빨강</option>
-            <option value="노랑">노랑</option>
+            <option value="빨강">강한 경보 · 3명 이상</option>
+            <option value="노랑">경보 · 2명</option>
           </select>
         </label>
         <p className="hint">{visible.length}대 · 비교는 4대까지</p>
@@ -97,7 +97,7 @@ export function PriorityBoard({
               <b>{bike.bike}</b>
               <span>{bike.station_name}</span>
               <span>{bike.p_next != null ? `${bike.p_next}%` : `${bike.chain}명`}</span>
-              <span>{bike.level}</span>
+              <span>{levelLabel(bike.level)}</span>
             </article>
           ))}
         </div>
@@ -129,7 +129,7 @@ export function PriorityBoard({
           <table>
             <caption>자전거</caption>
             <thead>
-              <tr><th>비교</th><th>번호</th><th>대여소</th><th>등급</th><th>확률</th></tr>
+              <tr><th>비교</th><th>번호</th><th>대여소</th><th>단계</th><th>확률</th></tr>
             </thead>
             <tbody>
               {visible.map((bike) => (
@@ -148,7 +148,7 @@ export function PriorityBoard({
                     </button>
                   </td>
                   <td>{bike.station_name}</td>
-                  <td>{bike.level}</td>
+                  <td>{levelLabel(bike.level)}</td>
                   <td>{bike.p_next != null ? `${bike.p_next}%` : `${bike.chain}명`}</td>
                 </tr>
               ))}
@@ -160,7 +160,7 @@ export function PriorityBoard({
         <aside className="drawer" role="dialog" aria-label={`${openBike.bike} 판단 근거`}>
           <button type="button" className="text-button" onClick={() => setOpen(null)}>닫기</button>
           <h2>{openBike.bike}</h2>
-          <p>{openBike.station_name} · {openBike.level} · {openBike.p_next != null ? `다음 사람도 바로 반납할 확률 ${openBike.p_next}%` : `${openBike.chain}명 연속`}</p>
+          <p>{openBike.station_name} · {levelLabel(openBike.level)} · {openBike.p_next != null ? `다음 사람도 바로 반납할 확률 ${openBike.p_next}%` : `${openBike.chain}명 연속`}</p>
           <h3>왜 이 확률?</h3>
           <ul>
             {(Array.isArray(openBike.why) ? openBike.why : []).map((reason, index) => (
