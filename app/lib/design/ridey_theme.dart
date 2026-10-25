@@ -441,7 +441,7 @@ extension RideyThemeContext on BuildContext {
     final body = base.fontFamily;
     return base.copyWith(
       fontFamily: RideyTheme.numberFamily,
-      fontFamilyFallback: [if (body != null) body],
+      fontFamilyFallback: [?body],
       fontWeight: FontWeight.w800,
       letterSpacing: 0,
       fontFeatures: const [FontFeature.tabularFigures()],
