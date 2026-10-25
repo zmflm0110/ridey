@@ -93,6 +93,8 @@ void main() {
 
   testWidgets('keeps a bike lookup in on-device history', (tester) async {
     await pumpRidey(tester);
+    await tester.ensureVisible(find.text('자전거 확인하기'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('자전거 확인하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-69683');
@@ -143,6 +145,8 @@ void main() {
   testWidgets('opens an alert detail from a bike number', (tester) async {
     await pumpRidey(tester);
 
+    await tester.ensureVisible(find.text('자전거 확인하기'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('자전거 확인하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-69683');
