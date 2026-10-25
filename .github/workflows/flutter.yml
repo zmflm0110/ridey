@@ -25,6 +25,33 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+  # 디자인 검토용 화면 사진(밝게·어둡게) — 실행 화면의 'ridey-screens' 에서 받는다. 한글은 Noto Sans CJK 로 그린다.
+  screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-cjk-extra
+      - run: flutter pub get
+      - run: |
+          export RIDEY_SCREENS="$PWD/build/screens"
+          export RIDEY_FONT="$(ls /usr/share/fonts/opentype/noto/NotoSansCJK-*.ttc | paste -sd: -)"
+          export RIDEY_ICONS="$(dirname "$(dirname "$(command -v flutter)")")/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf"
+          flutter test test/screens_test.dart
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridey-screens
+          path: app/build/screens
+          retention-days: 14
+
   # 대회 제출용 안드로이드 설치 파일 — Actions 실행 화면의 'ridey-apk' 에서 받는다(tools/make_submission.py 는 dist/RIDEY.apk 로 둔 것을 씀)
   apk:
     needs: test
