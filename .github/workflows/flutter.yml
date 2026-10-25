@@ -24,3 +24,30 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  # 대회 제출용 안드로이드 설치 파일 — Actions 실행 화면의 'ridey-apk' 에서 받는다(tools/make_submission.py 는 dist/RIDEY.apk 로 둔 것을 씀)
+  apk:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridey-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
