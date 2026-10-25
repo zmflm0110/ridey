@@ -434,10 +434,17 @@ extension RideyThemeContext on BuildContext {
 
   /// Counts and bike numbers use the brand's wide Unbounded figures with
   /// equal-width digits, so a value refreshed every five minutes never jitters.
-  TextStyle? rideyNumbers(TextStyle? base) => base?.copyWith(
-    fontFamily: RideyTheme.numberFamily,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 0,
-    fontFeatures: const [FontFeature.tabularFigures()],
-  );
+  /// The font is a subset (digits, capitals, a few signs), so anything else
+  /// — 'p' in '+12%p', Hangul in '3대' — falls back to the body font.
+  TextStyle? rideyNumbers(TextStyle? base) {
+    if (base == null) return null;
+    final body = base.fontFamily;
+    return base.copyWith(
+      fontFamily: RideyTheme.numberFamily,
+      fontFamilyFallback: [if (body != null) body],
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+  }
 }
