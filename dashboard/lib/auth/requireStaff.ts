@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { parseStaffProfile, staffAccess, type StaffProfile } from "@/lib/auth/access";
+import { demoMode, demoProfile } from "@/lib/demo";
 import { createClient } from "@/lib/supabase/server";
 
 export async function readStaffAccess() {
@@ -12,6 +13,7 @@ export async function readStaffAccess() {
 }
 
 export async function requireStaff(): Promise<StaffProfile> {
+  if (demoMode()) return demoProfile;
   const access = await readStaffAccess();
   if (access.status === "anonymous") redirect("/login");
   if (access.status === "forbidden") redirect("/forbidden");

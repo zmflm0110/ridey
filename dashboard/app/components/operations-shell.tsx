@@ -6,7 +6,7 @@ import { useState } from "react";
 import { LogoutButton } from "@/app/components/logout-button";
 import { shellNav } from "@/lib/shell";
 
-export function OperationsShell({ children }: { children: React.ReactNode }) {
+export function OperationsShell({ children, demo = false }: { children: React.ReactNode; demo?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -30,6 +30,7 @@ export function OperationsShell({ children }: { children: React.ReactNode }) {
         <div className="wordmark">
           RIDEY<i />
         </div>
+        {demo ? <p className="demo-badge">둘러보기 · 읽기 전용</p> : null}
         <nav aria-label="운영">
           {shellNav.map((item) => (
             <Link
@@ -43,9 +44,16 @@ export function OperationsShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <LogoutButton />
+        {demo ? null : <LogoutButton />}
       </aside>
-      <main className="content">{children}</main>
+      <main className="content">
+        {demo ? (
+          <p className="demo-bar" role="note">
+            둘러보기예요. 공개된 실시간 자료만 보이고, 현장 판정은 저장하지 않아요.
+          </p>
+        ) : null}
+        {children}
+      </main>
       <nav className="tabbar" aria-label="운영 탭">
         {shellNav.map((item) => (
           <Link

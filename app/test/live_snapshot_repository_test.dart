@@ -23,7 +23,13 @@ void main() {
 
   test('falls back to the last snapshot when the network fails', () async {
     final online = SupabaseLiveSnapshotRepository(
-      client: MockClient((_) async => http.Response(jsonEncode([_row]), 200)),
+      client: MockClient(
+        (_) async => http.Response.bytes(
+          utf8.encode(jsonEncode([_row])),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
     );
     final fresh = await online.fetch();
     expect(fresh.isOffline, isFalse);

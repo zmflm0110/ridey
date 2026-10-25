@@ -14,7 +14,15 @@ npm ci
 npm run dev
 ```
 
-`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` 다음에 `npx playwright test`를 돌린다. 배포는 아직 하지 않는다. Vercel에 올릴 때는 환경 변수 두 개만 넣고, 아래 인증 설정을 먼저 끝낸다.
+`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` 다음에 `npx playwright test`를 돌린다.
+
+### 둘러보기 (심사·시연용, 읽기 전용)
+
+```sh
+RIDEY_DEMO=1 npm run dev      # 또는 배포 환경 변수에 RIDEY_DEMO=1
+```
+
+로그인 없이 운영 화면이 열린다. publishable 키로 읽으므로 보이는 것은 RLS 가 이미 공개한 뷰(실시간·아침 목록·채점)뿐이다. 사람 확인·점검 기록처럼 직원만 읽는 자료는 그 칸만 비고(`–`), `/records` 는 설명만 보인다. `/field` 의 판정 버튼은 눌러도 저장하지 않는다. 실제 운영 배포에는 넣지 않는다. 배포는 아직 하지 않는다. Vercel에 올릴 때는 환경 변수 두 개만 넣고, 아래 인증 설정을 먼저 끝낸다.
 
 우선순위와 경로는 `web/app.js`, `web/route.js`와 같은 계산이다. 대여소는 `data/stations.json`, 경로 값은 `data/route_value.json`, 시간대별 대여는 `data/busy.json`(live-data 가지의 `data/ops/busy.json`)이다.
 
@@ -22,9 +30,9 @@ npm run dev
 
 | 경로 | 내용 |
 |---|---|
-| `/overview` | 의심 대수, 빨강, 오늘 경보, 모델 기대값과 하한, 자료 지연, 채점 막대 |
+| `/overview` | 의심 대수, 강한 경보, 오늘 경보, 모델 기대값과 하한, 자료 지연, 채점 막대 |
 | `/priority` | 대여소·자전거 표, 구·등급 필터, 비교, 판단 근거, 지도 |
-| `/districts` | 구별 대수, 빨강, 기대값, 점검 수 |
+| `/districts` | 구별 대수, 강한 경보, 기대값, 점검 수 |
 | `/route` | 60·90·180분 또는 직접 입력. 현재 위치, 대여소, 상암센터. 순위 비교, 인쇄, CSV |
 | `/field` | 대여소의 의심 자전거, 판정 6종, 메모, 1280px JPEG. 오프라인 대기열은 누른 시각을 유지 |
 | `/records` | 최근 점검 기록, 사진 서명 주소, CSV |

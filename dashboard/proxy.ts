@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { parseStaffProfile, staffAccess, staffRedirect } from "@/lib/auth/access";
+import { demoMode } from "@/lib/demo";
 import { supabaseEnv } from "@/lib/supabase/env";
 
 async function readAccess(request: NextRequest, response: NextResponse) {
@@ -41,6 +42,11 @@ function redirectTo(request: NextRequest, response: NextResponse, pathname: stri
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  if (demoMode()) {
+    // 둘러보기: 로그인 화면 없이 바로 운영 화면으로. 자료는 RLS 가 공개한 것만 읽힌다.
+    const path = request.nextUrl.pathname;
+    return path === "/login" || path === "/forbidden" ? redirectTo(request, response, "/overview") : response;
+  }
   const { access, response: refreshed } = await readAccess(request, response);
   response = refreshed;
   const target = staffRedirect(access, request.nextUrl.pathname);

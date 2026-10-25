@@ -20,7 +20,7 @@ export default async function Page() {
       {problem ? <p role="alert">{problem}</p> : null}
       <div className="kpis">
         <article><b>{summary.bikes.length}</b><span>고장 의심</span></article>
-        <article><b>{summary.red}</b><span>빨강 · 3명 이상</span></article>
+        <article><b>{summary.red}</b><span>강한 경보 · 3명 이상</span></article>
         <article><b>{summary.todayAlarms ?? "–"}</b><span>오늘 경보</span></article>
         <article><b>{summary.expected ?? "–"}</b><span>모델이 보는 진짜 고장</span></article>
         <article><b>{summary.atLeast ?? "–"}</b><span>90% 하한</span></article>
@@ -37,13 +37,20 @@ export default async function Page() {
         <p>실시간 경보 {summary.score.scored.toLocaleString("ko-KR")}건 중 {summary.score.hit.toLocaleString("ko-KR")}건({pct}%)은 다음 사람도 바로 반납했어요.</p>
       ) : null}
       {bars ? (
-        <div className="bars" role="img" aria-label={bars.map((bar) => `${bar.label} ${Math.round(bar.pct)}%`).join(", ")}>
-          {bars.map((bar) => (
-            <div key={bar.day} className="bar" style={{ ["--h" as string]: `${bar.height}%` }}>
-              <i>{Math.round(bar.pct)}</i>
-            </div>
-          ))}
-        </div>
+        <figure className="chart">
+          <figcaption>날짜별 채점 — 경보 뒤 다음 사람도 바로 반납한 비율(%), 마지막 막대가 가장 최근</figcaption>
+          <div className="bars" role="img" aria-label={bars.map((bar) => `${bar.label} ${Math.round(bar.pct)}%`).join(", ")}>
+            {bars.map((bar) => (
+              <div key={bar.day} className="bar" style={{ ["--h" as string]: `${bar.height}%` }}>
+                <i>{Math.round(bar.pct)}</i>
+              </div>
+            ))}
+          </div>
+          <div className="bar-axis" aria-hidden="true">
+            <span>{bars[0].label}</span>
+            <span>{bars[bars.length - 1].label}</span>
+          </div>
+        </figure>
       ) : (
         <p className="hint">채점이 100건 이상인 날이 3일 모이면 날마다 막대로 보여요.</p>
       )}

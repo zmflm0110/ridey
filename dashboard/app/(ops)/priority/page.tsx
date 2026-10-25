@@ -2,6 +2,7 @@ import { ListSourceForm } from "@/app/components/list-source-form";
 import { PriorityBoard } from "@/app/components/priority-board";
 import { requireStaff } from "@/lib/auth/requireStaff";
 import { loadChecked, loadWorkBikes } from "@/lib/ops-data";
+import { seoulStamp } from "@/lib/seoul";
 import { indexChecked } from "@/lib/snapshot";
 import { stationById, type Station } from "@/lib/stations";
 
@@ -16,7 +17,8 @@ export default async function Page({
   let work: Awaited<ReturnType<typeof loadWorkBikes>> | null = null;
   let checked = {};
   try {
-    const [loaded, rows] = await Promise.all([loadWorkBikes(query), loadChecked()]);
+    // 사람 확인 기록은 직원만 읽는다 — 못 읽어도 목록·지도는 보여 준다.
+    const [loaded, rows] = await Promise.all([loadWorkBikes(query), loadChecked().catch(() => [])]);
     work = loaded;
     checked = indexChecked(rows);
   } catch {
@@ -40,7 +42,7 @@ export default async function Page({
       {work ? (
         <>
           <ListSourceForm source={work.source} day={work.day} days={work.days} />
-          <p className="hint">{when}{work.at ? ` · ${work.at}` : ""} · {work.bikes.length}대</p>
+          <p className="hint">{when}{work.at ? ` · ${seoulStamp(work.at)} 기준` : ""} · {work.bikes.length}대</p>
           <PriorityBoard bikes={work.bikes} districts={profile.districts} checked={checked} stations={stations} />
         </>
       ) : null}

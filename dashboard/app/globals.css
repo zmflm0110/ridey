@@ -178,10 +178,12 @@ button, input { font: inherit; }
 }
 .login-form button, .gate .logout { background: var(--ink); color: var(--on-ink); cursor: pointer; }
 
-.stack { display: grid; gap: 18px; }
+/* minmax(0,1fr): 안의 넓은 표가 칸을 밀어 화면 밖으로 넘치지 않게(표는 .table-wrap 안에서 가로로 밀림) */
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .stack h1 { margin-bottom: 0; }
 .hint, .note { color: var(--sub); }
-.note { padding: 12px 14px; border-radius: 12px; background: var(--signal-soft); color: var(--signal-ink); }
+.content .note, .note { padding: 12px 14px; border-radius: 12px; background: var(--signal-soft); color: var(--signal-ink); }
+.content .info { padding: 12px 14px; border-radius: 12px; background: var(--calm-soft); color: var(--calm-ink); }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .kpis article, .compare article {
   background: var(--card);
@@ -191,16 +193,23 @@ button, input { font: inherit; }
 }
 .kpis b { display: block; font-family: var(--num); font-size: 32px; letter-spacing: -0.05em; }
 .kpis span, .compare span { display: block; color: var(--sub); }
-.bars { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding-top: 22px; }
+.chart { margin: 0; display: grid; gap: 6px; }
+.chart figcaption { color: var(--sub); font-size: 14px; }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding-top: 22px; border-bottom: 1px solid var(--line); }
+/* 신호색은 화면의 10% 안쪽(docs/brand.md) — 지난 날은 옅게, 가장 최근 하루만 신호색 */
 .bar {
   position: relative;
   flex: 1;
   height: var(--h);
   min-height: 4px;
   border-radius: 8px 8px 0 0;
-  background: var(--signal);
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
 }
-.bar i { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 12px; }
+.bar:last-child { background: var(--signal); }
+.bar i { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.bar:last-child i { color: var(--signal-ink); font-weight: 700; }
+.bar-axis { display: flex; justify-content: space-between; color: var(--sub); font-size: 12px; font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .bar i { display: none; } .bar:last-child i { display: block; } }
 .filters, .split { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
 .filters label { display: grid; gap: 6px; color: var(--body); }
 .filters select, .filters button, .text-button, .drawer button {
@@ -215,7 +224,7 @@ button, input { font: inherit; }
 .table-wrap { flex: 1; min-width: 260px; overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
 table { width: 100%; border-collapse: collapse; }
 caption { text-align: left; padding: 12px 14px 0; font-weight: 650; }
-th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .map-frame { height: 420px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--fill); }
 .drawer {
@@ -250,8 +259,75 @@ th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--li
 }
 .file, .stack label { display: grid; gap: 6px; }
 .stack input { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); color: var(--ink); }
-.verdicts button { min-height: 48px; }
+.verdicts { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.verdicts button { min-height: 56px; border-radius: 16px; font-size: 17px; }
 .bad { background: var(--signal-soft); color: var(--signal-ink); }
+/* 버튼 기본 — :where 라 따로 꾸민 버튼(.filters·.text-button·.choice 눌림·.bad)이 언제나 이긴다 */
+:where(.content) button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms var(--ease), background 140ms var(--ease), transform 140ms var(--ease);
+}
+:where(.content) button:hover { border-color: var(--sub); }
+:where(.content) button:active { transform: scale(0.98); }
+:where(.content) button:disabled { opacity: 0.5; cursor: not-allowed; }
+.filters button[type="submit"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); font-weight: 600; }
+.csv-button, .ghost-button { justify-self: start; display: inline-flex; align-items: center; gap: 8px; }
+.ghost-button[aria-pressed="true"] { background: var(--calm-soft); color: var(--calm-ink); border-color: transparent; }
+.csv-button svg, .file-pick svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.file { position: relative; color: var(--body); }
+.file input.visually-hidden, .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.file-pick {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px dashed var(--sub);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.file:hover .file-pick { border-color: var(--ink); }
+.file:focus-within .file-pick { outline: 2.5px solid var(--signal); outline-offset: 2px; }
+.demo-badge { margin: -12px 10px 10px; font-size: 13px; font-weight: 600; color: var(--calm-ink); }
+.content .demo-bar {
+  display: inline-block;
+  margin: 0 0 18px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--calm-soft);
+  color: var(--calm-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 @media print {
   .sidebar, .tabbar, .menu-button, .backdrop, .print-hide, .logout { display: none !important; }
   .content { padding: 0; }

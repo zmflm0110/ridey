@@ -34,7 +34,7 @@ async function sendDraft(draft: FieldDraft): Promise<boolean> {
   return !inserted.error;
 }
 
-export function FieldDesk({ bikes }: { bikes: Bike[] }) {
+export function FieldDesk({ bikes, demo = false }: { bikes: Bike[]; demo?: boolean }) {
   const [query, setQuery] = useState("");
   const [stationId, setStationId] = useState("");
   const [bike, setBike] = useState("");
@@ -66,11 +66,12 @@ export function FieldDesk({ bikes }: { bikes: Bike[] }) {
   }
 
   useEffect(() => {
+    if (demo) return;
     void flush();
     const onOnline = () => void flush();
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
-  }, []);
+  }, [demo]);
 
   const matches = useMemo(() => {
     const text = query.trim().replace(/\s+/g, "");
@@ -93,6 +94,13 @@ export function FieldDesk({ bikes }: { bikes: Bike[] }) {
     });
     if (!draft) {
       setMessage("자전거 번호(SPB-00000)를 먼저 넣어 주세요.");
+      return;
+    }
+    if (demo) {
+      setBike("");
+      setNote("");
+      setPhoto(null);
+      setMessage(`${draft.bike} → ${status} · 둘러보기라 저장하지 않았어요`);
       return;
     }
     const stored = writeQueue(localStorage, [...readQueue(localStorage), draft]);
@@ -137,8 +145,13 @@ export function FieldDesk({ bikes }: { bikes: Bike[] }) {
         <input value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} />
       </label>
       <label className="file">
-        사진 붙이기 (선택, 긴 변 1280px)
+        사진 (선택, 긴 변 1280px 로 줄여 보내요)
+        <span className="file-pick">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" /><circle cx="12" cy="13" r="3.2" /></svg>
+          {photo ? "다른 사진으로 바꾸기" : "사진 찍기 · 고르기"}
+        </span>
         <input
+          className="visually-hidden"
           type="file"
           accept="image/*"
           capture="environment"
@@ -158,6 +171,8 @@ export function FieldDesk({ bikes }: { bikes: Bike[] }) {
       {photo ? <p className="hint">사진이 붙었어요.</p> : null}
       <button
         type="button"
+        className="ghost-button"
+        aria-pressed={point != null}
         onClick={() => {
           if (!navigator.geolocation) return;
           navigator.geolocation.getCurrentPosition(
@@ -169,6 +184,7 @@ export function FieldDesk({ bikes }: { bikes: Bike[] }) {
       >
         {point ? "현재 위치를 붙여 두었어요" : "현재 위치 붙이기"}
       </button>
+      <p className="hint">{demo ? "판정 — 둘러보기에서는 눌러도 저장하지 않아요" : "판정 — 누르면 바로 저장돼요"}</p>
       <div className="choice verdicts">
         {FIELD_STATUSES.map((status) => (
           <button key={status} type="button" className={status === "멀쩡함" ? "" : "bad"} onClick={() => void save(status)}>

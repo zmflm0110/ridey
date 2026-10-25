@@ -4,6 +4,7 @@ export function CsvButton({ filename, csv, label }: { filename: string; csv: str
   return (
     <button
       type="button"
+      className="csv-button"
       onClick={() => {
         const link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -16,6 +17,7 @@ export function CsvButton({ filename, csv, label }: { filename: string; csv: str
         }, 1000);
       }}
     >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" /></svg>
       {label}
     </button>
   );

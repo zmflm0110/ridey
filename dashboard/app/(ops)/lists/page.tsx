@@ -3,7 +3,7 @@ import { morningCsv, morningFilename } from "@/lib/csv";
 import { loadChecked, loadMorning, loadMorningDays, loadScore } from "@/lib/ops-data";
 import { checkedCounts, indexChecked } from "@/lib/snapshot";
 import { guOf, stationById } from "@/lib/stations";
-import { groupByStation } from "@/lib/priority";
+import { groupByStation, levelLabel } from "@/lib/priority";
 
 export default async function Page({
   searchParams,
@@ -21,7 +21,7 @@ export default async function Page({
     days = await loadMorningDays();
     day = query.day && days.includes(query.day) ? query.day : days[0] ?? "";
     if (day) {
-      const [loaded, scoreRow, checks] = await Promise.all([loadMorning(day), loadScore(day), loadChecked()]);
+      const [loaded, scoreRow, checks] = await Promise.all([loadMorning(day), loadScore(day), loadChecked().catch(() => [])]);
       bikes = loaded;
       score = scoreRow;
       checked = checkedCounts(indexChecked(checks));
@@ -66,7 +66,7 @@ export default async function Page({
                 <td>{stationById.get(id)?.name || bike.station_name}</td>
                 <td>{guOf(id)}</td>
                 <td>{bike.bike}</td>
-                <td>{bike.level}</td>
+                <td>{levelLabel(bike.level)}</td>
                 <td>{bike.chain}</td>
               </tr>
             )))}
