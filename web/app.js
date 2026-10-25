@@ -1,7 +1,7 @@
 // RIDEY — 아침 목록(어제까지 기록), 자전거 조회, 구조대, 시연.
 const $ = (s) => document.querySelector(s);
 const state = { stations: {}, day: null, morning: null, map: null, layer: null, checked: {}, gu: "", scores: {}, ops: new Set(), sbDays: new Set(), busyDemo: {}, busyOps: null, routeValue: null };
-let here = null;   // 내 위치 (📍 버튼을 눌렀을 때만)
+let here = null;   // 내 위치 ('내 위치에서' 를 눌렀을 때만)
 // QR·입력에서 온 글자를 화면에 넣을 때는 반드시 거친다 (QR 에 HTML 을 심어 두는 장난 막기)
 const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -81,7 +81,18 @@ const minsAgo = (iso) => Math.max(0, Math.round((Date.now() - new Date(iso + "+0
 const kstToday = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const koDay = (d) => { const [, m, dd] = d.split("-").map(Number); return `${m}월 ${dd}일`; };
 const isPast = () => state.day !== "live" && state.day !== kstToday();
-const pastNote = () => isPast() ? `<p class="past-note">📅 ${koDay(state.day)} 자료예요${state.ops.has(state.day) ? "" : "(시연용)"}. 지금 이 자전거 상태는 실시간 목록이 있어야 알 수 있어요.</p>` : "";
+// 선 아이콘 — 이모지·기호 글자(▶ ⚠ ✓)는 아이폰에서 컬러 이모지로 바뀌어 브랜드와 어긋나서 쓰지 않음
+const ICON = {
+  warn: '<path d="M12 4.2 21 19.5H3Z"/><path d="M12 10v4.4M12 17.1v.1"/>',
+  ok: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  no: '<path d="M7 7l10 10M17 7 7 17"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5Z"/>',
+  pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
+  again: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.2v4.3h4.3"/>',
+  cal: '<rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
+};
+const icon = (k) => `<svg class="i i-${k}" viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>`;
+const pastNote = () => isPast() ? `<p class="past-note">${icon("cal")}${koDay(state.day)} 자료예요${state.ops.has(state.day) ? "" : "(시연용)"}. 지금 이 자전거 상태는 실시간 목록이 있어야 알 수 있어요.</p>` : "";
 // 서울 API 가 평소보다 훨씬 적게 내놓을 때(server/live.py feed) — 그 사이 새 경보를 놓칠 수 있다고 알림
 function feedNote() {
   const f = state.day === "live" && state.morning && state.morning.feed;
@@ -122,7 +133,7 @@ function renderMorning() {
     `<p class="num"><b>${bikes.length}</b>대 ${isPast() ? "있었어요" : "있어요"}</p>` +
     `<div class="sub">연쇄 3명+ ${red} · 2명 ${bikes.length - red}${live && state.morning.today_alarms != null ? ` · 오늘 경보 ${state.morning.today_alarms}번` : ""}</div>`
   const ex = live && bikes.length >= 10 ? listExpect(bikes, (state.morning.model || {}).q) : null;
-  if (ex) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="ai">✦ AI 예측: 이 중 약 ${Math.round(ex.mu)}대가 진짜 고장 · 최소 ${ex.atLeast}대(90%)</div>`);
+  if (ex) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="ai"><i class="spark" aria-hidden="true"></i>AI 예측: 이 중 약 ${Math.round(ex.mu)}대가 진짜 고장 · 최소 ${ex.atLeast}대(90%)</div>`);
   tick($("#morning-summary .num b"), state.shownCount ?? 0, bikes.length); state.shownCount = bikes.length;
   const notes = (live ? feedNote() : pastNote()) + (live && minsAgo(state.morning.at) > 30
     ? `<p class="past-note">⏳ 목록 갱신이 늦어지고 있어요(마지막 ${minsAgo(state.morning.at)}분 전). 그사이 새로 생긴 경보는 아직 안 보일 수 있어요.</p>` : "");
@@ -400,17 +411,17 @@ function lookup(raw) {
   const until = state.day === "live" ? "최근" : isPast() ? `${koDay(state.day)} 아침 목록에서` : "어제까지";
   if (hit) {
     const soft = hit.p_next != null && hit.p_next < 30;   // 모델이 낮게 본 자전거는 말을 누그러뜨림 (그래도 평소의 몇 배)
-    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">⚠︎</span><h2>${esc(id)}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h2>` +
+    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">${icon("warn")}</span><h2>${esc(id)}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h2>` +
       `${until} <b>서로 다른 ${hit.chain}명</b>이 빌리자마자 반납했어요. 옆 자전거를 골라 주세요.` +
       `<div class="facts"><div><span>다음 사람도 반납할 확률${hit.p_next != null ? " (모델)" : ""}</span><b class="red">${hit.p_next != null ? hit.p_next + "%" : hit.level === "빨강" ? "55% 이상" : "약 35~44%"}</b></div>` +
       `<div><span>평소 자전거</span><b>2.5%</b></div><div><span>마지막 반납</span><b>${esc(hit.last_dud)}</b></div><div><span>대여소</span><b>${esc(hit.station_name)}</b></div></div>` +
-      (hit.why && hit.why.length ? `<div class="why"><p>✦ AI 가 본 이유</p>` + hit.why.map((r) =>
+      (hit.why && hit.why.length ? `<div class="why"><p><i class="spark" aria-hidden="true"></i>AI 가 본 이유</p>` + hit.why.map((r) =>
         `<div><i class="${r.d >= 0 ? "up" : "down"}">${r.d >= 0 ? "▲" : "▼"}</i><span>${esc(r.t)}</span><em>${r.d >= 0 ? "+" : ""}${r.d}%p</em></div>`).join("") + `</div>` : "") +
       `<p class="ask">가까이 있다면, 어디가 이상했나요?</p>${VERDICTS(id)}${pastNote()}</div>`;
   } else {
     out.innerHTML = m ? (isPast()   // 지난 자료에 없다는 건 '괜찮다' 가 아니다 — 초록 체크 대신 모른다고
       ? `<div class="result"><span class="icon" aria-hidden="true">?</span><h2>${esc(id)}는<br>${koDay(state.day)} 자료에 없어요</h2>${pastNote()}</div>`
-      : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>${esc(id)}는<br>타도 괜찮아요</h2>${until} 기록에 빌리자마자 반납한 연쇄가 없어요.${feedNote()}</div>`)
+      : `<div class="result ok"><span class="icon" aria-hidden="true">${icon("ok")}</span><h2>${esc(id)}는<br>타도 괜찮아요</h2>${until} 기록에 빌리자마자 반납한 연쇄가 없어요.${feedNote()}</div>`)
       : `<div class="result"><h2>따릉이 번호를 못 찾았어요</h2>SPB-00000 모양으로 넣어 주세요. 읽은 글자: <code>${esc(String(raw).slice(0, 60))}</code></div>`;
   }
 }
@@ -495,14 +506,14 @@ function renderRescue() {
   $("#rescue-card").innerHTML = next
     ? `<div class="result warn"><span class="tag ${next.level}">연쇄 ${next.chain}명</span><h2 style="margin-top:12px">${esc(next.bike)}<span class="dist">${away(next)}</span></h2>` +
       `<p class="station">${esc(next.station_name)} · 서로 다른 ${next.chain}명이 바로 반납</p>${VERDICTS(next.bike)}</div>`
-    : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>오늘 목록을 다 확인했어요!</h2></div>`;
+    : `<div class="result ok"><span class="icon" aria-hidden="true">${icon("ok")}</span><h2>오늘 목록을 다 확인했어요!</h2></div>`;
   if (next && todo.length > 1)
     $("#rescue-card").insertAdjacentHTML("beforeend", `<h2>그다음</h2><div class="card list"><ul class="rows">` +
       todo.slice(1, 4).map((b) => `<li><span class="ico ${b.level}">${BIKE_SVG}</span><div><b>${esc(b.bike)}</b><span class="s">${esc(b.station_name)}</span></div>` +
         `<span class="muted">${away(b).replace(" · ", "")}</span></li>`).join("") + `</ul></div>`);
   $("#rescue-log").innerHTML = rescueLog().slice(0, 20).map((x) => {
     const fine = x.verdict === "멀쩡함";
-    return `<li><span class="ico ${fine ? "ok" : "빨강"}">${fine ? "✓" : "✕"}</span><div><b>${esc(x.bike)}</b><span class="s">${esc(x.at)}</span></div>` +
+    return `<li><span class="ico ${fine ? "ok" : "빨강"}">${icon(fine ? "ok" : "no")}</span><div><b>${esc(x.bike)}</b><span class="s">${esc(x.at)}</span></div>` +
       `<span class="n ${fine ? "ok" : "빨강"}">${esc(x.verdict)}</span></li>`;
   }).join("") || `<li><div><span class="s">아직 없어요. 위에서 한 번 눌러 보세요.</span></div></li>`;
 }
@@ -525,12 +536,12 @@ async function startReplay() {
     rmap = baseMap("replay-map", { zoomControl: false });
     rlayer = L.layerGroup().addTo(rmap);
   }
-  if (timer) { clearInterval(timer); timer = null; $("#play").textContent = "▶ 이어서 재생"; return; }
+  if (timer) { clearInterval(timer); timer = null; $("#play").innerHTML = icon("play") + "이어서 재생"; return; }
   let clock = 0, i = 0;
   const c = { 헛대여: 0, 경보: 0, "막을 수 있던 헛걸음": 0, "고장 신고": 0 };
   const feed = $("#replay-feed"); feed.innerHTML = "";
   const secs = (e) => e.s;   // 그날 0시부터 초 (다음 날 신고는 86400 넘음)
-  $("#play").textContent = "❚❚ 멈추기";
+  $("#play").innerHTML = icon("pause") + "멈추기";
   timer = setInterval(() => {
     clock += +$("#speed").value / 10;
     while (i < replay.events.length && secs(replay.events[i]) <= clock) {
@@ -552,7 +563,7 @@ async function startReplay() {
     $("#c-alarm").textContent = c["경보"];
     $("#c-prev").textContent = c["막을 수 있던 헛걸음"];
     $("#c-fault").textContent = c["고장 신고"];
-    if (i >= replay.events.length) { clearInterval(timer); timer = null; $("#play").textContent = "↻ 처음부터 다시"; }
+    if (i >= replay.events.length) { clearInterval(timer); timer = null; $("#play").innerHTML = icon("again") + "처음부터 다시"; }
   }, 100);
 }
 $("#play").addEventListener("click", startReplay);
@@ -739,7 +750,7 @@ function renderStationCard(id) {
   const bikes = ((state.morning && state.morning.bikes) || []).filter((b) => b.station === id).sort((a, b) => (b.p_next ?? b.chain) - (a.p_next ?? a.chain));
   const when = state.day === "live" ? "지금 이 대여소에 서 있는" : isPast() ? `${koDay(state.day)} 아침 목록 기준 (시연 자료)` : "오늘 아침 목록 기준";
   const added = mine.includes(id);
-  box.innerHTML = `<div class="result ${bikes.length ? "warn" : "ok"} st-card"><span class="icon" aria-hidden="true">${bikes.length ? "⚠︎" : "✓"}</span>` +
+  box.innerHTML = `<div class="result ${bikes.length ? "warn" : "ok"} st-card"><span class="icon" aria-hidden="true">${icon(bikes.length ? "warn" : "ok")}</span>` +
     `<p class="st-name">${esc(st.name)} <span>${esc(st.gu || "")}</span></p>` +
     `<p class="st-when">${when}</p>` +
     `<h2>${bikes.length ? `피할 자전거<br>${bikes.length}대 있어요` : `고장 의심 자전거가<br>없어요`}</h2>` +

@@ -545,8 +545,19 @@
   // ── 단추가 커서 쪽으로 살짝 끌려옴(자석) — 넓은 화면, 첫 화면 단추와 머리 '웹앱 열기'
   if (!reduce && matchMedia("(hover: hover)").matches) for (const b of $$(".hero .cta .btn, .nav .btn.solid, .try .btn")) {
     b.classList.add("mag");
-    b.addEventListener("pointermove", (e) => { const r = b.getBoundingClientRect(); b.style.translate = `${((e.clientX - r.left - r.width / 2) * 0.22).toFixed(1)}px ${((e.clientY - r.top - r.height / 2) * 0.35).toFixed(1)}px`; });
+    b.addEventListener("pointermove", (e) => {
+      // 끌려온 만큼(지금 translate)을 빼고 제자리 가운데에서 잼 — 안 빼면 움직인 자리를 다시 재서 덜 끌리고 흔들림
+      const r = b.getBoundingClientRect(), [tx = 0, ty = 0] = getComputedStyle(b).translate.split(" ").map(parseFloat).map((v) => v || 0);
+      b.style.translate = `${((e.clientX - (r.left - tx) - r.width / 2) * 0.22).toFixed(1)}px ${((e.clientY - (r.top - ty) - r.height / 2) * 0.35).toFixed(1)}px`;
+    });
     b.addEventListener("pointerleave", () => { b.style.translate = ""; });
+  }
+
+  // ── 로고에 올리면 점이 한 번 튐(머리·맨 아래). CSS 의 등장 애니메이션(drop)이 이기던 :hover 대신, 그 위에 잠깐 얹는 Web Animations
+  if (!reduce && matchMedia("(hover: hover)").matches) for (const logo of $$(".logo")) {
+    const dot = logo.querySelector(".wordmark .dot"); if (!dot) continue;
+    const easing = CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() : "cubic-bezier(.34, 1.56, .64, 1)";
+    logo.addEventListener("pointerenter", () => dot.animate([{ transform: "none" }, { transform: "translateY(-60%) scale(1.15)", offset: 0.4 }, { transform: "none" }], { duration: 700, easing }));
   }
 
   // ── 05 실시간 전광판: 정류장 안내판처럼 점(LED)으로 그린 글자 — 지금 경보 자전거가 한 칸씩 흘러감.
@@ -632,7 +643,8 @@
   // ── 앱 화면 사진: 커서 쪽으로 살짝 기울어짐(3D)
   if (!reduce && matchMedia("(hover: hover)").matches) for (const f of $$(".phones figure")) {
     const img = f.querySelector("img"); if (!img) continue;
-    f.addEventListener("pointermove", (e) => { const r = img.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; img.style.transform = `perspective(1000px) rotateY(${(x * 12).toFixed(2)}deg) rotateX(${(-y * 10).toFixed(2)}deg) translateY(-8px)`; });
+    // 기우는 사진이 아니라 그대로인 틀(figure) 기준으로 잼 — 사진 기준이면 기울 때마다 잰 값이 바뀌어 떨림
+    f.addEventListener("pointermove", (e) => { const r = f.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; img.style.transform = `perspective(1000px) rotateY(${(x * 12).toFixed(2)}deg) rotateX(${(-y * 10).toFixed(2)}deg) translateY(-8px)`; });
     f.addEventListener("pointerleave", () => { img.style.transform = ""; });
   }
 
