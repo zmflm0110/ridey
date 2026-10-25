@@ -145,7 +145,7 @@ class _LoadedHome extends StatelessWidget {
       children: [
         const RideyPageHeading(
           title: '타기 전,\n확인하세요.',
-          description: '번호를 확인하면 반복 반납 신호를 바로 알려 드려요.',
+          description: '번호를 확인하면 경보가 켜졌는지 바로 알려 드려요.',
           hero: true,
         ),
         const SizedBox(height: 16),
@@ -219,7 +219,7 @@ class _AlertSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '서울 전체 RIDEY 신호',
+            '지금 서울 경보',
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.surface.withValues(alpha: .76),
             ),
@@ -230,9 +230,9 @@ class _AlertSummary extends StatelessWidget {
             children: [
               Text(
                 '$count',
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  color: context.ridey.signal,
-                ),
+                style: context
+                    .rideyNumbers(theme.textTheme.headlineLarge)
+                    ?.copyWith(color: context.ridey.signal, fontSize: 40),
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 8, bottom: 6),

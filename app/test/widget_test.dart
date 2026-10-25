@@ -160,7 +160,7 @@ void main() {
     await tester.tap(find.text('경보 기록 확인'));
     await tester.pumpAndSettle();
 
-    expect(find.text('반복 반납 신호 없음'), findsOneWidget);
+    expect(find.text('경보 없음'), findsOneWidget);
     expect(find.textContaining('안전이 확인된 것은 아니니'), findsOneWidget);
   });
 

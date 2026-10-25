@@ -27,6 +27,8 @@ abstract final class RideyColors {
 }
 
 abstract final class RideyTheme {
+  static const numberFamily = 'RideyNumbers';
+
   static ThemeData light() => _build(Brightness.light);
 
   static ThemeData dark() => _build(Brightness.dark);
@@ -219,4 +221,13 @@ extension RideyThemeContext on BuildContext {
 
   /// Standard page titles deliberately stay smaller than hero decisions.
   TextStyle? get rideyPageTitle => Theme.of(this).textTheme.headlineLarge;
+
+  /// Counts and bike numbers use the brand's wide Unbounded figures with
+  /// equal-width digits, so a value refreshed every five minutes never jitters.
+  TextStyle? rideyNumbers(TextStyle? base) => base?.copyWith(
+    fontFamily: RideyTheme.numberFamily,
+    fontWeight: FontWeight.w800,
+    letterSpacing: 0,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
 }

@@ -82,9 +82,7 @@ class BikeDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               bike.bike,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: context.rideyNumbers(theme.textTheme.titleLarge),
             ),
             const SizedBox(height: 4),
             Text(

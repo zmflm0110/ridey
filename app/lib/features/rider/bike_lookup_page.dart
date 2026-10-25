@@ -140,7 +140,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
               ? RideySignalState.noSignal
               : RideySignalState.uncertain,
           _snapshot.feed.isHealthy
-              ? '$bikeId에서 반복 반납 신호를 찾지 못했어요. 안전이 확인된 것은 아니니 브레이크·타이어를 직접 살펴보세요.'
+              ? '$bikeId에는 지금 켜진 경보가 없어요. 안전이 확인된 것은 아니니 브레이크·타이어를 직접 살펴보세요.'
               : '$bikeId의 판단에 필요한 대여 기록이 늦고 있어요. 새로고침 후 직접 상태를 확인해 주세요.',
         ),
       );
@@ -216,7 +216,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
           children: [
             const RideyPageHeading(
               title: '자전거 확인',
-              description: 'QR을 찍거나 번호를 입력하면 반복 반납 신호를 찾아요.',
+              description: 'QR을 찍거나 번호를 입력하면 경보가 켜졌는지 찾아요.',
             ),
             const SizedBox(height: 32),
             Semantics(

@@ -19,7 +19,7 @@ class RideySignalBadge extends StatelessWidget {
         context.ridey.signalSoft,
       ),
       RideySignalState.noSignal => (
-        '반복 반납 신호 없음',
+        '경보 없음',
         Icons.remove_circle_outline_rounded,
         context.ridey.calm,
         context.ridey.calmSoft,
