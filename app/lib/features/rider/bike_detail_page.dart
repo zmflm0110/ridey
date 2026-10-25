@@ -274,11 +274,7 @@ class _DataNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final minutes = DateTime.now()
-        .difference(updatedAt)
-        .inMinutes
-        .clamp(0, 999);
-    final freshness = minutes == 0 ? '방금' : '$minutes분 전';
+    final freshness = rideyAgo(updatedAt);
 
     return Container(
       padding: const EdgeInsets.all(16),

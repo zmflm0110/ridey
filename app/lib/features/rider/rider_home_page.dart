@@ -153,6 +153,7 @@ class _LoadedHome extends StatelessWidget {
           updatedAt: snapshot.updatedAt,
           isHealthy: snapshot.feed.isHealthy,
           ratio: snapshot.feed.ratio,
+          isOffline: snapshot.isOffline,
         ),
         const SizedBox(height: 24),
         _CheckBikeCard(onLookup: onLookup, onSavedStations: onSavedStations),
