@@ -65,7 +65,7 @@
 - 단추는 알약(999px), 카드 반지름 20~28px, 그림자 없이 1px 선(폰 사진 테두리만 그림자).
 - 사진·일러스트 없이 **지도와 숫자**가 그림이다 — 서울 2,789곳 대여소가 점이고, 지금 경보 난 곳이 켜진다.
 
-**움직임 규칙** — 빠르게 출발해 부드럽게 앉는 곡선(`cubic-bezier(.16, 1, .3, 1)`)이 기본, **점·막대·카드만 스프링**(살짝 넘쳤다 돌아옴, CSS `linear()` · SwiftUI `.spring(bounce: .2~.35)`). 모든 움직임은 '움직임 줄이기'(웹 `prefers-reduced-motion`, 아이폰 `accessibilityReduceMotion`)면 꺼진다.
+**움직임 규칙** — 빠르게 출발해 부드럽게 앉는 곡선(`cubic-bezier(.16, 1, .3, 1)`)이 기본, **점·막대·카드만 스프링**(살짝 넘쳤다 돌아옴, CSS `linear()`). 모든 움직임은 '움직임 줄이기'(웹 `prefers-reduced-motion`, 앱 `MediaQuery.disableAnimations`)면 꺼진다.
 
 | 이름 | 어디서 | 모양 |
 |---|---|---|
@@ -109,7 +109,8 @@
 | | 파일 |
 |---|---|
 | 소개 사이트 | `site/`(style.css·main.js, 로고 자리 `<!-- brand:wordmark -->`) |
-| 웹앱·안드로이드 | `web/style.css`, 아이콘 `web/icon.svg` → `tools/make_icons.js` · `tools/make_android_assets.js`(시작 화면 'RIDEY.') |
-| 아이폰 | `ios/App/HeotgeoleumApp.swift` Palette·BrandFont, Assets 의 `Wordmark`(로고 SVG)·`UnboundedNumbers`(숫자 글꼴)·`icon-1024.png` |
+| 웹 데모 | `web/style.css`, 아이콘 `web/icon.svg` → `tools/make_icons.js` |
+| 이용자 앱(Flutter) | `app/lib/design/ridey_theme.dart` 색·숫자 글꼴(`RideyNumbers` = `app/assets/fonts/unbounded-ridey-800.ttf`), 아이콘 'R.'·시작 화면 'RIDEY.' → `tools/make_flutter_assets.js` |
+| 운영 화면 | `dashboard/app/globals.css` 같은 색 변수·Unbounded 숫자, 신호색은 경보와 가장 최근 막대에만 |
 | 발표·보고서·README | `docs/slides.html`, `docs/build_pdf.js`, `README.md` |
-| 다시 만들기 | `python tools/make_brand.py`(로고·아이콘·글꼴) → `node tools/make_icons.js` |
+| 다시 만들기 | `python tools/make_brand.py`(로고·아이콘·글꼴) → `node tools/make_icons.js` → `node tools/make_flutter_assets.js` |

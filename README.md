@@ -9,7 +9,8 @@
   <a href="https://zmflm0110.github.io/ridey/"><img alt="웹사이트" src="https://img.shields.io/badge/웹사이트-zmflm0110.github.io-111317"></a>
   <a href="https://zmflm0110.github.io/ridey/app/"><img alt="웹앱" src="https://img.shields.io/badge/웹앱-써_보기-FF4F1F"></a>
   <a href="https://github.com/zmflm0110/ridey/actions/workflows/test.yml"><img alt="검사" src="https://github.com/zmflm0110/ridey/actions/workflows/test.yml/badge.svg"></a>
-  <a href="https://github.com/zmflm0110/ridey/actions/workflows/ios.yml"><img alt="아이폰 앱 빌드" src="https://github.com/zmflm0110/ridey/actions/workflows/ios.yml/badge.svg"></a>
+  <a href="https://github.com/zmflm0110/ridey/actions/workflows/flutter.yml"><img alt="이용자 앱(Flutter)" src="https://github.com/zmflm0110/ridey/actions/workflows/flutter.yml/badge.svg"></a>
+  <a href="https://github.com/zmflm0110/ridey/actions/workflows/dashboard.yml"><img alt="운영 화면" src="https://github.com/zmflm0110/ridey/actions/workflows/dashboard.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="라이선스 MIT" src="https://img.shields.io/badge/라이선스-MIT-555"></a>
 </p>
 
@@ -117,7 +118,7 @@
   </tr>
 </table>
 
-웹앱(홈 화면에 추가) · 아이폰 앱(SwiftUI, 카메라로 번호판 읽기) · 안드로이드 앱(APK) — 같은 화면, 같은 자료.
+이용자 앱(Flutter — 안드로이드 APK·아이폰, QR·번호판 글자 읽기) · 직원용 RIDEY Operations(웹) · 설치 없이 보는 웹 데모 — 같은 자료, 같은 브랜드.
 
 **대여소 QR 스티커** — [사이트](https://zmflm0110.github.io/ridey/#stk)에서 대여소를 고르면 100×140mm 스티커가 만들어진다. 기둥에 붙여 두면 카메라로 비추는 것만으로 웹앱이 `app/?s=대여소번호` 로 열려 **그 대여소에 지금 서 있는 의심 자전거 번호**를 바로 보여 준다(설치·번호 입력 없음).
 
@@ -139,10 +140,10 @@
 
 | 부분 | 쓴 것 |
 |---|---|
-| **엔진** | 파이썬(`engine/`) — 같은 규칙이 **SQL·스위프트·자바스크립트**에도 있고, 서로 같은 답을 내는지 자동 검사 |
+| **엔진** | 파이썬(`engine/`) — 같은 규칙이 **SQL·자바스크립트(웹)·타입스크립트(운영 화면)**에도 있고, 서로 같은 답을 내는지 자동 검사 |
 | **운영** | Supabase Postgres — pg_cron(5분)·pg_net(서울 API)·SQL 로 연쇄·AI. 키는 DB 금고(Vault)·키체인에만 |
-| **앱** | 웹(바닐라 JS·Leaflet, 오프라인 동작) · 아이폰(SwiftUI·VisionKit) · 안드로이드(Capacitor) |
-| **검사** | 파이썬 35개 · 스위프트 16개 · 웹 화면 검사, 올릴 때마다 GitHub Actions |
+| **앱** | 이용자: Flutter(안드로이드·아이폰, 카메라 QR·번호판 OCR, 끊겨도 마지막 기록) · 운영: Next.js(RIDEY Operations) · 웹 데모(바닐라 JS·Leaflet, 오프라인 동작) |
+| **검사** | 파이썬 35개 · Flutter 34개 · 운영 화면 19개 · 웹 화면 검사, 올릴 때마다 GitHub Actions(APK 도 여기서 빌드) |
 
 **무료 DB 에서 버티기** — 10월 2일 밤, 무료 클라우드(메모리 0.5GB)가 6시간 멈췄다. 5분 작업이 한 번에 145MB 를 건드려 DB 캐시가 디스크로 밀려났기 때문. '헛대여가 둘 이상 이어져야 경보' 라는 필요조건으로 후보를 줄이고(답은 같음), 자전거별 기록을 덮개 색인에서 바로 읽게 다시 짰다 → **40MB · 한 번 16\~20초**. 옛·새 SQL 이 같은 답인지는 로컬 Postgres 에 6월 기록을 흘려 넣으며 확인했다(36시간 73번 모두 같음, [`tools/live_sql_compare.py`](tools/live_sql_compare.py)).
 
@@ -177,7 +178,7 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 
 1. Supabase 프로젝트에 `supabase/schema.sql`(쓰기 표) → `supabase/staff.sql`(직원 명단·권한) → `supabase/model.sql`(AI 식) → `supabase/live.sql`(5분 작업) → `supabase/ev.sql`(충전기) → `supabase/calib.sql`(보정) 순서로 적용. 클라우드 적용은 DB 비밀번호로 psql 에서 직접 한다.
 2. Vault 에 `seoul_openapi`(·`datagokr`), 처음 채우기 `tools/supabase_live_load.py --stations --backfill 8`.
-3. 앱의 공개(publishable) 키를 `web/cloud.js`·`ios/Core/Sources/HeotgeoleumCore/Cloud.swift` 에.
+3. 공개(publishable) 키를 `web/cloud.js`·`app/lib/config/ridey_config.dart`·운영 화면 환경 변수(`dashboard/.env.local`)에.
 
 확인: `select at, ms from live.tick_log order by at desc limit 5` (단계별 ms·DB 크기). 파이썬과 같은 답인지 `tools/supabase_live_load.py --parity` · `--parity-model`.
 충전기 기록은 클라우드에 3일만 남으니 3일 안에 `tools/ev_pull.py` → `analysis/ev_validate.py`. 실시간으로 AI 점검·다시 배우기는 `tools/retrain.py` (`--deploy` 는 나을 때만 바꿈).
@@ -186,9 +187,16 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 <details>
 <summary><b>안드로이드 · 아이폰</b></summary>
 
-- **안드로이드(APK)**: 웹앱을 [Capacitor](https://capacitorjs.com) 로 감쌈(`android-app/`). `brew install openjdk@21 && brew install --cask android-commandlinetools` → SDK(`platforms;android-36`, `build-tools;36.0.0`) → `cd android-app && npm i && npm run apk`(디버그) 또는 `npm run release`(서명). 에뮬레이터 기능 시험 `tests/android/webview_e2e.js`.
-- **아이폰 앱**: Xcode → `ios/HeotgeoleumZero.xcodeproj` → Team 고르고 ▶. 자세히는 [`ios/README.md`](ios/README.md).
+- **안드로이드(APK)**: GitHub Actions 의 `flutter` 실행 화면에서 `ridey-apk` 를 받는다(테스트를 통과해야 만들어짐). 직접 만들려면 `cd app && flutter build apk --release` — `app/android/key.properties`(git 밖)가 있으면 그 키로, 없으면 디버그 키로 서명.
+- **아이폰 앱**: `cd app && flutter build ios`, 또는 Xcode 로 `app/ios/Runner.xcworkspace` → Team 고르고 ▶.
+- **아이콘·시작 화면**: `node tools/make_flutter_assets.js` (`web/icon.svg`·`docs/brand/wordmark-dark.svg` 에서).
 - **아이폰 웹앱**: 사파리로 웹앱 주소 → 공유 → 홈 화면에 추가.
+</details>
+
+<details>
+<summary><b>옛 앱(지움)</b></summary>
+
+- 10월 25일 Flutter 로 옮기기 전의 SwiftUI 아이폰 앱(`ios/`)과 Capacitor 안드로이드 앱(`android-app/`)은 git 기록에 남아 있다(커밋 `b561e16` 이전).
 </details>
 
 <details>
@@ -202,7 +210,8 @@ SHOTS=docs/shots node tests/web/smoke.js                                        
 node tests/web/record_demo.js                                                    # 시연 영상 (ffmpeg 필요)
 node docs/build_pdf.js                                                           # 보고서·제안서·발표 PDF
 .venv/bin/python tools/build_site.py                                             # 웹사이트
-cd ios/Core && swift test                                                        # 스위프트 엔진
+(cd app && flutter test)                                                         # 이용자 앱
+(cd dashboard && npm test)                                                       # 운영 화면 (같은 계산인지 포함)
 python tools/live_sql_compare.py --old <커밋>                                     # 클라우드 SQL 을 고칠 때: 옛·새 같은 답인지 (로컬 Postgres)
 ```
 대회 제출 zip: `python tools/make_submission.py --id <학번> --name <이름>` (APK·소스·출처·영상·보고서·발표를 규칙대로 한 파일로).
@@ -219,7 +228,7 @@ python tools/live_sql_compare.py --old <커밋>                                 
 
 공개로 남는 읽기 뷰는 `live_snapshot`, `ops_lists`, `ops_scores`, `ops_alarm_days` 네 개다. `rescue`·`survey`·사진·`checked`·`field_records`는 활성 직원만 읽고 쓴다. 직원 명단 스키마 `ops`는 API에 열어 두지 않는다. 클라우드에 `staff.sql`을 적용하는 일은 개발자가 psql로 한다. 적용 전에는 기존 웹의 익명 쓰기가 그대로다.
 
-`web/`, `site/`, 루트 `ios/`, `android-app/`은 아직 지우지 않았다. 지울 때 `test.yml`, `pages.yml`, `ios.yml`도 같이 정리한다. 대여소 목록을 다시 만들면 `analysis/export_web.py`가 `web/data/stations.json`을 쓰고, 그 파일을 `app/assets/data/stations.json`과 `dashboard/data/stations.json`에 복사한다.
+루트 `ios/`, `android-app/`은 Flutter 앱으로 바뀌어 지웠다(`ios.yml` 도). `web/`은 설치 없이 보는 웹 데모이자 대여소 QR 스티커가 여는 곳이라 남긴다(`test.yml`, `pages.yml` 이 쓴다). `site/`는 작품 소개. 대여소 목록을 다시 만들면 `analysis/export_web.py`가 `web/data/stations.json`을 쓰고, 그 파일을 `app/assets/data/stations.json`과 `dashboard/data/stations.json`에 복사한다.
 
 ## 폴더
 
@@ -228,15 +237,13 @@ python tools/live_sql_compare.py --old <커밋>                                 
 | [`engine/`](engine) | 헛대여·연쇄·경보 규칙(`core.py`), 아침 목록(`morning.py`), 충전기 헛충전(`ev.py`) |
 | [`supabase/`](supabase) | 클라우드 5분 작업(`live.sql`), AI 식(`model.sql`), 충전기(`ev.sql`), 쓰기 표(`schema.sql`), 직원 명단(`staff.sql`) |
 | [`app/`](app/README.md) | 이용자 Flutter 앱. 직원 기능은 없다. |
-| [`dashboard/`](dashboard/README.md) | 직원용 RIDEY Operations (Next.js). 로그인 없이는 화면이 열리지 않는다. |
+| [`dashboard/`](dashboard/README.md) | 직원용 RIDEY Operations (Next.js). 로그인 없이는 화면이 열리지 않는다(심사·시연용 읽기 전용 둘러보기는 `RIDEY_DEMO=1`). |
 | [`analysis/`](analysis) | 검증 스크립트 — 기준 선택, 실시간 대조, AI 학습·비교, 공단 순회 효과, 그림 |
-| [`web/`](web) | 웹앱 — 지금 목록·조회(QR)·현장 확인·하루 재생·현장 조사, 오프라인 동작 |
-| [`ios/`](ios/README.md) | 아이폰 앱(SwiftUI) — 엔진 패키지 `Core/`, 화면 `App/` |
-| [`android-app/`](android-app) | 안드로이드 앱(APK) — `web/` 을 Capacitor 로 감쌈 |
+| [`web/`](web) | 웹 데모(설치 없이) — 지금 목록·조회(QR)·현장 확인·하루 재생·현장 조사, 오프라인 동작 |
 | [`site/`](site) | 작품 소개 웹사이트 (GitHub Pages) |
 | [`docs/`](docs/README.md) | 보고서·발표·대본·결과 표·조사 — [문서 목록](docs/README.md) · [스토리라인](docs/story.md) |
 | [`tools/`](tools) | 클라우드 적재·대조, SQL 비교, 다시 배우기, 제출물 만들기 |
-| [`tests/`](tests) | 파이썬·웹 화면·오프라인·안드로이드 검사 |
+| [`tests/`](tests) | 파이썬·웹 화면·오프라인 검사 (앱·운영 화면 검사는 각 폴더 안) |
 
 자세한 측정과 실패 기록은 [`PLAN.md`](PLAN.md), 바뀐 점은 [`CHANGELOG.md`](CHANGELOG.md).
 
