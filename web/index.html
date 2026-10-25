@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F7F5F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D0F12" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RIDEY">
+<title>RIDEY</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><h1 aria-label="RIDEY"><!-- brand:wordmark --><svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 415.1 75.0" aria-hidden="true"><path fill="currentColor" d="M22.1 32.6H48.7Q53.3 32.6 55.9 30.4Q58.5 28.3 58.5 24.4Q58.5 20.5 55.9 18.3Q53.3 16.2 48.7 16.2H18.9L28.9 5.8V75H6.7V0H52Q60.7 0 67.2 3.1Q73.7 6.1 77.3 11.6Q81 17 81 24.4Q81 31.6 77.3 37.1Q73.7 42.5 67.2 45.6Q60.7 48.6 52 48.6H22.1ZM32.5 39.9H57.4L83.7 75H58ZM91.5 0H113.7V75H91.5ZM164.2 0Q177.7 0 187.7 4.7Q197.8 9.3 203.4 17.7Q209.1 26.2 209.1 37.5Q209.1 48.8 203.4 57.2Q197.8 65.7 187.7 70.3Q177.7 75 164.2 75H126.1V0ZM148.2 65.4 137.8 55.2H165.9Q172.3 55.2 176.9 53Q181.6 50.9 184.1 46.9Q186.6 42.9 186.6 37.5Q186.6 32 184.1 28.1Q181.6 24.1 176.9 22Q172.3 19.8 165.9 19.8H137.8L148.2 9.6ZM283.2 29.6V45.4H227.9V29.6ZM243 37.5 238.2 67 229.4 57.1H286.7V75H216.1L221.7 37.5L216.1 0H286.2V17.9H229.4L238.2 8ZM326.1 75V38.3H348.3V75ZM290.9 0H315.5L342 33.9H332.3L358.7 0H383.3L344.3 49.7L330 49.9Z"/><circle class="dot" cx="401.7" cy="61.6" r="13.4" fill="#FF4F1F"/></svg><!-- /brand:wordmark --></h1></div>
+  <div class="date"><label>기준일 <select id="day"></select></label></div>
+</header>
+
+<nav id="tabs" aria-label="화면" style="--tab:0"><i class="tabdot" aria-hidden="true"></i><div class="tablist" role="tablist" aria-label="화면">
+  <button data-tab="morning" role="tab" aria-controls="morning" aria-selected="true" aria-label="아침 목록" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg><span>홈</span></button>
+  <button data-tab="lookup" role="tab" aria-controls="lookup" aria-selected="false" aria-label="자전거 조회"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>조회</span></button>
+  <button data-tab="rescue" role="tab" aria-controls="rescue" aria-selected="false" aria-label="현장 확인"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.4-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.8-7.5 10.2-7.5 10.2Z"/></svg><span>확인</span></button>
+  <button data-tab="replay" role="tab" aria-controls="replay" aria-selected="false" aria-label="시연"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="m10.5 11.5 4 2.5-4 2.5v-5Z"/></svg><span>재생</span></button>
+  <button data-tab="survey" role="tab" aria-controls="survey" aria-selected="false" aria-label="현장 조사"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 8v8M8 12h8"/></svg><span>조사</span></button>
+</div></nav>
+
+<main>
+  <section id="morning" class="tab on" role="tabpanel">
+    <div class="hero" id="morning-summary"></div>
+    <div class="stories" id="stories" aria-label="구 고르기"></div>
+    <div class="bento" id="morning-retro" hidden></div>
+    <div id="map" role="region" aria-label="지도: 의심 자전거가 있는 대여소 (아래 목록과 같은 내용)"></div>
+    <h2>정비 먼저 볼 곳 <button id="csv-btn" class="link" aria-label="이 목록을 엑셀용 CSV 로 받기">CSV 받기</button></h2>
+    <div class="card list"><ol id="station-rank" class="rank rows"></ol></div>
+    <h2>정비 동선 <span class="muted">근무 시간 안에 가장 많이 막는 순서</span></h2>
+    <div class="card">
+      <div class="filters"><select id="shift" aria-label="근무 시간"><option value="60">1시간</option><option value="90" selected>1시간 30분</option><option value="180">3시간</option></select>
+        <button id="route-here" class="secondary">내 위치에서</button></div>
+      <ol id="route-list" class="rank route rows"></ol>
+    </div>
+    <h2>의심 자전거 <span class="muted">누르면 자세히 · 실시간은 AI 확률 순</span></h2>
+    <div class="card list"><ul id="bike-list" class="posts rows"></ul></div>
+    <button id="bike-more" class="secondary" type="button" hidden aria-controls="bike-list" aria-expanded="false"></button>
+  </section>
+
+  <section id="lookup" class="tab" role="tabpanel">
+    <div id="st-card" aria-live="polite"></div>
+    <p class="headline">타기 전에<br>자전거 번호를 확인해 보세요</p>
+    <div class="card">
+      <form id="lookup-form"><input id="bike-input" aria-label="자전거 번호" placeholder="SPB-00000" autocomplete="off" autocapitalize="characters"><button class="big">조회하기</button></form>
+      <button id="scan-btn" class="secondary">QR 로 찍기</button>
+      <video id="cam" playsinline muted hidden></video>
+      <canvas id="cam-canvas" hidden></canvas>
+    </div>
+    <div id="lookup-result" aria-live="polite"></div>
+    <h2>내 대여소 <span class="muted" id="my-when">가기 전에 피할 번호</span></h2>
+    <div class="card list">
+      <ul id="my-list" class="rows"></ul>
+      <div class="my-add">
+        <input id="my-q" type="search" placeholder="대여소 이름 (예: 망원역)" aria-label="내 대여소 추가 — 대여소 이름으로 찾기" autocomplete="off" enterkeyhint="search">
+        <button id="my-near" class="secondary" type="button">가까운 곳</button>
+      </div>
+      <ul id="my-sugg" class="rows" aria-label="찾은 대여소"></ul>
+    </div>
+  </section>
+
+  <section id="rescue" class="tab" role="tabpanel">
+    <p class="headline">의심 자전거 앞에서,<br>탭 한 번으로 확인</p>
+    <p class="hint">확인 결과는 바로 정비 순위에 반영돼요.</p>
+    <div id="rescue-card"></div>
+    <button id="rescue-near" class="secondary">가까운 순서로 보기</button>
+    <h2>내 확인 기록</h2>
+    <div class="card list"><ul id="rescue-log" class="bikes rows"></ul></div>
+  </section>
+
+  <section id="replay" class="tab" role="tabpanel">
+    <p class="headline">2026년 6월 15일,<br>서울의 하루를 다시 봐요</p>
+    <p class="hint">실제 대여기록을 빠르게 돌려요. 경보가 켜진 자전거를 누가 또 빌렸는지 보세요.</p>
+    <div class="reel"><div class="clock" id="clock" aria-live="off">00:00</div>
+    <div id="replay-map" role="img" aria-label="하루 재생 지도 (아래 숫자·기록과 같은 내용)"></div></div>
+    <div class="legend"><span class="dot r"></span>경보 <span class="dot g"></span>막을 수 있던 헛걸음 <span class="dot b"></span>뒤늦은 고장 신고</div>
+    <div class="card counters">
+      <div><i class="dot k"></i><span>헛대여</span><b id="c-dud">0</b></div>
+      <div><i class="dot r"></i><span>경보</span><b id="c-alarm">0</b></div>
+      <div class="good"><i class="dot g"></i><span>막을 수 있던 헛걸음</span><b id="c-prev">0</b></div>
+      <div><i class="dot b"></i><span>뒤늦은 고장 신고</span><b id="c-fault">0</b></div>
+    </div>
+    <div class="card"><ul id="replay-feed" class="feed"></ul></div>
+    <div class="controls"><button id="play">▶ 재생하기</button><label>속도 <select id="speed" aria-label="속도"><option value="600">10분/초</option><option value="1800" selected>30분/초</option><option value="3600">1시간/초</option></select></label></div>
+  </section>
+  <section id="survey" class="tab" role="tabpanel">
+    <p class="headline">현장 조사</p>
+    <p class="hint">대여소의 자전거를 한 대씩 보고 상태를 남겨요. 나중에 공개 기록과 맞춰 경보가 맞았는지 봐요.</p>
+    <div class="card" id="plan-card">
+      <h2 class="plan-h">오늘 갈 곳 — 눈 가리고</h2>
+      <p class="muted plan-p">경보 대여소 3곳과 근처 경보 없는 대여소 2곳을 섞어 이름만 보여 줘요. 어느 쪽인지 모르는 채로, 그곳 자전거를 모두 보고 남겨 주세요.</p>
+      <button id="plan-btn" class="secondary" type="button" style="margin-top:0">갈 곳 고르기</button>
+      <ul id="plan-list" class="rows"></ul>
+    </div>
+    <div class="card">
+      <button id="near-btn" class="secondary" style="margin-top:0">가까운 대여소 찾기</button>
+      <input id="station-filter" aria-label="대여소 이름으로 찾기" placeholder="대여소 이름으로 찾기 (예: 망원역)">
+      <select id="survey-station" aria-label="대여소"></select>
+      <form id="survey-form"><input id="survey-bike" aria-label="조사한 자전거 번호" placeholder="SPB-00000" autocomplete="off" autocapitalize="characters"></form>
+      <input id="survey-note" aria-label="메모" placeholder="메모(선택): 바람 빠짐, 체인 빠짐…">
+      <label class="photo-btn"><input id="survey-photo" type="file" accept="image/*" capture="environment"><span id="survey-photo-label">사진 붙이기 (선택)</span><img id="survey-thumb" alt="" hidden></label>
+    </div>
+    <h2>상태 (누르면 저장)</h2>
+    <div class="card"><div class="choices three" id="survey-choices" style="margin-top:0"></div></div>
+    <p class="muted" id="survey-count"></p>
+    <a id="survey-csv" href="api/survey.csv" class="muted">조사 기록 CSV 내려받기</a>
+  </section>
+</main>
+
+<footer>데이터: 서울 열린데이터광장 따릉이 대여이력·고장신고·대여소 정보. 경보 규칙: 서로 다른 사람이 3분·300m 안 반납을 2번 이상 이어서 함.</footer>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="route.js"></script>
+<script src="cloud.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,809 @@
+// RIDEY — 아침 목록(어제까지 기록), 자전거 조회, 구조대, 시연.
+const $ = (s) => document.querySelector(s);
+const state = { stations: {}, day: null, morning: null, map: null, layer: null, checked: {}, gu: "", scores: {}, ops: new Set(), sbDays: new Set(), busyDemo: {}, busyOps: null, routeValue: null };
+let here = null;   // 내 위치 (📍 버튼을 눌렀을 때만)
+// QR·입력에서 온 글자를 화면에 넣을 때는 반드시 거친다 (QR 에 HTML 을 심어 두는 장난 막기)
+const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function getJSON(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(path + " " + r.status);
+  return r.json();
+}
+
+// ── 탭
+document.querySelectorAll("#tabs button").forEach((b) =>
+  b.addEventListener("click", () => {
+    const all = [...document.querySelectorAll("#tabs button")];
+    all.forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+    document.querySelector("#tabs").style.setProperty("--tab", all.indexOf(b));   // 아래 신호 점이 미끄러져 따라감
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.id === b.dataset.tab));
+    if (b.dataset.tab === "morning" && state.map) setTimeout(() => state.map.invalidateSize(), 50);
+    if (b.dataset.tab === "rescue") renderRescue();
+    window.scrollTo(0, 0);
+  })
+);
+
+// ── 아침 목록
+let liveTimer = null;
+const DEMO_DAY = "2026-06-15";   // 앱 안(오프라인 캐시)에 늘 있는 시연 날
+async function loadDay(day, prefetched) {
+  state.day = day;
+  clearInterval(liveTimer);
+  try {
+    state.morning = day === "live" ? (prefetched !== undefined ? prefetched : await getLive()) || state.morning
+      : state.sbDays.has(day) ? (await sbOpsList(day).catch(() => null)) || await getJSON(`${state.opsBase}${day}.json`)   // Supabase(06:10) 먼저, 없으면 GitHub
+      : await getJSON(state.ops.has(day) ? `${state.opsBase}${day}.json` : `data/morning/${day}.json`);
+    if (!state.morning) throw new Error("no live");
+  } catch (e) {   // 인터넷이 끊겨 그날 목록을 못 받으면 시연 자료로 (전에 받아 둔 날짜 목록만 믿고 열다 멈추던 것)
+    if (day === DEMO_DAY) throw e;
+    toast("인터넷이 안 돼서 앱 안의 시연 자료(6월 15일)를 보여 줄게요.");
+    $("#day").value = DEMO_DAY;
+    return loadDay(DEMO_DAY);
+  }
+  if (day === "live") liveTimer = setInterval(() => state.day === "live" && !document.hidden && refreshLive(), 60e3);   // 안 보는 동안은 묻지 않음
+  state.morning.bikes.forEach((b) => (b.station_name = String(b.station_name).trim()));
+  guOptions();
+  renderMorning();
+  renderRescue();
+  relookup();
+  loadChecked();
+}
+// 조회 결과가 떠 있는데 기준 목록이 바뀌면(날짜를 바꾸거나 실시간이 새로 들어오면) 다시 맞춰 봄
+function relookup() { if ($("#lookup-result").innerHTML && $("#bike-input").value) lookup($("#bike-input").value); }
+
+// 실시간: 맥 server/live.py(1분, 같은 와이파이) · Supabase(5분, DB 가 스스로) · GitHub(예약이 드묾) 중 가장 새 것.
+// 채점·자료 지연 표시는 GitHub 쪽에만 있어 가장 새 목록에 빌려 붙인다.
+async function getLive() {
+  const within = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);   // 백업은 3초까지만 기다림
+  const src = [["mac", within(getJSON(`data/live.json?t=${Date.now()}`), 3000)], ["supabase", sbLive()], ["cloud", within(getJSON(`${CLOUD.data}live.json?t=${Date.now()}`), 3000)]];
+  const got = await Promise.allSettled(src.map(([, p]) => p));
+  const all = got.map((g, i) => g.status === "fulfilled" && g.value && g.value.at ? { ...g.value, source: src[i][0] } : null).filter(Boolean);
+  const ok = all.filter((m) => minsAgo(m.at) <= (m.source === "mac" ? 20 : 180));   // 3시간 안이면 늦었다고 알리고 보여 줌(6월 시연 자료보다 낫다)
+  const best = ok.sort((a, b) => b.at.localeCompare(a.at))[0];
+  if (!best) return null;
+  const gh = all.find((m) => m.source === "cloud");
+  if (gh && !best.score) best.score = gh.score;
+  if (gh && !best.feed) best.feed = gh.feed;
+  return best;
+}
+// 다른 앱·탭에 갔다 돌아오면 바로 새로 (안 보는 동안은 묻지 않았으니)
+document.addEventListener("visibilitychange", () => { if (!document.hidden && state.day === "live") refreshLive(); });
+async function refreshLive() {
+  const m = await getLive();
+  if (!m) return;
+  state.morning = m;
+  state.morning.bikes.forEach((b) => (b.station_name = String(b.station_name).trim()));
+  guOptions(); renderMorning(); relookup();
+}
+const minsAgo = (iso) => Math.max(0, Math.round((Date.now() - new Date(iso + "+09:00").getTime()) / 60e3));
+// 지난 날 목록을 보고 있나 — 실시간도, 오늘 아침 목록도 아니면 '지금' 상태는 모른다 (시연 자료·지난 운영 목록)
+const kstToday = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+const koDay = (d) => { const [, m, dd] = d.split("-").map(Number); return `${m}월 ${dd}일`; };
+const isPast = () => state.day !== "live" && state.day !== kstToday();
+const pastNote = () => isPast() ? `<p class="past-note">📅 ${koDay(state.day)} 자료예요${state.ops.has(state.day) ? "" : "(시연용)"}. 지금 이 자전거 상태는 실시간 목록이 있어야 알 수 있어요.</p>` : "";
+// 서울 API 가 평소보다 훨씬 적게 내놓을 때(server/live.py feed) — 그 사이 새 경보를 놓칠 수 있다고 알림
+function feedNote() {
+  const f = state.day === "live" && state.morning && state.morning.feed;
+  if (!f || f.ok) return "";
+  const h = Number(f.since.slice(11, 13));
+  return `<div class="feed-note" role="status"><b>서울시 대여 기록이 ${h}시부터 평소의 ${Math.max(1, Math.round(f.ratio * 100))}%만 올라오고 있어요.</b> ` +
+    `자료가 늦는 건지 이용이 실제로 줄어든 건지는 아직 몰라요. 그동안 새 경보가 늦을 수 있고, 기록이 다시 들어오면 자동으로 채워요.</div>`;
+}
+
+// 구(區) 고르기 — 정비는 구역 단위로 움직인다. 고른 구의 자전거만 요약·지도·순위·동선·목록에.
+const guOf = (b) => (state.stations[b.station] || {}).gu || "기타";
+const shown = () => (state.morning ? state.morning.bikes.filter((b) => !state.gu || guOf(b) === state.gu) : []);
+function guOptions() {   // 고른 구가 새 목록에 없으면 전체로 (구 고르기는 알약 — renderStories)
+  if (state.gu && !state.morning.bikes.some((b) => guOf(b) === state.gu)) state.gu = "";
+}
+function setGu(g) {
+  state.gu = g;
+  renderMorning();
+  if (state.map && state.layer) { const b = state.layer.getLayers().map((m) => m.getLatLng()); if (b.length) state.map.fitBounds(L.latLngBounds(b).pad(0.2), { maxZoom: 14 }); }
+}
+// 숫자가 앞 값에서 새 값으로 올라감 (칸 너비가 같은 글꼴이라 흔들리지 않음) — '움직임 줄이기' 면 바로
+function tick(el, from, to, dur = 900) {
+  if (!el || from === to || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const t0 = performance.now(), ease = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+  const step = (now) => { const k = Math.min(1, (now - t0) / dur); el.textContent = Math.round(from + (to - from) * ease(k)); if (k < 1) requestAnimationFrame(step); };
+  el.textContent = from; requestAnimationFrame(step);
+}
+function renderMorning() {
+  const bikes = shown();
+  const red = bikes.filter((b) => b.level === "빨강").length;
+  const place = state.gu ? `${esc(state.gu)}에` : "서울에";
+  const live = state.day === "live";
+  const status = live ? `<span class="live">실시간 · ${minsAgo(state.morning.at)}분 전 갱신${state.morning.source === "supabase" ? "(5분마다)" : ""}</span>`
+    : `<span class="live past">${isPast() ? `${koDay(state.day)} 자료${state.ops.has(state.day) ? "" : " (시연)"}` : "오늘 아침 목록"}</span>`;
+  const when = live ? "지금 " : isPast() ? `${koDay(state.day)} 아침, ` : "오늘 아침, ";
+  $("#morning-summary").innerHTML = status +
+    `<p class="big">${when}${place}<br>고장 의심 따릉이가</p>` +
+    `<p class="num"><b>${bikes.length}</b>대 ${isPast() ? "있었어요" : "있어요"}</p>` +
+    `<div class="sub">연쇄 3명+ ${red} · 2명 ${bikes.length - red}${live && state.morning.today_alarms != null ? ` · 오늘 경보 ${state.morning.today_alarms}번` : ""}</div>`
+  const ex = live && bikes.length >= 10 ? listExpect(bikes, (state.morning.model || {}).q) : null;
+  if (ex) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="ai">✦ AI 예측: 이 중 약 ${Math.round(ex.mu)}대가 진짜 고장 · 최소 ${ex.atLeast}대(90%)</div>`);
+  tick($("#morning-summary .num b"), state.shownCount ?? 0, bikes.length); state.shownCount = bikes.length;
+  const notes = (live ? feedNote() : pastNote()) + (live && minsAgo(state.morning.at) > 30
+    ? `<p class="past-note">⏳ 목록 갱신이 늦어지고 있어요(마지막 ${minsAgo(state.morning.at)}분 전). 그사이 새로 생긴 경보는 아직 안 보일 수 있어요.</p>` : "");
+  if (notes) $("#morning-summary").insertAdjacentHTML("beforeend", `<div class="notes">${notes}</div>`);
+  renderMap(bikes);
+  renderRetro(bikes);
+  renderLists();
+  renderStories();
+}
+
+const GU_EN = { 강남구: "gangnam", 강동구: "gangdong", 강북구: "gangbuk", 강서구: "gangseo", 관악구: "gwanak", 광진구: "gwangjin", 구로구: "guro",
+  금천구: "geumcheon", 노원구: "nowon", 도봉구: "dobong", 동대문구: "dongdaemun", 동작구: "dongjak", 마포구: "mapo", 서대문구: "seodaemun",
+  서초구: "seocho", 성동구: "seongdong", 성북구: "seongbuk", 송파구: "songpa", 양천구: "yangcheon", 영등포구: "yeongdeungpo", 용산구: "yongsan",
+  은평구: "eunpyeong", 종로구: "jongno", 중구: "jung", 중랑구: "jungnang" };
+// 정비 담당에게 보낼 목록 — 엑셀에서 바로 열리게(UTF-8 BOM). 서버 없이 폰·정적 호스팅에서도 된다.
+function morningCSV(bikes) {
+  const q = (x) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+  const head = ["기준일", "구", "대여소번호", "대여소", "자전거번호", "서로 다른 사람 연속 헛대여(명)", "단계", "마지막 헛대여", "고장 신고", "사람 확인(구조대·현장 조사)"];
+  const rows = groupByStation(bikes).flatMap(([, arr]) => arr).map((b) => {
+    const c = checkedOf(b.bike);
+    return [state.day, guOf(b), b.station, b.station_name, b.bike, b.chain, b.level, b.last_dud, b.reported === true ? "있음" : b.reported === false ? "없음" : "모름",
+      c.total ? `고장 ${c.broken}/${c.total}` : ""];
+  });
+  return "\ufeff" + [head, ...rows].map((r) => r.map(q).join(",")).join("\r\n") + "\r\n";
+}
+$("#csv-btn").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([morningCSV(shown())], { type: "text/csv;charset=utf-8" }));
+  // 파일 이름은 영문만 — 한글 이름은 일부 브라우저가 'download' 로 바꿔 버린다(구 이름은 표 안에 있다)
+  a.download = `morning_${state.day}${state.gu ? "_" + (Object.keys(GU_EN).includes(state.gu) ? GU_EN[state.gu] : "gu") : ""}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+});
+
+// 뒤돌아 채점 — 지난 기록이라 '이 목록이 나온 뒤 처음 빌린 사람' 이 어땠는지 안다 (운영에서는 다음 날 아침 채점: server/daily_job.py)
+function scoreCard(title, hit, n, what) {
+  const p = n ? Math.round((100 * hit) / n) : 0;
+  return `<div class="tile ring-tile"><div class="ring" style="--p:${p}"><b>${p}%</b></div>` +
+    `<div><div class="title">${title}</div><div class="detail">${what} ${n.toLocaleString("ko-KR")}명 중 ${hit.toLocaleString("ko-KR")}명(${p}%)이 또 바로 반납 · 평소 자전거는 2.5%</div></div></div>`;
+}
+// 운영 성적표 — 결과가 100건 넘게 정해진 날마다 막대 하나, 점선은 평소 자전거 2.5% (사이트 #livescore 와 같은 모양)
+function dayBars(rows) {
+  const d = (rows || []).filter(([, n]) => n >= 100);
+  if (d.length < 3) return "";
+  const pct = d.map(([, n, k]) => (100 * k) / n), md = (s) => s.slice(5).split("-").map(Number).join("/");
+  const lo = Math.min(...pct), hi = Math.max(...pct);
+  return `<div class="tile days"><div class="daybars" role="img" aria-label="날마다 경보 뒤 다음 사람도 바로 반납한 비율: ${d.map(([day], i) => `${md(day)} ${Math.round(pct[i])}%`).join(", ")} (평소 2.5%)">` +
+    d.map((x, i) => `<div class="db" style="--h:${Math.min(100, pct[i] * 2).toFixed(1)}%;--i:${i}"><i>${Math.round(pct[i])}</i></div>`).join("") + `<div class="base"></div></div>` +
+    `<div class="dayaxis" aria-hidden="true"><span>${md(d[0][0])}</span><span>${md(d[d.length - 1][0])}</span></div>` +
+    `<div class="detail">날마다 — <b>${d.length}일 하루도 빠짐없이 평소의 ${Math.floor(lo / 2.5)}배 이상</b> (${Math.round(lo)}~${Math.round(hi)}%) · 점선은 평소 자전거(2.5%)</div></div>`;
+}
+function renderRetro(bikes) {
+  const box = $("#morning-retro");
+  const show = (html) => { box.hidden = !html; box.innerHTML = html || ""; };
+  if (state.day === "live") {
+    const sc = state.morning.score || {};   // 몇 건으로 낸 % 는 오해를 부른다 — 20건부터
+    if (state.alarmDays === undefined && CLOUD.key) {   // 날짜별 막대는 한 번만, 첫 화면 뒤에 (공개 읽기라 검사·녹화의 HZ_CLOUD_OFF 와 상관없이)
+      state.alarmDays = null;
+      sbAlarmDays().then((d) => { state.alarmDays = d; if (state.day === "live") renderRetro(bikes); }).catch(() => {});
+    }
+    return show(sc.scored >= 20 ? scoreCard("실시간 경보, 얼마나 맞았을까요?", sc.next_rider_dud, sc.scored, "경보 뒤 처음 빌린 다른 사람") + dayBars(state.alarmDays)
+      : sc.scored ? `<div class="detail">실시간 경보 채점을 모으는 중이에요 (${sc.scored}건 — 20건부터 보여 줘요)</div>` : "");
+  }
+  const known = bikes.filter((b) => typeof b.truth_first_rider_dud === "boolean");
+  const sc = state.scores[state.day];
+  if (!known.length && sc && !state.gu)   // 운영: 다음 날 아침 매일 작업이 채점해 둔 것
+    return show(scoreCard("이 목록, 얼마나 맞았을까요?", sc.first_dud, sc.rode, "다음 날 첫 이용자"));
+  if (!known.length) return show("");
+  const hit = known.filter((b) => b.truth_first_rider_dud).length;
+  show(scoreCard("이 목록, 얼마나 맞았을까요?", hit, known.length, "목록이 나온 뒤 처음 빌린 사람"));
+}
+function renderLists() {
+  if (!state.morning) return;
+  const bikes = shown();
+  renderRank(bikes);
+  renderRoute(bikes);
+  // 처음엔 10대만(토스처럼 짧게) — 사람이 고장이라고 확인한 자전거는 접혀 있어도 맨 위에. '모두 보기' 로 펼침
+  const sure = (b) => (checkedOf(b.bike).broken ? 0 : 1);
+  const list = [...bikes].sort((a, b) => sure(a) - sure(b));
+  const lim = state.allBikes ? 80 : 10;
+  $("#bike-list").innerHTML = list.slice(0, lim).map(bikeRow).join("");
+  const sig = `${state.day}|${state.gu}|${state.allBikes ? 1 : 0}`;
+  if (sig !== state.listSig) {   // 날짜·구가 바뀔 때만 줄이 차례로 들어옴 (1분마다 새로 받을 땐 그대로)
+    state.listSig = sig;
+    for (const ul of [$("#bike-list"), $("#station-rank")]) { [...ul.children].forEach((li, i) => li.style.setProperty("--i", Math.min(i, 12))); ul.classList.remove("enter"); void ul.offsetWidth; ul.classList.add("enter"); }
+  }
+  const more = $("#bike-more");
+  more.hidden = list.length <= 10;
+  more.textContent = state.allBikes ? "접기" : `${Math.min(list.length, 80)}대 모두 보기`;
+  more.setAttribute("aria-expanded", String(!!state.allBikes));
+  renderMine();
+  { const sid = stationFromUrl(); if (sid && $("#st-card").innerHTML) renderStationCard(sid); }   // 대여소 QR 로 연 카드는 날짜·목록이 바뀌면 같이
+}
+$("#bike-more").addEventListener("click", () => { state.allBikes = !state.allBikes; renderLists(); });
+
+// 정비 동선: 순위 위 10곳을 (내 위치 또는 1위 대여소에서) 도는 순서 — route.js
+// 정비 동선 — 근무 시간 안에 '막을 헛걸음' 이 가장 많은 대여소와 순서 (route.js planValue, 되짚기: docs/route_backtest.md)
+// 대여소 값 = 목록 자전거마다 그날 낼 헛걸음 평균(연쇄 길이 × 대여소 붐빔, route_value.json) × 도착 뒤 남은 대여 비율(busy.json 시간대별)
+function stationValue(s, minute) {
+  const rv = state.routeValue;
+  if (!rv) return s.arr.length * Math.max(0, (1440 - minute) / 1440);
+  const busy = (state.day === "live" || state.ops.has(state.day)) && state.busyOps ? state.busyOps : state.busyDemo;
+  const b = busy[s.id];
+  const avg = b ? b[0] : 0, h = b ? b.slice(1).map((x) => x + 0.5) : Array(24).fill(1);
+  const lvl = avg < rv.cuts[0] ? 0 : avg < rv.cuts[1] ? 1 : 2;
+  return s.arr.reduce((t, bike) => t + rv.value[String(Math.min(Math.max(bike.chain, 2), 4))][lvl], 0) * shareAfter(h, minute);
+}
+function routeStart() {   // 운영(오늘·실시간)이면 지금부터, 지난 날(시연)이면 그날 9시부터
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  if (state.day === "live" || state.day === today) { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+  return 9 * 60;
+}
+const people = (v) => (v < 0.05 ? "0.1명 미만" : `${v.toFixed(1)}명`);
+const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(Math.floor(m % 60)).padStart(2, "0")}`;
+function renderRoute(bikes) {
+  const minutes = +$("#shift").value, t0 = routeStart();
+  let groups = groupByStation(bikes).map(([id, arr]) => ({ id, arr, n: arr.length, ...state.stations[id] })).filter((s) => s.lat);
+  if (!groups.length) { $("#route-list").innerHTML = ""; if (state.routeLayer) state.routeLayer.remove(); return; }
+  // 후보는 값이 큰 40곳까지 (서울 전체를 한 사람이 도는 건 비현실적 — 기사는 구역 단위로 움직인다: 구를 고르면 그 구 안에서)
+  groups = groups.sort((a, b) => stationValue(b, t0) - stationValue(a, t0)).slice(0, 40);
+  const start = here ? { lat: here.lat, lon: here.lon, name: "내 위치" } : groups[0];
+  const stops = planValue(start, groups, stationValue, minutes, t0);
+  const sim = simulate(start, stops, stationValue, t0);
+  // 비교: 지금까지의 방식(누적 헛걸음 순위대로 가장 짧게) 을 같은 시간만큼 돌았다면
+  const rank = groupByStation(bikes).map(([id, arr]) => ({ id, arr, n: arr.length, ...state.stations[id] })).filter((s) => s.lat).slice(0, 10);
+  const rankStops = withinShift(start, planRoute(start, rank), minutes);
+  const rankValue = simulate(start, rankStops, stationValue, t0).value;
+  $("#route-list").innerHTML = stops.map((s, i) =>
+    `<li><div><b>${esc(s.name)}</b><span class="s">${hhmm(sim.arr[i])} 도착 · 의심 ${s.arr.length}대</span></div>` +
+    `<span class="n accent">${people(stationValue(s, sim.arr[i]))}</span></li>`).join("") +
+    `<li class="total"><span>${here ? "내 위치에서 " : ""}${stops.length}곳 · 약 ${Math.round(sim.used)}분 · 막을 헛걸음 예상 <b style="display:inline;color:var(--signal-ink)">${people(sim.value)}</b>` +
+    `${sim.value > rankValue + 0.05 ? ` (순위대로 돌 때보다 ${(sim.value - rankValue).toFixed(1)}명 더)` : ""}</span></li>`;
+  if (typeof L === "undefined" || !state.map) return;
+  if (state.routeLayer) state.routeLayer.remove();
+  state.routeLayer = L.layerGroup().addTo(state.map);
+  const path = [start, ...stops].map((p) => [p.lat, p.lon]);   // 흰 밑줄 위 잉크 점선 — 흑백 지도 위에서도 보임
+  L.polyline(path, { color: "#FFFFFF", weight: 7, opacity: 0.9 }).addTo(state.routeLayer);
+  L.polyline(path, { color: "#111317", weight: 3, opacity: 1, dashArray: "6 6" }).addTo(state.routeLayer);
+  stops.forEach((s, i) => L.marker([s.lat, s.lon], { icon: L.divIcon({ className: "route-num", html: String(i + 1), iconSize: [20, 20] }) }).addTo(state.routeLayer));
+}
+
+// 위치 한 번 받기 (아이폰은 https 에서만) — 구조대·동선·현장 조사가 같이 쓴다
+function locate() {
+  return new Promise((ok, no) => {
+    if (!navigator.geolocation) return no(new Error("no geolocation"));
+    navigator.geolocation.getCurrentPosition((p) => { here = { lat: p.coords.latitude, lon: p.coords.longitude }; ok(here); }, no,
+      { enableHighAccuracy: true, timeout: 8000 });
+  });
+}
+const noLocation = () => toast("위치를 쓸 수 없어요(아이폰은 https 주소에서만). 목록 순서대로 보여 줄게요.");
+
+// 구조대가 서버에 보낸 확인 결과 (자전거별 {판정: 명}) — 정비 순위에 '사람이 봤음' 으로 붙인다. 서버가 없으면(정적·오프라인) 조용히 건너뜀.
+async function loadChecked() {
+  try {
+    if (sbOn()) { state.checked = await sbChecked(); renderLists(); return; }
+    const r = await fetch("api/rescue"); if (r.ok) { state.checked = await r.json(); renderLists(); }
+  } catch {}
+}
+function checkedOf(bike) {
+  const v = state.checked[bike] || {};
+  const total = Object.values(v).reduce((a, b) => a + b, 0);
+  return { total, broken: total - (v["멀쩡함"] || 0) };
+}
+function checkedBadge(bike) {
+  const c = checkedOf(bike);
+  if (!c.total) return "";
+  return c.broken ? ` · <b>사람 확인: 고장 ${c.broken}/${c.total}</b>` : ` · 사람 확인: 멀쩡함 ${c.total}`;
+}
+
+// 의심 자전거 하나 = 인스타 게시물 하나: 머리(자전거 번호·대여소·언제), 큰 숫자 카드, 단추(3초 확인·자세히), 설명
+const ago = (b) => typeof b.minutes_ago === "number" ? (b.minutes_ago < 60 ? `${b.minutes_ago}분 전` : b.minutes_ago < 1440 ? `${Math.floor(b.minutes_ago / 60)}시간 전` : `${Math.floor(b.minutes_ago / 1440)}일 전`) : `마지막 ${b.last_dud}`;
+const BIKE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 9h6l3.5 7.5M9 9 7.5 6H5M12 16.5 15 9"/></svg>';
+function bikeRow(b) {
+  const tail = [b.reported === true ? "신고됨" : b.reported === false ? "미신고" : "",
+    b.truth_first_rider_dud === true ? "다음 사람도 반납" : b.truth_first_rider_dud === false ? "다음 사람은 탐" : ""].filter(Boolean).join(" · ");
+  return `<li><button type="button" class="rowbtn" data-bike="${esc(b.bike)}" aria-label="${esc(b.bike)} 서로 다른 ${b.chain}명 반납, 자세히">` +
+    `<span class="ico ${b.level}">${BIKE_SVG}</span>` +
+    `<div><b>${esc(b.bike)}</b><span class="s">${esc(b.station_name)}${b.p_next != null ? ` · ${b.chain}명 연속` : ""} · ${ago(b)}${tail ? " · " + tail : ""}${checkedBadge(b.bike)}</span></div>` +
+    `<span class="n ${b.level}">${b.p_next != null ? b.p_next + "%" : b.chain + "명"}</span></button></li>`;
+}
+function showTab(t) {
+  const btn = document.querySelector(`#tabs button[data-tab="${t}"]`);
+  if (btn) btn.click();
+}
+// 안드로이드 앱의 뒤로 가기 — 다른 탭이면 홈으로, 홈이면 앱을 닫는다 (Capacitor App 플러그인, 웹에서는 없음)
+const capApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+if (capApp) capApp.addListener("backButton", () => {
+  const on = document.querySelector("#tabs button[aria-selected=\"true\"], #tabs button.on");
+  if (on && on.dataset.tab !== "morning") showTab("morning"); else capApp.exitApp();
+});
+const openBike = (e) => {   // 한 줄을 누르면 조회 탭에서 자세히 (판정 단추도 거기)
+  const row = e.target.closest("[data-bike]");   // 줄마다 진짜 단추 — Enter·Space 는 단추가 알아서 누름으로 바꿈
+  if (!row) return;
+  showTab("lookup"); $("#bike-input").value = row.dataset.bike; lookup(row.dataset.bike);
+};
+$("#bike-list").addEventListener("click", openBike);
+
+// 스토리 = 구 고르기: 의심 자전거가 많은 구부터, 고른 구는 테두리로
+function renderStories() {
+  if (!state.morning) return;
+  const n = {};
+  state.morning.bikes.forEach((b) => (n[guOf(b)] = (n[guOf(b)] || 0) + 1));
+  const items = [["", "전체", state.morning.bikes.length], ...Object.entries(n).sort((a, b) => b[1] - a[1]).map(([g, c]) => [g, g, c])];
+  $("#stories").innerHTML = items.map(([v, name, c]) =>
+    `<button class="story${v === state.gu ? " on" : ""}" data-gu="${esc(v)}" aria-pressed="${v === state.gu}" aria-label="${esc(v || "서울 전체")} ${c}대">${esc(name.replace(/구$/, "") || name)} ${c}</button>`).join("");
+}
+$("#stories").addEventListener("click", (e) => {
+  const st = e.target.closest(".story");
+  if (st) setGu(st.dataset.gu);
+});
+
+function groupByStation(bikes) {
+  const g = {};
+  bikes.forEach((b) => (g[b.station] = g[b.station] || []).push(b));
+  // 우선순위: 구조대가 고장이라고 확인한 자전거가 있는 곳 먼저, 그다음 연쇄 길이의 합 (그만큼 사람들이 이미 헛걸음했고, 앞으로도 날 가능성이 큼)
+  // 자체 모델 확률이 있으면(실시간) 연쇄 합 대신 '진짜 고장일 자전거 수' 의 기대값(확률 합) 순 — docs/model.md
+  return Object.entries(g).sort((a, b) => sumBroken(b[1]) - sumBroken(a[1]) || (expectOf(b[1]) ?? 0) - (expectOf(a[1]) ?? 0) || sumChain(b[1]) - sumChain(a[1]) || b[1].length - a[1].length);
+}
+const expectOf = (arr) => arr.some((b) => b.p_next != null) ? arr.reduce((t, b) => t + (b.p_next || 0) / 100, 0) : null;
+// 목록 보장: 이 중 약 μ대가 진짜, 90% 확률로 최소 ⌊μ + q·σ⌋대 (q 는 클라우드 목록에 실려 옴)
+function listExpect(bikes, q) {
+  if (q == null || !bikes.length || bikes.some((b) => b.p_next == null)) return null;
+  const ps = bikes.map((b) => b.p_next / 100), mu = ps.reduce((a, b) => a + b, 0), sd = Math.sqrt(ps.reduce((a, p) => a + p * (1 - p), 0));
+  return { mu, atLeast: Math.max(0, Math.floor(mu + q * sd)) };
+}
+const sumBroken = (arr) => arr.filter((b) => checkedOf(b.bike).broken > 0).length;
+const maxChain = (arr) => Math.max(...arr.map((b) => b.chain));
+const sumChain = (arr) => arr.reduce((t, b) => t + b.chain, 0);
+
+function renderRank(bikes) {
+  $("#station-rank").innerHTML = groupByStation(bikes).slice(0, 10).map(([id, arr]) => {
+    const s = state.stations[id];
+    const nb = sumBroken(arr);
+    const red = arr.some((b) => b.level === "빨강");
+    const ex = expectOf(arr);
+    return `<li><div><b>${s ? esc(s.name) : id}</b><span class="s">${nb ? `<b>사람이 확인한 고장 ${nb}대</b> · ` : ""}${s ? s.gu : ""} · ${ex != null ? `진짜 고장 예상 ${ex.toFixed(1)}대` : `헛걸음 ${sumChain(arr)}명 쌓임`}</span></div>` +
+      `<span class="n ${red ? "빨강" : "노랑"}">${arr.length}대</span></li>`;
+  }).join("");
+}
+
+// 지도 바탕: 지도 조각(인터넷) + 대여소 전체를 옅은 점으로 — 오프라인이라 조각이 없어도 점들이 서울 모양을 그린다
+function baseMap(id, opts = {}) {
+  const map = L.map(id, opts).setView([37.55, 126.99], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, crossOrigin: true, attribution: "© OpenStreetMap" }).addTo(map);
+  const r = L.canvas({ padding: 0.5 });
+  Object.values(state.stations).forEach((s) =>
+    L.circleMarker([s.lat, s.lon], { renderer: r, radius: 1.5, stroke: false, fillColor: "#8A8F98", fillOpacity: 0.45, interactive: false }).addTo(map));
+  return map;
+}
+
+function renderMap(bikes) {
+  if (typeof L === "undefined") { $("#map").textContent = "지도를 불러오지 못했어요(오프라인). 아래 목록을 보세요."; return; }
+  if (!state.map) state.map = baseMap("map");
+  if (state.layer) state.layer.remove();
+  state.layer = L.layerGroup().addTo(state.map);
+  groupByStation(bikes).forEach(([id, arr]) => {
+    const s = state.stations[id];
+    if (!s) return;
+    const red = arr.some((b) => b.level === "빨강");
+    L.circleMarker([s.lat, s.lon], { radius: 5 + 2 * arr.length, color: red ? "#FF4F1F" : "#FF9A73", weight: 1.5, fillOpacity: 0.55, className: red ? "m-strong" : "" })
+      .bindPopup(`<b>${esc(s.name)}</b><br>${arr.map((b) => `${esc(b.bike)} · ${b.chain}명 연속`).join("<br>")}`)
+      .addTo(state.layer);
+  });
+}
+
+// ── 자전거 조회
+const VERDICTS = (id, fine = "멀쩡해요") => !/^SPB-\d{5}$/.test(id) ? "" : `<div class="choices">` +   // 번호 모양이 아니면 단추를 만들지 않음(onclick 속성에 들어가는 값)
+  ["체인·기어", "타이어", "안장·핸들"].map((v) => `<button onclick="rescueSave('${id}','${v}')">${v}</button>`).join("") +
+  `<button class="fine" onclick="rescueSave('${id}','멀쩡함')">${fine}</button></div>`;
+function lookup(raw) {
+  const m = String(raw).toUpperCase().match(/SPB-?\s?(\d{3,6})/);
+  const id = m ? `SPB-${m[1].padStart(5, "0")}` : String(raw).trim().toUpperCase();
+  const hit = state.morning.bikes.find((b) => b.bike === id);
+  const out = $("#lookup-result");
+  const until = state.day === "live" ? "최근" : isPast() ? `${koDay(state.day)} 아침 목록에서` : "어제까지";
+  if (hit) {
+    const soft = hit.p_next != null && hit.p_next < 30;   // 모델이 낮게 본 자전거는 말을 누그러뜨림 (그래도 평소의 몇 배)
+    out.innerHTML = `<div class="result warn"><span class="icon" aria-hidden="true">⚠︎</span><h2>${esc(id)}는<br>${soft ? "되도록 피하세요" : "타지 마세요"}</h2>` +
+      `${until} <b>서로 다른 ${hit.chain}명</b>이 빌리자마자 반납했어요. 옆 자전거를 골라 주세요.` +
+      `<div class="facts"><div><span>다음 사람도 반납할 확률${hit.p_next != null ? " (모델)" : ""}</span><b class="red">${hit.p_next != null ? hit.p_next + "%" : hit.level === "빨강" ? "55% 이상" : "약 35~44%"}</b></div>` +
+      `<div><span>평소 자전거</span><b>2.5%</b></div><div><span>마지막 반납</span><b>${esc(hit.last_dud)}</b></div><div><span>대여소</span><b>${esc(hit.station_name)}</b></div></div>` +
+      (hit.why && hit.why.length ? `<div class="why"><p>✦ AI 가 본 이유</p>` + hit.why.map((r) =>
+        `<div><i class="${r.d >= 0 ? "up" : "down"}">${r.d >= 0 ? "▲" : "▼"}</i><span>${esc(r.t)}</span><em>${r.d >= 0 ? "+" : ""}${r.d}%p</em></div>`).join("") + `</div>` : "") +
+      `<p class="ask">가까이 있다면, 어디가 이상했나요?</p>${VERDICTS(id)}${pastNote()}</div>`;
+  } else {
+    out.innerHTML = m ? (isPast()   // 지난 자료에 없다는 건 '괜찮다' 가 아니다 — 초록 체크 대신 모른다고
+      ? `<div class="result"><span class="icon" aria-hidden="true">?</span><h2>${esc(id)}는<br>${koDay(state.day)} 자료에 없어요</h2>${pastNote()}</div>`
+      : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>${esc(id)}는<br>타도 괜찮아요</h2>${until} 기록에 빌리자마자 반납한 연쇄가 없어요.${feedNote()}</div>`)
+      : `<div class="result"><h2>따릉이 번호를 못 찾았어요</h2>SPB-00000 모양으로 넣어 주세요. 읽은 글자: <code>${esc(String(raw).slice(0, 60))}</code></div>`;
+  }
+}
+$("#lookup-form").addEventListener("submit", (e) => { e.preventDefault(); lookup($("#bike-input").value); });
+
+let scanning = false;
+// 스크립트 하나 받기 (QR 읽기 라이브러리는 처음 누를 때만 — 첫 화면에서 57KB 덜 받음)
+const loadScript = (src) => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.append(s); });
+$("#scan-btn").addEventListener("click", async () => {
+  const video = $("#cam"), canvas = $("#cam-canvas");
+  if (scanning) { stopScan(); return; }
+  try {
+    if (!window.jsQR) await loadScript("vendor/jsqr/jsQR.js").catch(() => {});
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = stream; video.hidden = false; await video.play(); scanning = true;
+    $("#scan-btn").textContent = "그만 찍기";
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const tick = () => {
+      if (!scanning) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const code = window.jsQR && jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+        if (code) { stopScan(); $("#bike-input").value = code.data; lookup(code.data); return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  } catch (err) {
+    $("#lookup-result").innerHTML = `<div class="result">카메라를 쓸 수 없어요(${err.name}). 번호를 직접 넣어 주세요.</div>`;
+  }
+});
+function stopScan() {
+  scanning = false;
+  const v = $("#cam");
+  if (v.srcObject) v.srcObject.getTracks().forEach((t) => t.stop());
+  v.hidden = true; $("#scan-btn").textContent = "QR 로 찍기";
+}
+
+// ── 구조대 (이 기기에 남기고, 서버가 있으면 정비 쪽으로 보냄)
+function rescueLog() { try { return JSON.parse(localStorage.getItem("rescue") || "[]"); } catch { return []; } }
+window.rescueSave = async (bike, verdict) => {
+  const log = rescueLog();
+  log.unshift({ bike, verdict, at: new Date().toLocaleString("ko-KR"), day: state.day });
+  try { localStorage.setItem("rescue", JSON.stringify(log.slice(0, 200))); } catch {}
+  renderRescue();
+  // 서버가 있으면 정비 쪽으로 보낸다. 없으면(정적 호스팅·오프라인) 이 기기에만 남는다.
+  let sent = "";
+  const day = state.day === "live" ? kstToday() : state.day;
+  try {
+    if (sbOn()) {   // 어디서든 → Supabase
+      const r = await sbInsert("rescue", { bike, verdict, day });
+      if (r.ok) { const c = (await sbChecked(bike))[bike] || {}; sent = ` 지금까지 ${Object.values(c).reduce((a, b) => a + b, 0)}명이 이 자전거를 확인했어요.`; loadChecked(); }
+    } else {
+      const r = await fetch("api/rescue", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bike, verdict, day }) });
+      if (r.ok) { const j = await r.json(); sent = ` 지금까지 ${j.count}명이 이 자전거를 확인했어요.`; loadChecked(); }
+    }
+  } catch {}
+  toast(`고마워요! ${bike} 를 "${verdict}" 로 기록했어요.${sent}`);
+};
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg; t.setAttribute("role", "status");   // 화면 읽기 프로그램이 읽어 줌
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add("out"), 2900); setTimeout(() => t.remove(), 3250);
+}
+function renderRescue() {
+  if (!state.morning) return;
+  const done = new Set(rescueLog().filter((x) => x.day === state.day).map((x) => x.bike));
+  let todo = state.morning.bikes.filter((b) => !done.has(b.bike));
+  const focused = !!state.focusBike;
+  if (state.focusBike) {   // 게시물의 '3초 확인' 으로 온 자전거를 맨 앞에
+    const f = todo.find((b) => b.bike === state.focusBike);
+    if (f) todo = [f, ...todo.filter((b) => b !== f)];
+    state.focusBike = null;
+  }
+  const far = (b) => (here && state.stations[b.station] ? meters(here, state.stations[b.station]) : null);
+  if (here && !focused) todo = todo.slice().sort((a, b) => (far(a) ?? 1e12) - (far(b) ?? 1e12));   // 위치를 알면 가까운 순
+  const next = todo[0];
+  const away = (b) => (far(b) == null ? "" : far(b) < 1000 ? ` · ${Math.round(far(b))}m` : ` · ${(far(b) / 1000).toFixed(1)}km`);
+  $("#rescue-card").innerHTML = next
+    ? `<div class="result warn"><span class="tag ${next.level}">연쇄 ${next.chain}명</span><h2 style="margin-top:12px">${esc(next.bike)}<span class="dist">${away(next)}</span></h2>` +
+      `<p class="station">${esc(next.station_name)} · 서로 다른 ${next.chain}명이 바로 반납</p>${VERDICTS(next.bike)}</div>`
+    : `<div class="result ok"><span class="icon" aria-hidden="true">✓</span><h2>오늘 목록을 다 확인했어요!</h2></div>`;
+  if (next && todo.length > 1)
+    $("#rescue-card").insertAdjacentHTML("beforeend", `<h2>그다음</h2><div class="card list"><ul class="rows">` +
+      todo.slice(1, 4).map((b) => `<li><span class="ico ${b.level}">${BIKE_SVG}</span><div><b>${esc(b.bike)}</b><span class="s">${esc(b.station_name)}</span></div>` +
+        `<span class="muted">${away(b).replace(" · ", "")}</span></li>`).join("") + `</ul></div>`);
+  $("#rescue-log").innerHTML = rescueLog().slice(0, 20).map((x) => {
+    const fine = x.verdict === "멀쩡함";
+    return `<li><span class="ico ${fine ? "ok" : "빨강"}">${fine ? "✓" : "✕"}</span><div><b>${esc(x.bike)}</b><span class="s">${esc(x.at)}</span></div>` +
+      `<span class="n ${fine ? "ok" : "빨강"}">${esc(x.verdict)}</span></li>`;
+  }).join("") || `<li><div><span class="s">아직 없어요. 위에서 한 번 눌러 보세요.</span></div></li>`;
+}
+
+// ── 시연
+let replay = null, timer = null, rmap = null, rlayer = null;
+const COLORS = { "경보": "#FF5C2E", "막을 수 있던 헛걸음": "#F3F1EC", "고장 신고": "#7C9BFF" };   // 어두운 재생 판 위: 신호 · 흰 점 · 파랑 (docs/brand.md)
+function flash(e) {
+  if (!rmap) return;
+  const s = state.stations[e.station] || (e.type === "고장 신고" && lastStation[e.bike] && state.stations[lastStation[e.bike]]);
+  if (!s) return;
+  const m = L.circleMarker([s.lat, s.lon], { radius: e.type === "경보" ? 9 : 7, color: COLORS[e.type], weight: 2, fillOpacity: 0.6 }).addTo(rlayer);
+  let life = 30;   // 3초에 걸쳐 흐려짐
+  const fade = setInterval(() => { life -= 1; m.setStyle({ opacity: life / 30, fillOpacity: 0.6 * life / 30 }); if (life <= 0) { clearInterval(fade); m.remove(); } }, 100);
+}
+const lastStation = {};
+async function startReplay() {
+  if (!replay) replay = await getJSON("data/replay_2026-06-15.json");
+  if (!rmap && typeof L !== "undefined") {
+    rmap = baseMap("replay-map", { zoomControl: false });
+    rlayer = L.layerGroup().addTo(rmap);
+  }
+  if (timer) { clearInterval(timer); timer = null; $("#play").textContent = "▶ 이어서 재생"; return; }
+  let clock = 0, i = 0;
+  const c = { 헛대여: 0, 경보: 0, "막을 수 있던 헛걸음": 0, "고장 신고": 0 };
+  const feed = $("#replay-feed"); feed.innerHTML = "";
+  const secs = (e) => e.s;   // 그날 0시부터 초 (다음 날 신고는 86400 넘음)
+  $("#play").textContent = "❚❚ 멈추기";
+  timer = setInterval(() => {
+    clock += +$("#speed").value / 10;
+    while (i < replay.events.length && secs(replay.events[i]) <= clock) {
+      const e = replay.events[i++];
+      c[e.type] = (c[e.type] || 0) + 1;
+      if (e.station) lastStation[e.bike] = e.station;
+      if (e.type !== "헛대여") flash(e);
+      if (e.type !== "헛대여") {
+        const s = state.stations[e.station];
+        const text = e.type === "고장 신고" ? `${e.t} 고장 신고 들어옴 — ${e.bike} (${e.kind}) · 우리 경보는 이미 울렸음`
+          : e.type === "경보" ? `${e.t} 경보 — ${e.bike} 서로 다른 ${e.chain}명 연속 (${s ? s.name : e.station})`
+          : `${e.t} 막을 수 있던 헛걸음 — ${e.bike} (${s ? s.name : e.station})`;
+        feed.insertAdjacentHTML("afterbegin", `<li class="${e.type.split(" ")[0]}">${text}</li>`);
+      }
+    }
+    const m = Math.floor((clock % 3600) / 60);
+    $("#clock").textContent = (clock >= 86400 ? "다음 날 " : "") + `${String(Math.floor(clock / 3600) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    $("#c-dud").textContent = c["헛대여"] + c["경보"] + c["막을 수 있던 헛걸음"];
+    $("#c-alarm").textContent = c["경보"];
+    $("#c-prev").textContent = c["막을 수 있던 헛걸음"];
+    $("#c-fault").textContent = c["고장 신고"];
+    if (i >= replay.events.length) { clearInterval(timer); timer = null; $("#play").textContent = "↻ 처음부터 다시"; }
+  }, 100);
+}
+$("#play").addEventListener("click", startReplay);
+
+// 처음 보여 줄 날: 주소에 ?day= 가 있으면 그날, 운영 중이면(최근 3일 안 목록) 가장 새 목록, 아니면 시연 날짜(6/15)
+function defaultDay(days) {
+  const want = new URLSearchParams(location.search).get("day");
+  if (want && days.includes(want)) return want;
+  const latest = days[days.length - 1];
+  const fresh = latest && Date.now() - new Date(latest + "T00:00:00+09:00").getTime() < 3 * 86400e3;
+  return fresh ? latest : days.includes("2026-06-15") ? "2026-06-15" : latest;
+}
+
+// ── 시작
+(async () => {
+  // 서로 기다릴 필요 없는 자료는 한꺼번에 받기 시작한다 — 전엔 12번을 하나씩 차례로 받아 느린 4G 에서 첫 숫자까지 8.5초 걸렸다(2026-10-06)
+  const liveP = getLive();
+  const stationsP = getJSON("data/stations.json");
+  const opsLocalP = getJSON("data/ops/index.json").catch(() => null);
+  const opsCloudP = getJSON(`${CLOUD.data}ops/index.json?t=${Date.now()}`).catch(() => []);
+  const sbDaysP = sbOpsDays().catch(() => []);
+  const morningP = getJSON("data/morning/index.json");
+  const sbScoresP = sbScores().catch(() => ({}));
+  const routeValueP = getJSON("data/route_value.json").catch(() => null);   // 정비 동선 값 표
+  const busyDemoP = getJSON("data/busy.json").catch(() => ({}));   // 대여소 시간대별 대여 — 시연 날짜는 그때 자료(6/15 앞 7일)
+  const list = await stationsP;
+  list.forEach((s) => { s.name = s.name.trim(); state.stations[s.id] = s; });   // 원본 이름 앞에 빈칸이 붙은 곳이 많다
+  // 시연 목록(data/morning, 월별 파일) + 운영 목록(data/ops, 매일 06:10 — 서버에만 있음)
+  // 운영 목록: 맥 서버에 있으면 거기, 없으면(밖·GitHub Pages) GitHub 가 매일 06:10 만든 것
+  state.opsBase = "data/ops/";
+  let ops = await opsLocalP;
+  if (!ops || !ops.length) { ops = await opsCloudP; state.opsBase = `${CLOUD.data}ops/`; }
+  const scoresP = getJSON(`${state.opsBase}scores.json`).catch(() => null);   // 운영 중에만 있음
+  const busyOpsP = getJSON(`${state.opsBase}busy.json`).catch(() => null);   // 운영(실시간·매일 목록)은 서버가 지난 7일로 쓴 것
+  state.sbDays = new Set(await sbDaysP);   // Supabase 가 매일 06:10 에 만든 목록
+  state.ops = new Set([...ops, ...state.sbDays]);
+  ops = [...state.ops];
+  const days = [...new Set([...(await morningP), ...ops])].sort();
+  Object.assign(state.scores, (await scoresP) || {}, await sbScoresP);   // Supabase 채점이 있으면 그것으로
+  state.routeValue = await routeValueP;
+  // 붐빔 표(약 140KB)는 정비 동선에만 쓰므로 기다리지 않는다 — 도착하면 동선만 다시 (첫 화면이 그만큼 빨리)
+  Promise.all([busyDemoP, busyOpsP]).then(([demo, ops]) => { state.busyDemo = demo; state.busyOps = ops; if (state.morning) renderLists(); });
+  const live = await liveP;
+  const pick = live && !new URLSearchParams(location.search).get("day") ? "live" : defaultDay(days);
+  // 지금 → 매일 아침 목록(최근 것부터) → 시연 자료. 이름은 사람이 읽는 말로, 값은 날짜 그대로
+  const label = (d) => state.ops.has(d) ? (d === kstToday() ? `오늘 아침 (${koDay(d)})` : `${koDay(d)} 아침`) : `${d} (시연)`;
+  const ordered = [...days.filter((d) => state.ops.has(d)).reverse(), ...days.filter((d) => !state.ops.has(d)).reverse()];
+  $("#day").innerHTML = (live ? `<option value="live" ${pick === "live" ? "selected" : ""}>지금 (실시간)</option>` : "") +
+    ordered.map((d) => `<option value="${d}" ${d === pick ? "selected" : ""}>${label(d)}</option>`).join("");
+  $("#day").addEventListener("change", (e) => loadDay(e.target.value));
+  await loadDay($("#day").value, live);   // 실시간 목록은 위에서 받은 것 그대로 (두 번 받지 않게)
+  stationOptions(null);
+  openStationLink();   // 대여소 QR 로 들어왔으면 그 대여소를 맨 위에
+  flushQueue();
+  if ("serviceWorker" in navigator && !window.Capacitor) navigator.serviceWorker.register("sw.js").catch(() => {});   // 안드로이드 앱은 파일이 앱 안에 있어 필요 없음
+})();
+
+// ── 현장 조사 (검증용): 보이는 그대로 기록 → 서버, 안 되면 폰에 모아 두고 다음에 보냄
+const SURVEY_STATUS = ["멀쩡함", "타이어", "체인·기어", "안장·핸들", "브레이크", "기타 고장"];
+function queue() { try { return JSON.parse(localStorage.getItem("survey_queue") || "[]"); } catch { return []; } }
+function setQueue(q) { try { localStorage.setItem("survey_queue", JSON.stringify(q)); return true; } catch { return false; } }
+// Supabase 로 한 건: 사진 먼저 올리고(안 되면 사진만 빼고) 기록. 돌려주는 값은 fetch 응답처럼 {ok, status}
+async function sbSurvey(rec) {
+  const bike = normBike(rec.bike);
+  if (!bike) return { ok: false, status: 400 };
+  let photo = null;
+  if (rec.photo) { try { photo = await sbPhoto(rec.photo); } catch (e) { if (!e.status) throw e; } }   // 네트워크 문제면 다음에 통째로
+  return sbInsert("survey", { at: rec.at || new Date().toISOString(), station: rec.station ? String(rec.station).slice(0, 10) : null, bike,
+    status: rec.status, note: rec.note ? String(rec.note).slice(0, 200) : null, lat: rec.lat ?? null, lon: rec.lon ?? null, photo });
+}
+async function flushQueue() {
+  const q = queue(); const left = [];
+  for (const rec of q) {
+    try {
+      if (sbOn()) {
+        const r = await sbSurvey(rec);
+        if (!r.ok && ![400, 409, 422].includes(r.status)) left.push(rec);   // 잘못된 기록은 버리고, 서버 문제면 다음에 다시
+        continue;
+      }
+      let r = await fetch("api/survey", { method: "POST", body: JSON.stringify(rec) });
+      if (r.status === 400 && rec.photo) {   // 사진이 거절돼도 본 기록은 살린다
+        const { photo, ...plain } = rec;
+        r = await fetch("api/survey", { method: "POST", body: JSON.stringify(plain) });
+      }
+      if (!r.ok && r.status !== 400) left.push(rec);   // 400 = 잘못된 기록 → 버림, 그 밖(서버 문제) → 다음에 다시
+    } catch { left.push(rec); }
+  }
+  setQueue(left);
+  return left.length;
+}
+function stationOptions(center, filter = "") {
+  const list = Object.values(state.stations).filter((s) => !filter || s.name.includes(filter));
+  if (center) list.sort((a, b) => dist(a, center) - dist(b, center));
+  else list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  $("#survey-station").innerHTML = list.slice(0, center ? 30 : 3000)
+    .map((s) => `<option value="${s.id}">${s.name}${center ? ` · ${Math.round(dist(s, center))}m` : ""}</option>`).join("");
+}
+const dist = (a, b) => meters(a, b);
+$("#station-filter").addEventListener("input", (e) => stationOptions(here, e.target.value.trim()));
+$("#near-btn").addEventListener("click", () =>
+  locate().then(() => stationOptions(here, $("#station-filter").value.trim()), () => toast("위치를 쓸 수 없어요(아이폰은 https 주소에서만). 이름으로 찾아 주세요.")));
+$("#rescue-near").addEventListener("click", () => locate().then(renderRescue, noLocation));
+$("#route-here").addEventListener("click", () => locate().then(renderLists, noLocation));
+$("#shift").addEventListener("change", () => renderLists());
+// 사진(선택): 폰에서 긴 변 1280px JPEG 로 줄여서 보낸다 (원본 몇 MB → 약 150KB). 번호판·얼굴이 안 나오게 — 절차 문서.
+let surveyPhoto = null;
+async function shrink(file, max = 1280, q = 0.7) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", q);
+  } finally { URL.revokeObjectURL(url); }
+}
+function setSurveyPhoto(dataUrl) {
+  surveyPhoto = dataUrl;
+  $("#survey-thumb").hidden = !dataUrl;
+  if (dataUrl) $("#survey-thumb").src = dataUrl; else $("#survey-thumb").removeAttribute("src");
+  $("#survey-photo-label").textContent = dataUrl ? `사진 붙음 (${Math.round(dataUrl.length * 0.75 / 1024)}KB) — 다시 누르면 바꿈` : "사진 붙이기 (선택)";
+}
+$("#survey-photo").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  try { setSurveyPhoto(await shrink(f)); } catch { setSurveyPhoto(null); toast("사진을 읽지 못했어요. 다른 사진으로 해 주세요."); }
+  e.target.value = "";
+});
+
+// 내 대여소 — 자주 가는 대여소(5곳까지)를 이 폰에만 저장해 두고, 지금 그곳에 서 있는 의심 자전거 번호를 바로 보여 준다(가기 전에 피할 번호).
+// 지난(시연) 자료를 보고 있으면 그 날 아침 목록 기준. 번호를 누르면 위에서 바로 조회.
+const MY_KEY = "my_stations", MY_MAX = 5;
+let mine = (() => { try { return (JSON.parse(localStorage.getItem(MY_KEY) || "[]") || []).filter((x) => typeof x === "string").slice(0, MY_MAX); } catch { return []; } })();
+const saveMine = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(mine)); } catch {} };
+function renderMine() {
+  const bikes = (state.morning && state.morning.bikes) || [];
+  $("#my-when").textContent = state.day === "live" ? "지금 피할 번호" : isPast() ? `${koDay(state.day)} 아침 목록 기준` : "오늘 아침 목록 기준";
+  $("#my-list").innerHTML = mine.length ? mine.map((id) => {
+    const st = state.stations[id] || {}, bad = bikes.filter((b) => b.station === id).sort((a, b) => (b.p_next ?? b.chain) - (a.p_next ?? a.chain));
+    const red = bad.some((b) => b.level === "빨강");
+    return `<li class="my-row"><span class="ico ${bad.length ? (red ? "빨강" : "노랑") : "ok"}">${BIKE_SVG}</span>` +
+      `<div><b>${esc(st.name || id)}</b><span class="s">${esc(st.gu || "")}${here && st.lat ? ` · ${Math.round(meters(here, st))}m` : ""}</span></div>` +
+      `<span class="n ${bad.length ? (red ? "빨강" : "노랑") : "ok"}">${bad.length ? `${bad.length}대 피하기` : "괜찮아요"}</span>` +
+      `<button type="button" class="link my-x" data-unpin="${esc(id)}" aria-label="${esc(st.name || id)} 내 대여소에서 빼기">×</button>` +
+      (bad.length ? `<div class="my-bikes">${bad.map((b) => `<button type="button" class="chip ${b.level}" data-bike="${esc(b.bike)}" aria-label="${esc(b.bike)} 피하기, 자세히">${esc(b.bike)}</button>`).join("")}</div>` : "") + `</li>`;
+  }).join("") : `<li class="my-empty">자주 가는 대여소를 넣어 두면, 가기 전에 그곳의 고장 의심 자전거 번호를 바로 보여 줘요.</li>`;
+}
+function myAdd(id) {
+  if (!state.stations[id]) return;
+  if (!mine.includes(id)) { if (mine.length >= MY_MAX) mine.shift(); mine.push(id); saveMine(); }
+  $("#my-q").value = ""; $("#my-sugg").innerHTML = ""; renderMine();
+  toast(`${state.stations[id].name.trim()} — 내 대여소에 넣었어요.`);
+}
+function mySuggest(list) {
+  $("#my-sugg").innerHTML = list.map((st) => `<li><div><b>${esc(st.name)}</b><span class="s">${esc(st.gu || "")}${here && st.lat ? ` · ${Math.round(meters(here, st))}m` : ""}</span></div>` +
+    `<button type="button" class="soft sm" data-add="${esc(st.id)}" aria-label="${esc(st.name)} 내 대여소에 넣기">넣기</button></li>`).join("");
+}
+$("#my-q").addEventListener("input", (e) => {
+  const q = e.target.value.trim().replace(/\s+/g, "");
+  mySuggest(q ? Object.values(state.stations).filter((st) => st.name && st.name.replace(/\s+/g, "").includes(q) && !mine.includes(st.id)).slice(0, 6) : []);
+});
+$("#my-near").addEventListener("click", async () => {
+  try { await locate(); } catch { toast("위치를 쓸 수 없어요 — 이름으로 찾아 주세요."); return; }
+  mySuggest(Object.values(state.stations).filter((st) => st.lat && !mine.includes(st.id)).sort((a, b) => meters(here, a) - meters(here, b)).slice(0, 5));
+});
+$("#my-sugg").addEventListener("click", (e) => { const id = e.target.closest("[data-add]")?.dataset.add; if (id) myAdd(id); });
+$("#my-list").addEventListener("click", (e) => {
+  const x = e.target.closest("[data-unpin]");
+  if (x) { mine = mine.filter((id) => id !== x.dataset.unpin); saveMine(); renderMine(); return; }
+  const b = e.target.closest("[data-bike]");
+  if (b) { $("#bike-input").value = b.dataset.bike; lookup(b.dataset.bike); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});
+
+// 대여소 QR(?s=02720) — 대여소 기둥 스티커를 스캔하면 그 대여소에 지금 서 있는 의심 자전거 번호를 바로 보여 준다(조회 탭 맨 위).
+// 번호를 누르면 아래에서 바로 조회, '내 대여소에 넣기' 로 계속 볼 수 있다. 주소는 5자리 대여소 번호만(다른 값은 무시).
+function stationFromUrl() {
+  const raw = new URLSearchParams(location.search).get("s");
+  return raw && /^\d{3,5}$/.test(raw) ? raw.padStart(5, "0") : null;
+}
+function renderStationCard(id) {
+  const st = state.stations[id], box = $("#st-card");
+  if (!st || !box) return;
+  const bikes = ((state.morning && state.morning.bikes) || []).filter((b) => b.station === id).sort((a, b) => (b.p_next ?? b.chain) - (a.p_next ?? a.chain));
+  const when = state.day === "live" ? "지금 이 대여소에 서 있는" : isPast() ? `${koDay(state.day)} 아침 목록 기준 (시연 자료)` : "오늘 아침 목록 기준";
+  const added = mine.includes(id);
+  box.innerHTML = `<div class="result ${bikes.length ? "warn" : "ok"} st-card"><span class="icon" aria-hidden="true">${bikes.length ? "⚠︎" : "✓"}</span>` +
+    `<p class="st-name">${esc(st.name)} <span>${esc(st.gu || "")}</span></p>` +
+    `<p class="st-when">${when}</p>` +
+    `<h2>${bikes.length ? `피할 자전거<br>${bikes.length}대 있어요` : `고장 의심 자전거가<br>없어요`}</h2>` +
+    (bikes.length ? `<div class="my-bikes">${bikes.map((b) => `<button type="button" class="chip ${b.level}" data-bike="${esc(b.bike)}" aria-label="${esc(b.bike)} 피하기, 자세히">${esc(b.bike)}</button>`).join("")}</div>` +
+      `<p class="st-help">번호를 누르면 아래에서 자세히 보여 줘요. 이 번호만 피하고 옆 자전거를 타세요.</p>` : `<p class="st-help">서로 다른 사람이 연달아 빌리자마자 반납한 자전거가 없어요. 다른 대여소도 확인하려면 아래에서 번호를 넣어 보세요.</p>`) +
+    `<button type="button" class="secondary st-add" data-add-st="${esc(id)}" ${added ? "disabled" : ""}>${added ? "내 대여소에 있어요" : "내 대여소에 넣기"}</button></div>`;
+}
+$("#st-card").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-bike]");
+  if (b) { $("#bike-input").value = b.dataset.bike; lookup(b.dataset.bike); $("#lookup-result").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  const a = e.target.closest("[data-add-st]");
+  if (a) { myAdd(a.dataset.addSt); renderStationCard(a.dataset.addSt); }
+});
+function openStationLink() {
+  const id = stationFromUrl();
+  if (!id || !state.stations[id]) return;
+  showTab("lookup"); renderStationCard(id);
+}
+
+// 오늘 갈 곳 — 눈 가리고(docs/field_protocol.md): 경보 대여소 3곳 + 그 근처(1.5km 안) 경보 없는 대여소 2곳을 섞어 이름만.
+// 어느 곳이 경보인지 숨겨야 '고장일 거야' 하는 선입견 없이 본다. 고른 목록은 이 폰에만 남김(분석 땐 조사 시각의 실시간 기록으로 맞춤).
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function renderPlan(ids) {
+  $("#plan-list").innerHTML = ids.map((id, i) => { const st = state.stations[id] || {};
+    return `<li><span class="n accent">${i + 1}</span><div><b>${esc(st.name || id)}</b><span class="s">${st.gu || ""}${here && st.lat ? ` · ${Math.round(meters(here, st))}m` : ""}</span></div>` +
+      `<button class="soft sm" type="button" data-plan="${id}">여기 조사</button></li>`; }).join("");
+}
+$("#plan-btn").addEventListener("click", async () => {
+  if (!state.morning || state.day !== "live") { toast("'지금 (실시간)' 목록이 있을 때 골라요."); return; }
+  await locate().catch(() => {});
+  const st = (id) => state.stations[id];
+  const alarm = groupByStation(state.morning.bikes).map(([id]) => id).filter((id) => st(id) && st(id).lat);
+  if (!alarm.length) { toast("지금은 경보 대여소가 없어요."); return; }
+  const from = here || st(alarm[0]);
+  const pickA = alarm.map((id) => [id, meters(from, st(id))]).sort((a, b) => a[1] - b[1]).slice(0, 3).map((x) => x[0]);
+  const isAlarm = new Set(alarm);
+  const near = Object.values(state.stations).filter((s) => s.lat && !isAlarm.has(s.id) && pickA.some((a) => meters(s, st(a)) < 1500));
+  const pick = shuffle([...pickA, ...shuffle(near).slice(0, 2).map((s) => s.id)]);
+  try { localStorage.setItem("survey_plan", JSON.stringify({ at: Date.now(), ids: pick })); } catch {}
+  renderPlan(pick);
+});
+$("#plan-list").addEventListener("click", (e) => {
+  const id = e.target.closest("[data-plan]")?.dataset.plan; if (!id) return;
+  stationOptions(null); $("#survey-station").value = id; $("#survey-bike").focus();
+  toast(`${(state.stations[id] || {}).name || id} — 서 있는 자전거를 모두 하나씩 남겨 주세요.`);
+});
+try { const pl = JSON.parse(localStorage.getItem("survey_plan") || "null"); if (pl && Date.now() - pl.at < 12 * 3600e3) setTimeout(() => renderPlan(pl.ids), 0); } catch {}
+$("#survey-choices").innerHTML = SURVEY_STATUS.map((st) => `<button class="${st === "멀쩡함" ? "fine" : "bad"}" data-st="${st}">${st}</button>`).join("");
+$("#survey-form").addEventListener("submit", (e) => e.preventDefault());
+$("#survey-choices").addEventListener("click", async (e) => {
+  const st = e.target.dataset.st; if (!st) return;
+  const bike = $("#survey-bike").value.trim();
+  if (!/SPB\s*-?\s*\d{3,6}/i.test(bike)) return toast("자전거 번호(SPB-00000)를 먼저 넣어 주세요.");
+  const rec = { station: $("#survey-station").value, bike, status: st, note: $("#survey-note").value, lat: here && here.lat, lon: here && here.lon,
+                at: new Date().toISOString() };
+  if (surveyPhoto) rec.photo = surveyPhoto;
+  let dropped = false;
+  if (!setQueue([...queue(), rec]) && rec.photo) {   // 폰 저장 공간이 차면 사진만 빼고라도 기록은 남긴다
+    delete rec.photo; dropped = true; setQueue([...queue(), rec]);
+  }
+  const left = await flushQueue();
+  const n = (+(localStorage.getItem("survey_n") || 0)) + 1;
+  try { localStorage.setItem("survey_n", n); } catch {}
+  $("#survey-count").textContent = `오늘 이 기기로 ${n}대 기록${left ? ` (서버에 못 보낸 ${left}건은 폰에 보관 중)` : ""}`;
+  $("#survey-bike").value = ""; $("#survey-note").value = ""; setSurveyPhoto(null);
+  toast(`${bike.toUpperCase()} → ${st}${rec.photo ? " (사진 포함)" : ""}${dropped ? " — 폰 저장 공간이 모자라 사진은 빼고 보관했어요" : ""}`);
+});
