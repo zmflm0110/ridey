@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ridey_app/widgets/ridey_ui.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/habits/lookup_habits.dart';
 
@@ -62,25 +63,29 @@ class _LookupHabitsPageState extends State<LookupHabitsPage> {
           }
           final events = snapshot.data ?? const <LookupEvent>[];
           return ListView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             children: [
-              Text(
-                '최근 14일 동안의 조회예요. 시각과 약 500m 격자 위치만 이 폰에 저장돼요.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: context.ridey.muted,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '최근 14일 동안의 조회예요. 시각과 약 500m 격자 위치만 이 폰에 저장돼요.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontSize: 15,
+                    color: context.ridey.muted,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               if (events.isEmpty)
                 const _EmptyHabits()
               else ...[
-                for (final event in events.reversed)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _HabitTile(event: event),
-                  ),
-                const SizedBox(height: 12),
-                OutlinedButton(onPressed: _clear, child: const Text('기록 지우기')),
+                RideyListCard(
+                  children: [
+                    for (final event in events.reversed) _HabitTile(event: event),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                RideyButton.secondary(label: '기록 지우기', onPressed: _clear),
               ],
             ],
           );
@@ -97,36 +102,23 @@ class _HabitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final where = event.latitude == null || event.longitude == null
         ? '위치 없음'
         : '${event.latitude!.toStringAsFixed(3)}, ${event.longitude!.toStringAsFixed(3)}';
     final subject = event.subject;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border.all(color: context.ridey.line),
-        borderRadius: BorderRadius.circular(18),
+    return RideyRow(
+      leading: RideyIco(
+        icon: event.kind == LookupKind.station
+            ? Icons.location_on_outlined
+            : Icons.search_rounded,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(lookupKindLabel(event.kind), style: theme.textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Text(
-            [
-              formatLookupTime(event.at),
-              if (subject != null && subject.isNotEmpty) subject,
-              where,
-            ].join(' · '),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: context.ridey.muted,
-            ),
-          ),
-        ],
-      ),
+      title: lookupKindLabel(event.kind),
+      subtitle: [
+        formatLookupTime(event.at),
+        if (subject != null && subject.isNotEmpty) subject,
+        where,
+      ].join(' · '),
     );
   }
 }
@@ -136,13 +128,7 @@ class _EmptyHabits extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: context.ridey.line),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return RideyCard(
       child: Text(
         '아직 조회 기록이 없어요. 번호를 확인하거나 대여소를 열면 여기에 남아요.',
         style: Theme.of(

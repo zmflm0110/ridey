@@ -9,7 +9,8 @@ import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
-import 'package:ridey_app/widgets/liquid_navigation.dart';
+import 'package:ridey_app/widgets/ridey_tab_bar.dart';
+import 'package:ridey_app/widgets/ridey_ui.dart';
 
 class RideyApp extends StatefulWidget {
   const RideyApp({
@@ -88,35 +89,44 @@ class _RideyShellState extends State<RideyShell> {
   var _index = 0;
 
   static const _navigationItems = [
-    RideyNavigationItem('이용하기', Icons.directions_bike_outlined),
-    RideyNavigationItem('번호 확인', Icons.qr_code_scanner_outlined),
-    RideyNavigationItem('대여소', Icons.location_on_outlined),
+    RideyNavigationItem('이용하기', Icons.home_outlined, Icons.home_rounded),
+    RideyNavigationItem('번호 확인', Icons.search_rounded),
+    RideyNavigationItem('대여소', Icons.location_on_outlined, Icons.location_on),
     RideyNavigationItem('더보기', Icons.more_horiz_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final reducedMotion = MediaQuery.disableAnimationsOf(context);
-
     return Scaffold(
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const _AppHeader(),
             Expanded(
+              // A tab rises 12px and fades in (web `.tab.on`); the old one just fades.
               child: AnimatedSwitcher(
-                duration: reducedMotion
-                    ? Duration.zero
-                    : const Duration(milliseconds: 260),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
+                duration: RideyMotion.of(context, const Duration(milliseconds: 450)),
+                reverseDuration: RideyMotion.of(context, const Duration(milliseconds: 150)),
+                switchInCurve: RideyMotion.ease,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0, .016),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
                 child: _pages[_index],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: LiquidNavigation(
+      bottomNavigationBar: RideyTabBar(
         index: _index,
         items: _navigationItems,
         onChanged: (index) => setState(() => _index = index),
@@ -156,8 +166,8 @@ class _AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 14, 24, 10),
-      child: Row(children: [_Wordmark()]),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(children: [RideyWordmark(size: 22)]),
     );
   }
 }
@@ -167,9 +177,7 @@ class _StartupPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator.adaptive()),
-    );
+    return const Scaffold(body: Center(child: RideyWordmark(size: 30)));
   }
 }
 
@@ -193,113 +201,77 @@ class _MorePage extends StatelessWidget {
     };
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 34, 24, 130),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        Text('더보기', style: theme.textTheme.displayLarge),
-        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text('더보기', style: theme.textTheme.displayLarge),
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '화면 모드, 조회 기록, 알림을 여기서 관리해요.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: context.ridey.muted,
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        RideyListCard(
+          children: [
+            RideyRow(
+              leading: RideyIco(
+                icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              ),
+              title: '화면 모드',
+              subtitle: isDark ? '어두운 화면 사용 중' : '밝은 화면 사용 중',
+              trailing: Switch(
+                value: isDark,
+                onChanged: (value) {
+                  onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
+                },
+              ),
+            ),
+            RideyRow(
+              leading: const RideyIco(icon: Icons.history_rounded),
+              title: '조회 기록',
+              subtitle: '최근 14일, 이 폰에만 저장돼요.',
+              trailing: Icon(Icons.chevron_right_rounded, color: context.ridey.muted),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LookupHabitsPage(),
+                  ),
+                );
+              },
+            ),
+            RideyRow(
+              leading: const RideyIco(icon: Icons.notifications_none_rounded),
+              title: '알림',
+              subtitle: '자주 확인하는 시간대에만, 하루 한 번',
+              trailing: Icon(Icons.chevron_right_rounded, color: context.ridey.muted),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotificationSettingsPage(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 28),
         Text(
-          '화면 모드, 조회 기록, 알림을 여기서 관리해요.',
-          style: theme.textTheme.bodyLarge?.copyWith(
+          '자료: 서울 열린데이터광장 따릉이 대여이력·대여소 정보. '
+          '경보 규칙: 서로 다른 사람이 3분·300m 안 반납을 2번 이상 이어서 함.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: 12,
             color: context.ridey.muted,
           ),
         ),
-        const SizedBox(height: 36),
-        Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: Icon(
-              isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-            ),
-            title: const Text('화면 모드'),
-            subtitle: Text(isDark ? '어두운 화면 사용 중' : '밝은 화면 사용 중'),
-            trailing: Switch(
-              value: isDark,
-              onChanged: (value) {
-                onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: const Icon(Icons.history_rounded),
-            title: const Text('조회 기록'),
-            subtitle: const Text('최근 14일, 이 폰에만 저장돼요.'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const LookupHabitsPage(),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: const Icon(Icons.notifications_none_rounded),
-            title: const Text('알림'),
-            subtitle: const Text('자주 확인하는 시간대에만, 하루 한 번'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const NotificationSettingsPage(),
-                ),
-              );
-            },
-          ),
-        ),
       ],
-    );
-  }
-}
-
-class _Wordmark extends StatelessWidget {
-  const _Wordmark();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return ExcludeSemantics(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            'RIDEY',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onSurface,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.3,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 4),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: context.ridey.signal,
-                shape: BoxShape.circle,
-              ),
-              child: const SizedBox(width: 7, height: 7),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

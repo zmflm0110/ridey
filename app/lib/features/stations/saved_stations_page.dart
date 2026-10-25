@@ -9,6 +9,7 @@ import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
+import 'package:ridey_app/widgets/ridey_ui.dart';
 
 class SavedStationsDestination extends StatefulWidget {
   const SavedStationsDestination({
@@ -248,7 +249,7 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: widget.showAppBar ? AppBar(title: const Text('내 대여소')) : null,
+      appBar: widget.showAppBar ? AppBar() : null,
       body: FutureBuilder<void>(
         future: _loading,
         builder: (context, loading) {
@@ -306,80 +307,104 @@ class _Content extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final savedStations = saved
         .map((id) => stations.where((station) => station.id == id).firstOrNull)
         .whereType<BikeStation>()
         .toList(growable: false);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        Text('내 대여소', style: context.rideyPageTitle),
-        const SizedBox(height: 10),
-        Text(
-          '자주 가는 곳을 저장하면, 출발 전에 주의 번호를 바로 확인할 수 있어요.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text('내 대여소', style: context.rideyPageTitle),
         ),
-        const SizedBox(height: 28),
-        Text('저장한 대여소', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '자주 가는 곳을 저장하면, 출발 전에 피할 번호를 바로 볼 수 있어요.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontSize: 15,
+              color: context.ridey.muted,
+            ),
+          ),
+        ),
+        RideySectionTitle(
+          '저장한 대여소',
+          note: '${savedStations.length}/$savedStationsLimit곳',
+        ),
         if (savedStations.isEmpty)
           const _SavedStationsEmpty()
         else
-          ...savedStations.map(
-            (station) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _SavedStationCard(
-                station: station,
-                bikes: _bikesAt(snapshot.bikes, station.id),
-                updatedAt: updatedAt,
-                onRemove: () => onRemove(station),
+          RideyListCard(
+            children: [
+              for (final station in savedStations)
+                _SavedStationRow(
+                  station: station,
+                  bikes: _bikesAt(snapshot.bikes, station.id),
+                  updatedAt: updatedAt,
+                  onRemove: () => onRemove(station),
+                ),
+            ],
+          ),
+        const RideySectionTitle('대여소 추가'),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                onChanged: onSearch,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: '대여소 이름 (예: 망원역)',
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: context.ridey.muted,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(99),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(99),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(99),
+                    borderSide: BorderSide(
+                      color: theme.colorScheme.onSurface,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        const SizedBox(height: 34),
-        Text('대여소 추가', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
-        TextField(
-          onChanged: onSearch,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: '대여소 이름 (예: 망원역)',
-            prefixIcon: const Icon(Icons.search_rounded),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(color: context.ridey.line),
+            const SizedBox(width: 8),
+            RideyButton(
+              label: '가까운 곳',
+              icon: Icons.near_me_outlined,
+              compact: true,
+              busy: locating,
+              onPressed: onFindNearby,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(color: context.ridey.line),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: locating ? null : onFindNearby,
-          icon: locating
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                )
-              : const Icon(Icons.near_me_outlined),
-          label: const Text('가까운 대여소 찾기'),
+          ],
         ),
         if (message != null) ...[
-          const SizedBox(height: 14),
-          _Message(message: message!),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _Message(message: message!),
+          ),
         ],
         if (suggestions.isNotEmpty) ...[
           const SizedBox(height: 12),
-          ...suggestions.map(
-            (station) =>
+          RideyListCard(
+            key: ValueKey(suggestions.map((station) => station.id).join()),
+            children: [
+              for (final station in suggestions)
                 _SuggestionRow(station: station, onAdd: () => onAdd(station)),
+            ],
           ),
         ],
       ],
@@ -387,8 +412,8 @@ class _Content extends StatelessWidget {
   }
 }
 
-class _SavedStationCard extends StatelessWidget {
-  const _SavedStationCard({
+class _SavedStationRow extends StatelessWidget {
+  const _SavedStationRow({
     required this.station,
     required this.bikes,
     required this.updatedAt,
@@ -402,91 +427,89 @@ class _SavedStationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.ridey;
     final hasHigh = bikes.any((bike) => bike.isHighAlert);
-    final statusColor = bikes.isEmpty
-        ? context.ridey.calm
-        : hasHigh
-        ? context.ridey.signal
-        : context.ridey.signalText;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: context.ridey.line),
-        borderRadius: BorderRadius.circular(22),
+    return RideyRow(
+      leading: RideyIco(
+        icon: Icons.location_on_outlined,
+        tone: bikes.isEmpty
+            ? RideyTone.ok
+            : hasHigh
+            ? RideyTone.strong
+            : RideyTone.normal,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      title: station.name,
+      subtitle: station.district,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: .12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.directions_bike_outlined, color: statusColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      station.name,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      station.district,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: context.ridey.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: '${station.name} 내 대여소에서 빼기',
-                onPressed: onRemove,
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
+          if (bikes.isEmpty)
+            Text(
+              '현재 경보 없음',
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: c.calmText),
+            )
+          else
+            RideyNumber('${bikes.length}대 피하기', color: c.signalText),
+          IconButton(
+            tooltip: '${station.name} 내 대여소에서 빼기',
+            visualDensity: VisualDensity.compact,
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, size: 20),
           ),
-          const SizedBox(height: 16),
-          Text(
-            bikes.isEmpty ? '현재 경보 없음' : '${bikes.length}대 피하기',
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(color: statusColor),
-          ),
-          if (bikes.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
+        ],
+      ),
+      below: bikes.isEmpty
+          ? null
+          : Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: bikes
-                  .map(
-                    (bike) => ActionChip(
-                      label: Text(bike.bike),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => BikeDetailPage(
-                              bike: bike,
-                              updatedAt: updatedAt,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                  .toList(growable: false),
+              children: [
+                for (final bike in bikes)
+                  _BikeChip(
+                    bike: bike,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              BikeDetailPage(bike: bike, updatedAt: updatedAt),
+                        ),
+                      );
+                    },
+                  ),
+              ],
             ),
-          ],
-        ],
+    );
+  }
+}
+
+/// A bike number pill (web `.chip`): solid signal for a strong alert.
+class _BikeChip extends StatelessWidget {
+  const _BikeChip({required this.bike, required this.onTap});
+
+  final LiveBike bike;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ridey;
+    return RideyPressable(
+      onTap: onTap,
+      scale: .95,
+      semanticLabel: '${bike.bike} 자세히 보기',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: bike.isHighAlert ? c.signal : c.signalSoft,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: RideyNumber(
+          bike.bike,
+          size: 12,
+          color: bike.isHighAlert ? RideyColors.ink : c.signalText,
+        ),
       ),
     );
   }
@@ -500,11 +523,14 @@ class _SuggestionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      title: Text(station.name),
-      subtitle: Text(station.district),
-      trailing: TextButton(onPressed: onAdd, child: const Text('넣기')),
+    return RideyRow(
+      title: station.name,
+      subtitle: station.district,
+      trailing: RideyButton.secondary(
+        label: '넣기',
+        compact: true,
+        onPressed: onAdd,
+      ),
     );
   }
 }
@@ -514,13 +540,7 @@ class _SavedStationsEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(color: context.ridey.line),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return RideyCard(
       child: Text(
         '자주 가는 대여소를 넣어 두면, 가기 전에 그곳의 피할 번호를 바로 보여 줘요.',
         style: Theme.of(
@@ -540,9 +560,10 @@ class _Message extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       message,
-      style: Theme.of(
-        context,
-      ).textTheme.bodyMedium?.copyWith(color: context.ridey.calm),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: context.ridey.calmText,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -554,23 +575,30 @@ class _StationLoadFailure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_outlined, size: 40),
-            const SizedBox(height: 16),
-            Text(
-              '대여소 목록을 불러오지 못했어요.',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(onPressed: onRetry, child: const Text('다시 시도')),
-          ],
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      children: [
+        RideyCard(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const RideyIco(icon: Icons.cloud_off_outlined),
+              const SizedBox(height: 14),
+              Text(
+                '대여소 목록을 불러오지 못했어요.',
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
+              const SizedBox(height: 18),
+              RideyButton.secondary(
+                label: '다시 시도',
+                icon: Icons.refresh_rounded,
+                onPressed: onRetry,
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
