@@ -147,3 +147,93 @@ String formatDistance(double meters) {
   if (meters < 1000) return '${meters.round()}m';
   return '${(meters / 1000).toStringAsFixed(1)}km';
 }
+
+/// One suspect bike placed at its station, with distance when the user location is known.
+class NearbyBike {
+  const NearbyBike({
+    required this.bike,
+    required this.stationName,
+    this.latitude,
+    this.longitude,
+    this.meters,
+  });
+
+  final LiveBike bike;
+  final String stationName;
+  final double? latitude;
+  final double? longitude;
+  final double? meters;
+}
+
+String stationDisplayName(LiveBike bike, BikeStation? station) {
+  if (station != null && station.name.isNotEmpty) return station.name;
+  if (bike.stationName.isNotEmpty) return bike.stationName;
+  return bike.station;
+}
+
+/// Suspect bikes whose station is within [withinMeters] of the user, nearest first.
+List<NearbyBike> bikesNear({
+  required List<LiveBike> bikes,
+  required List<BikeStation> stations,
+  required double latitude,
+  required double longitude,
+  double withinMeters = nearbyAlertRadiusMeters,
+}) {
+  final byId = {for (final station in stations) station.id: station};
+  final nearby = <NearbyBike>[];
+  for (final bike in bikes) {
+    final station = byId[bike.station];
+    final lat = station?.latitude;
+    final lon = station?.longitude;
+    if (lat == null || lon == null) continue;
+    final meters = metersBetween(latitude, longitude, lat, lon);
+    if (meters > withinMeters) continue;
+    nearby.add(
+      NearbyBike(
+        bike: bike,
+        stationName: stationDisplayName(bike, station),
+        latitude: lat,
+        longitude: lon,
+        meters: meters,
+      ),
+    );
+  }
+  nearby.sort((a, b) {
+    final byMeters = a.meters!.compareTo(b.meters!);
+    if (byMeters != 0) return byMeters;
+    return a.bike.bike.compareTo(b.bike.bike);
+  });
+  return nearby;
+}
+
+/// Suspect bikes at the saved stations, in the order those stations were saved.
+List<NearbyBike> bikesAtStations({
+  required List<LiveBike> bikes,
+  required List<BikeStation> stations,
+  required List<String> stationIds,
+}) {
+  final byId = {for (final station in stations) station.id: station};
+  final wanted = stationIds.toSet();
+  final order = {for (var i = 0; i < stationIds.length; i++) stationIds[i]: i};
+  final listed = <NearbyBike>[];
+  for (final bike in bikes) {
+    if (!wanted.contains(bike.station)) continue;
+    final station = byId[bike.station];
+    listed.add(
+      NearbyBike(
+        bike: bike,
+        stationName: stationDisplayName(bike, station),
+        latitude: station?.latitude,
+        longitude: station?.longitude,
+      ),
+    );
+  }
+  listed.sort((a, b) {
+    final byStation = (order[a.bike.station] ?? 0).compareTo(
+      order[b.bike.station] ?? 0,
+    );
+    if (byStation != 0) return byStation;
+    return a.bike.bike.compareTo(b.bike.bike);
+  });
+  return listed;
+}

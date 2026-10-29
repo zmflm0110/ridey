@@ -2,84 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/habits/lookup_habits.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
-import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
 import 'package:ridey_app/features/rider/bike_ocr_scanner_page.dart';
-import 'package:ridey_app/features/rider/qr_scanner_page.dart';
-import 'package:ridey_app/widgets/ridey_status.dart';
+import 'package:ridey_app/features/rider/qr_preview.dart';
+import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
-
-class BikeLookupDestination extends StatefulWidget {
-  const BikeLookupDestination({super.key, this.repository, this.readLocation});
-
-  final LiveSnapshotRepository? repository;
-  final Future<DeviceLocation?> Function()? readLocation;
-
-  @override
-  State<BikeLookupDestination> createState() => _BikeLookupDestinationState();
-}
-
-class _BikeLookupDestinationState extends State<BikeLookupDestination> {
-  late final LiveSnapshotRepository _repository;
-  late Future<LiveSnapshot> _snapshot;
-
-  @override
-  void initState() {
-    super.initState();
-    _repository = widget.repository ?? SupabaseLiveSnapshotRepository();
-    _snapshot = _repository.fetch();
-  }
-
-  void _retry() => setState(() => _snapshot = _repository.fetch());
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<LiveSnapshot>(
-      future: _snapshot,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator.adaptive());
-        }
-        if (snapshot.hasError) {
-          return _LookupLoadFailure(onRetry: _retry);
-        }
-        return BikeLookupPage(
-          snapshot: snapshot.requireData,
-          repository: _repository,
-          showAppBar: false,
-          readLocation: widget.readLocation,
-        );
-      },
-    );
-  }
-}
 
 class BikeLookupPage extends StatefulWidget {
   const BikeLookupPage({
     super.key,
     required this.snapshot,
     required this.repository,
-    this.showAppBar = true,
+    required this.routeObserver,
     this.readLocation,
+    this.cameraEnabled = true,
+    this.visible = true,
   });
 
   final LiveSnapshot snapshot;
   final LiveSnapshotRepository repository;
-  final bool showAppBar;
+  final RouteObserver<PageRoute<dynamic>> routeObserver;
   final Future<DeviceLocation?> Function()? readLocation;
+  final bool cameraEnabled;
+  final bool visible;
 
   @override
   State<BikeLookupPage> createState() => _BikeLookupPageState();
 }
 
-class _BikeLookupPageState extends State<BikeLookupPage> {
+class _BikeLookupPageState extends State<BikeLookupPage> with RouteAware {
   final _controller = TextEditingController();
-  final _inputFocus = FocusNode();
   late LiveSnapshot _snapshot;
-  _LookupOutcome? _outcome;
-  bool _refreshing = false;
+  String? _detectedId;
+  var _covered = false;
+  PageRoute<dynamic>? _route;
 
   @override
   void initState() {
@@ -88,43 +47,64 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
   }
 
   @override
+  void didUpdateWidget(BikeLookupPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.snapshot != oldWidget.snapshot) _snapshot = widget.snapshot;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route == _route) return;
+    if (_route != null) widget.routeObserver.unsubscribe(this);
+    _route = route is PageRoute<dynamic> ? route : null;
+    if (_route != null) widget.routeObserver.subscribe(this, _route!);
+  }
+
+  @override
   void dispose() {
+    widget.routeObserver.unsubscribe(this);
     _controller.dispose();
-    _inputFocus.dispose();
     super.dispose();
   }
 
-  Future<void> _refresh() async {
-    setState(() => _refreshing = true);
-    try {
-      _snapshot = await widget.repository.fetch();
-      if (!mounted) return;
-      setState(() {
-        _outcome = null;
-        _refreshing = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _outcome = const _LookupOutcome(
-          RideySignalState.uncertain,
-          '실시간 목록을 새로 불러오지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.',
-        );
-        _refreshing = false;
-      });
-    }
+  @override
+  void didPushNext() {
+    if (mounted) setState(() => _covered = true);
   }
 
-  void _lookup([LookupKind kind = LookupKind.number]) {
+  @override
+  void didPopNext() {
+    if (mounted) setState(() => _covered = false);
+  }
+
+  void _backToScanner() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  void _showMessage({
+    required String title,
+    required String message,
+    String? bikeId,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BikeCheckMessagePage(
+          title: title,
+          message: message,
+          bikeId: bikeId,
+          onCheckAnother: _backToScanner,
+        ),
+      ),
+    );
+  }
+
+  void _lookup(LookupKind kind) {
     FocusScope.of(context).unfocus();
     final bikeId = normalizeBikeId(_controller.text);
     if (bikeId == null) {
-      setState(
-        () => _outcome = const _LookupOutcome(
-          RideySignalState.uncertain,
-          'SPB-00000 형식의 자전거 번호를 입력해 주세요.',
-        ),
-      );
+      _showMessage(title: '판단 어려움', message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.');
       return;
     }
 
@@ -135,183 +115,192 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     );
     final bike = findBike(_snapshot.bikes, bikeId);
     if (bike == null) {
-      setState(
-        () => _outcome = _LookupOutcome(
-          _snapshot.feed.isHealthy
-              ? RideySignalState.noSignal
-              : RideySignalState.uncertain,
-          _snapshot.feed.isHealthy
-              ? '$bikeId에는 지금 켜진 경보가 없어요. 안전이 확인된 것은 아니니 브레이크·타이어를 직접 살펴보세요.'
-              : '$bikeId의 판단에 필요한 대여 기록이 늦고 있어요. 새로고침 후 직접 상태를 확인해 주세요.',
-        ),
+      _showMessage(
+        title: _snapshot.feed.isHealthy ? '경보 없음' : '판단 어려움',
+        bikeId: bikeId,
+        message: _snapshot.feed.isHealthy
+            ? '$bikeId에는 지금 켜진 경보가 없어요. 안전이 확인된 것은 아니니 브레이크·타이어를 직접 살펴보세요.'
+            : '$bikeId의 판단에 필요한 대여 기록이 늦고 있어요. 새로고침 후 직접 상태를 확인해 주세요.',
       );
       return;
     }
 
-    setState(() => _outcome = null);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => BikeDetailPage(
           bike: bike,
           updatedAt: _snapshot.updatedAt,
           feed: _snapshot.feed,
+          onCheckAnother: _backToScanner,
         ),
       ),
     );
   }
 
-  Future<void> _scanQr() async {
-    final bikeId = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(builder: (_) => const QrScannerPage()),
-    );
-    if (!mounted) return;
+  Future<void> _typeNumber() async {
+    final entered =
+        await showModalBottomSheet<({String text, LookupKind kind})>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          builder: (context) => _NumberSheet(
+            onScanPlate: () async {
+              final bikeId = await Navigator.of(context, rootNavigator: true)
+                  .push<String>(
+                    MaterialPageRoute<String>(
+                      builder: (_) => const BikeOcrScannerPage(),
+                    ),
+                  );
+              if (!context.mounted || bikeId == null) return;
+              Navigator.of(context).pop((text: bikeId, kind: LookupKind.ocr));
+            },
+          ),
+        );
+    if (!mounted || entered == null) return;
+    _controller.text = entered.text;
+    _lookup(entered.kind);
+  }
+
+  void _lookupDetected() {
+    final bikeId = _detectedId;
     if (bikeId == null) {
-      _inputFocus.requestFocus();
+      _showMessage(title: '판단 어려움', message: '따릉이 QR을 카드 안에 맞춰 주세요.');
       return;
     }
     _controller.text = bikeId;
     _lookup(LookupKind.qr);
   }
 
-  Future<void> _scanNumberPlate() async {
-    final bikeId = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(builder: (_) => const BikeOcrScannerPage()),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scanning = widget.cameraEnabled && widget.visible && !_covered;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+      children: [
+        Text(
+          '자전거 확인',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 18),
+        QrPreview(
+          active: scanning,
+          onDetected: (bikeId) {
+            if (_detectedId == bikeId) return;
+            setState(() => _detectedId = bikeId);
+          },
+        ),
+        const SizedBox(height: 22),
+        RideyButton.signal(label: '이 자전거 조회하기', onPressed: _lookupDetected),
+        const SizedBox(height: 18),
+        Center(
+          child: RideyPressable(
+            onTap: _typeNumber,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Text(
+                '자전거 번호 직접 입력하기',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  decoration: TextDecoration.underline,
+                  decorationColor: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
-    if (!mounted) return;
-    if (bikeId == null) {
-      _inputFocus.requestFocus();
-      return;
-    }
-    _controller.text = bikeId;
-    _lookup(LookupKind.ocr);
+  }
+}
+
+class _NumberSheet extends StatefulWidget {
+  const _NumberSheet({required this.onScanPlate});
+
+  final Future<void> Function() onScanPlate;
+
+  @override
+  State<_NumberSheet> createState() => _NumberSheetState();
+}
+
+class _NumberSheetState extends State<_NumberSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.of(
+      context,
+    ).pop((text: _controller.text, kind: LookupKind.number));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Scaffold(
-      appBar: widget.showAppBar
-          ? AppBar(
-              actions: [
-                IconButton(
-                  tooltip: '실시간 목록 새로고침',
-                  onPressed: _refreshing ? null : _refresh,
-                  icon: _refreshing
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.refresh_rounded),
-                ),
-              ],
-            )
-          : null,
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                '타기 전에\n자전거 번호를 확인해 보세요',
-                style: theme.textTheme.displayLarge,
-              ),
-            ),
-            const SizedBox(height: 14),
-            RideyEnter(
-              child: RideyCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Semantics(
-                      textField: true,
-                      label: '자전거 번호',
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _inputFocus,
-                        autofocus: true,
-                        textCapitalization: TextCapitalization.characters,
-                        keyboardType: TextInputType.text,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _lookup(),
-                        style: context
-                            .rideyNumbers(theme.textTheme.titleLarge)
-                            ?.copyWith(fontSize: 20),
-                        decoration: InputDecoration(
-                          hintText: 'SPB-00000',
-                          hintStyle: context
-                              .rideyNumbers(theme.textTheme.titleLarge)
-                              ?.copyWith(
-                                fontSize: 20,
-                                color: context.ridey.muted.withValues(alpha: .6),
-                              ),
-                        ),
-                      ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('자전거 번호', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 14),
+          Semantics(
+            textField: true,
+            label: '자전거 번호',
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _submit(),
+              style: context
+                  .rideyNumbers(theme.textTheme.titleLarge)
+                  ?.copyWith(fontSize: 20),
+              decoration: InputDecoration(
+                hintText: 'SPB-00000',
+                hintStyle: context
+                    .rideyNumbers(theme.textTheme.titleLarge)
+                    ?.copyWith(
+                      fontSize: 20,
+                      color: context.ridey.muted.withValues(alpha: .6),
                     ),
-                    const SizedBox(height: 10),
-                    RideyButton(label: '경보 기록 확인', onPressed: () => _lookup()),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RideyButton.secondary(
-                            label: 'QR로 찍기',
-                            icon: Icons.qr_code_scanner_rounded,
-                            onPressed: _scanQr,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: RideyButton.secondary(
-                            label: '번호판으로 읽기',
-                            icon: Icons.document_scanner_outlined,
-                            onPressed: _scanNumberPlate,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
             ),
-            if (_outcome != null) ...[
-              const SizedBox(height: 12),
-              RideyPopIn(
-                key: ObjectKey(_outcome),
-                child: _LookupMessage(outcome: _outcome!),
-              ),
-            ],
-            const RideySectionTitle('알아두세요'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                '경보가 없다고 자전거가 정상이라는 뜻은 아니에요. RIDEY는 서로 다른 사람들이 바로 반납한 기록이 이어진 자전거만 알려 줘요.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 15,
-                  color: context.ridey.muted,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          RideyButton(label: '조회하기', onPressed: _submit),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: widget.onScanPlate,
+            child: const Text('번호판으로 읽기'),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _LookupLoadFailure extends StatelessWidget {
-  const _LookupLoadFailure({required this.onRetry});
+class BikeLookupLoadFailure extends StatelessWidget {
+  const BikeLookupLoadFailure({super.key, required this.onRetry});
 
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
       children: [
         RideyCard(
           padding: const EdgeInsets.all(22),
@@ -336,57 +325,4 @@ class _LookupLoadFailure extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Result card like the web `.result`: soft color fading into the card,
-/// a line icon, the verdict in big type, then the reason.
-class _LookupMessage extends StatelessWidget {
-  const _LookupMessage({required this.outcome});
-
-  final _LookupOutcome outcome;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ridey;
-    final theme = Theme.of(context);
-    final calm = outcome.state == RideySignalState.noSignal;
-    final soft = calm ? c.calmSoft : c.signalSoft;
-    final accent = calm ? c.calm : c.signal;
-    final (title, icon) = switch (outcome.state) {
-      RideySignalState.noSignal => ('경보 없음', Icons.check_rounded),
-      RideySignalState.avoid => ('피하기', Icons.warning_amber_rounded),
-      RideySignalState.completed => ('현장 확인 완료', Icons.check_rounded),
-      RideySignalState.uncertain => ('판단 어려움', Icons.help_outline_rounded),
-    };
-    return RideyCard(
-      padding: const EdgeInsets.all(22),
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [soft, theme.colorScheme.surface],
-        stops: const [0, .8],
-      ),
-      borderColor: Color.lerp(c.line, accent, .35),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 34, color: calm ? c.calmText : c.signalText),
-          const SizedBox(height: 12),
-          Text(title, style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 8),
-          Text(
-            outcome.message,
-            style: theme.textTheme.bodyLarge?.copyWith(color: c.body),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LookupOutcome {
-  const _LookupOutcome(this.state, this.message);
-
-  final RideySignalState state;
-  final String message;
 }

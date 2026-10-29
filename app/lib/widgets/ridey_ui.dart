@@ -112,7 +112,8 @@ class RideyButton extends StatelessWidget {
     this.icon,
     this.compact = false,
     this.busy = false,
-  }) : primary = true;
+  }) : primary = true,
+       signal = false;
 
   const RideyButton.secondary({
     super.key,
@@ -121,20 +122,38 @@ class RideyButton extends StatelessWidget {
     this.icon,
     this.compact = false,
     this.busy = false,
-  }) : primary = false;
+  }) : primary = false,
+       signal = false;
+
+  const RideyButton.signal({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.compact = false,
+    this.busy = false,
+  }) : primary = true,
+       signal = true;
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool primary;
+  final bool signal;
   final bool compact;
   final bool busy;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final background = primary ? theme.colorScheme.onSurface : context.ridey.fill;
-    final foreground = primary
+    final background = signal
+        ? context.ridey.signal
+        : primary
+        ? theme.colorScheme.onSurface
+        : context.ridey.fill;
+    final foreground = signal
+        ? Colors.white
+        : primary
         ? theme.scaffoldBackgroundColor
         : theme.colorScheme.onSurface;
     final enabled = onPressed != null && !busy;
@@ -307,10 +326,7 @@ class RideyRow extends StatelessWidget {
           ),
           if (below != null)
             Padding(
-              padding: EdgeInsets.only(
-                left: leading == null ? 0 : 56,
-                top: 10,
-              ),
+              padding: EdgeInsets.only(left: leading == null ? 0 : 56, top: 10),
               child: below!,
             ),
         ],
@@ -331,7 +347,11 @@ enum RideyTone { strong, normal, ok, neutral }
 /// 42px round icon (web `.ico`): strong alert = signal ring, plain alert =
 /// grey, checked = calm blue. Solid orange is kept for dots and big numbers.
 class RideyIco extends StatelessWidget {
-  const RideyIco({super.key, required this.icon, this.tone = RideyTone.neutral});
+  const RideyIco({
+    super.key,
+    required this.icon,
+    this.tone = RideyTone.neutral,
+  });
 
   final IconData icon;
   final RideyTone tone;
@@ -386,7 +406,12 @@ class RideyNumber extends StatelessWidget {
 
 /// A small pill (web `.tag`).
 class RideyTag extends StatelessWidget {
-  const RideyTag(this.label, {super.key, required this.background, required this.foreground});
+  const RideyTag(
+    this.label, {
+    super.key,
+    required this.background,
+    required this.foreground,
+  });
 
   final String label;
   final Color background;
@@ -596,11 +621,8 @@ class RideyCountUp extends StatelessWidget {
       tween: Tween(begin: 0, end: value.toDouble()),
       duration: RideyMotion.of(context, const Duration(milliseconds: 1100)),
       curve: RideyMotion.ease,
-      builder: (context, v, _) => Text(
-        '${v.round()}',
-        semanticsLabel: '$value',
-        style: style,
-      ),
+      builder: (context, v, _) =>
+          Text('${v.round()}', semanticsLabel: '$value', style: style),
     );
   }
 }
@@ -660,9 +682,7 @@ class _RideyPingState extends State<RideyPing>
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: widget.size,
-      child: CustomPaint(
-        painter: _PingPainter(_controller, widget.color),
-      ),
+      child: CustomPaint(painter: _PingPainter(_controller, widget.color)),
     );
   }
 }
@@ -720,7 +740,9 @@ class _DotGridPainter extends CustomPainter {
     final paint = Paint();
     for (var y = gap / 2; y < size.height; y += gap) {
       for (var x = gap / 2; x < size.width; x += gap) {
-        final d = math.sqrt(math.pow((x - cx) / rx, 2) + math.pow((y - cy) / ry, 2));
+        final d = math.sqrt(
+          math.pow((x - cx) / rx, 2) + math.pow((y - cy) / ry, 2),
+        );
         final fade = math.max(0.0, math.min(1.0, 1 - d / .72));
         if (fade <= 0) continue;
         paint.color = color.withValues(alpha: .18 * fade);

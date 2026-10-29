@@ -84,4 +84,17 @@ void main() {
     expect(saved.last.count, 2);
     expect(firstBikeAt(bikes, '02720')?.bike, 'SPB-00001');
   });
+
+  test('lists suspect bikes near the user and skips far stations', () {
+    final nearby = bikesNear(
+      bikes: bikes,
+      stations: [near, far],
+      latitude: 37.501,
+      longitude: 127.001,
+    );
+
+    expect(nearby.map((item) => item.bike.bike), ['SPB-00001', 'SPB-00002']);
+    expect(nearby.first.stationName, '힐스테이트에코');
+    expect(nearby.first.meters, lessThan(nearbyAlertRadiusMeters));
+  });
 }

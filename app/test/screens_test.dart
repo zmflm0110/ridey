@@ -19,13 +19,44 @@ final _out = Platform.environment['RIDEY_SCREENS'];
 const _frame = ValueKey('screen-frame');
 
 const _stations = [
-  BikeStation(id: '02720', name: '힐스테이트에코', district: '강서구', latitude: 37.5600, longitude: 126.8370),
-  BikeStation(id: '01105', name: '마곡나루역 2번 출구', district: '강서구', latitude: 37.5668, longitude: 126.8272),
-  BikeStation(id: '01160', name: '발산역 1번 출구', district: '강서구', latitude: 37.5585, longitude: 126.8380),
-  BikeStation(id: '00207', name: '망원역 1번 출구 앞', district: '마포구', latitude: 37.5560, longitude: 126.9100),
+  BikeStation(
+    id: '02720',
+    name: '힐스테이트에코',
+    district: '강서구',
+    latitude: 37.5600,
+    longitude: 126.8370,
+  ),
+  BikeStation(
+    id: '01105',
+    name: '마곡나루역 2번 출구',
+    district: '강서구',
+    latitude: 37.5668,
+    longitude: 126.8272,
+  ),
+  BikeStation(
+    id: '01160',
+    name: '발산역 1번 출구',
+    district: '강서구',
+    latitude: 37.5585,
+    longitude: 126.8380,
+  ),
+  BikeStation(
+    id: '00207',
+    name: '망원역 1번 출구 앞',
+    district: '마포구',
+    latitude: 37.5560,
+    longitude: 126.9100,
+  ),
 ];
 
-LiveBike _bike(String id, String station, String name, int chain, int? p, {List<AlertReason> why = const []}) => LiveBike(
+LiveBike _bike(
+  String id,
+  String station,
+  String name,
+  int chain,
+  int? p, {
+  List<AlertReason> why = const [],
+}) => LiveBike(
   bike: id,
   station: station,
   stationName: name,
@@ -43,11 +74,18 @@ class _Live implements LiveSnapshotRepository {
     date: '2026-10-25',
     feed: const FeedHealth(isHealthy: true),
     bikes: [
-      _bike('SPB-69683', '02720', '힐스테이트에코', 5, 48, why: const [
-        AlertReason(text: '서로 다른 5명이 연달아 반납', deltaPoints: 21),
-        AlertReason(text: '마지막 반납 뒤 40분째 그대로', deltaPoints: 6),
-        AlertReason(text: '평소 많이 타는 대여소', deltaPoints: -3),
-      ]),
+      _bike(
+        'SPB-69683',
+        '02720',
+        '힐스테이트에코',
+        5,
+        48,
+        why: const [
+          AlertReason(text: '서로 다른 5명이 연달아 반납', deltaPoints: 21),
+          AlertReason(text: '마지막 반납 뒤 40분째 그대로', deltaPoints: 6),
+          AlertReason(text: '평소 많이 타는 대여소', deltaPoints: -3),
+        ],
+      ),
       _bike('SPB-41207', '02720', '힐스테이트에코', 2, 31),
       _bike('SPB-50579', '01105', '마곡나루역 2번 출구', 3, 39),
       _bike('SPB-74511', '01160', '발산역 1번 출구', 2, 27),
@@ -66,7 +104,9 @@ Future<void> _loadFonts() async {
   Future<void> load(String family, List<String> paths) async {
     final loader = FontLoader(family);
     for (final path in paths) {
-      loader.addFont(Future.value(ByteData.sublistView(File(path).readAsBytesSync())));
+      loader.addFont(
+        Future.value(ByteData.sublistView(File(path).readAsBytesSync())),
+      );
     }
     await loader.load();
   }
@@ -81,7 +121,11 @@ void main() {
     if (_out != null) await _loadFonts();
   });
 
-  setUp(() => SharedPreferences.setMockInitialValues({'my_stations': ['02720', '00207']}));
+  setUp(
+    () => SharedPreferences.setMockInitialValues({
+      'my_stations': ['02720', '00207'],
+    }),
+  );
 
   Future<void> settle(WidgetTester tester) async {
     for (var i = 0; i < 12; i++) {
@@ -91,7 +135,9 @@ void main() {
 
   Future<void> shot(WidgetTester tester, String name) async {
     await settle(tester);
-    final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(_frame));
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(_frame),
+    );
     await tester.runAsync(() async {
       final image = await boundary.toImage(pixelRatio: 2);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -101,10 +147,16 @@ void main() {
     });
   }
 
-  Future<void> open(WidgetTester tester, {bool dark = false, double height = 844}) async {
+  Future<void> open(
+    WidgetTester tester, {
+    bool dark = false,
+    double height = 844,
+  }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = Size(390 * 3, height * 3);
-    tester.platformDispatcher.platformBrightnessTestValue = dark ? Brightness.dark : Brightness.light;
+    tester.platformDispatcher.platformBrightnessTestValue = dark
+        ? Brightness.dark
+        : Brightness.light;
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await tester.pumpWidget(
@@ -114,6 +166,7 @@ void main() {
           liveRepository: _Live(),
           stationRepository: _Stations(),
           readLocation: () async => (latitude: 37.5610, longitude: 126.8350),
+          enableCamera: false,
         ),
       ),
     );
@@ -121,10 +174,12 @@ void main() {
   }
 
   Future<void> lookup(WidgetTester tester, String number) async {
-    await tester.tap(find.text('번호 확인'));
+    await tester.tap(find.text('자전거 확인'));
+    await settle(tester);
+    await tester.tap(find.text('자전거 번호 직접 입력하기'));
     await settle(tester);
     await tester.enterText(find.byType(TextField).first, number);
-    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.tap(find.text('조회하기'));
     await settle(tester);
   }
 
@@ -143,10 +198,12 @@ void main() {
 
     testWidgets('lookup$tag', (tester) async {
       await open(tester, dark: dark);
-      await tester.tap(find.text('번호 확인'));
+      await tester.tap(find.text('자전거 확인'));
       await shot(tester, '03_lookup$tag');
+      await tester.tap(find.text('자전거 번호 직접 입력하기'));
+      await settle(tester);
       await tester.enterText(find.byType(TextField).first, 'spb-12345');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.tap(find.text('조회하기'));
       await shot(tester, '04_lookup_none$tag');
     }, skip: _out == null);
 
@@ -158,7 +215,9 @@ void main() {
 
     testWidgets('stations$tag', (tester) async {
       await open(tester, dark: dark, height: 1100);
-      await tester.tap(find.text('대여소'));
+      await tester.tap(find.text('더보기'));
+      await settle(tester);
+      await tester.tap(find.text('자주 쓰는 대여소'));
       await shot(tester, '06_stations$tag');
     }, skip: _out == null);
 

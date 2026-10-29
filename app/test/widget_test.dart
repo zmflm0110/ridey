@@ -59,6 +59,7 @@ void main() {
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
         readLocation: () async => null,
+        enableCamera: false,
       ),
     );
     await tester.pumpAndSettle();
@@ -67,20 +68,15 @@ void main() {
   testWidgets('shows only rider tabs', (tester) async {
     await pumpRidey(tester);
 
-    expect(find.text('이용하기'), findsOneWidget);
-    expect(find.text('번호 확인'), findsOneWidget);
-    expect(find.text('대여소'), findsOneWidget);
+    expect(find.text('홈'), findsOneWidget);
+    expect(find.text('자전거 확인'), findsOneWidget);
     expect(find.text('더보기'), findsOneWidget);
-    expect(find.text('타기 전,\n확인하세요.'), findsOneWidget);
-    // The home list scrolls vertically; the district pills scroll sideways inside it.
-    await tester.scrollUntilVisible(
-      find.text('내 대여소'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('내 대여소'), findsOneWidget);
+    expect(find.text('이용하기'), findsNothing);
+    expect(find.text('번호 확인'), findsNothing);
+    expect(find.textContaining('저장한 대여소에'), findsOneWidget);
+    expect(find.textContaining('1대'), findsOneWidget);
+    expect(find.text('SPB-69683'), findsOneWidget);
     expect(find.text('힐스테이트에코'), findsOneWidget);
-    expect(find.text('1대'), findsOneWidget);
     for (final label in _staffLabels) {
       expect(find.text(label), findsNothing);
     }
@@ -93,18 +89,16 @@ void main() {
 
   testWidgets('keeps a bike lookup in on-device history', (tester) async {
     await pumpRidey(tester);
-    await tester.ensureVisible(find.text('자전거 확인하기'));
+    await tester.tap(find.text('자전거 확인'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('자전거 확인하기'));
+    await tester.tap(find.text('자전거 번호 직접 입력하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-69683');
-    await tester.tap(find.text('경보 기록 확인'));
+    await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('피하세요.'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.pageBack();
+    expect(find.text('고장이 의심되는 자전거예요.'), findsOneWidget);
+    await tester.tap(find.text('다른 자전거 확인하기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('더보기'));
     await tester.pumpAndSettle();
@@ -145,15 +139,17 @@ void main() {
   testWidgets('opens an alert detail from a bike number', (tester) async {
     await pumpRidey(tester);
 
-    await tester.ensureVisible(find.text('자전거 확인하기'));
+    await tester.tap(find.text('자전거 확인'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('자전거 확인하기'));
+    await tester.tap(find.text('자전거 번호 직접 입력하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-69683');
-    await tester.tap(find.text('경보 기록 확인'));
+    await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('피하세요.'), findsOneWidget);
+    expect(find.text('고장이 의심되는 자전거예요.'), findsOneWidget);
+    await tester.tap(find.text('판단 근거 확인하기'));
+    await tester.pumpAndSettle();
     expect(find.text('왜 경보가 켜졌나요?'), findsOneWidget);
     expect(find.text('현장에서 확인하기'), findsNothing);
   });
@@ -163,10 +159,12 @@ void main() {
   ) async {
     await pumpRidey(tester);
 
-    await tester.tap(find.text('번호 확인'));
+    await tester.tap(find.text('자전거 확인'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('자전거 번호 직접 입력하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-12345');
-    await tester.tap(find.text('경보 기록 확인'));
+    await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('경보 없음'), findsOneWidget);
@@ -175,7 +173,9 @@ void main() {
 
   testWidgets('opens saved stations from the rider tab', (tester) async {
     await pumpRidey(tester);
-    await tester.tap(find.text('대여소'));
+    await tester.tap(find.text('더보기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('자주 쓰는 대여소'));
     await tester.pumpAndSettle();
 
     expect(find.text('내 대여소'), findsOneWidget);

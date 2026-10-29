@@ -58,7 +58,7 @@ class _SavedStationsDestinationState extends State<SavedStationsDestination> {
         return SavedStationsPage(
           snapshot: snapshot.requireData,
           stationRepository: widget.stationRepository,
-          showAppBar: false,
+          showAppBar: true,
           readLocation: widget.readLocation,
         );
       },

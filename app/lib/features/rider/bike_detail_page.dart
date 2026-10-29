@@ -4,10 +4,141 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
+import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
 class BikeDetailPage extends StatelessWidget {
   const BikeDetailPage({
+    super.key,
+    required this.bike,
+    required this.updatedAt,
+    this.feed,
+    this.onCheckAnother,
+  });
+
+  final LiveBike bike;
+  final DateTime updatedAt;
+  final FeedHealth? feed;
+  final VoidCallback? onCheckAnother;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+        children: [
+          const _CheckBackTitle(),
+          const SizedBox(height: 28),
+          Text(
+            bike.bike,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '고장이 의심되는 자전거예요.',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: context.ridey.signal,
+              fontSize: 26,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '서로 다른 ${bike.chain}명이 짧은 시간 안에 반납한 이력이 확인된 자전거예요.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 28),
+          RideyButton.signal(
+            label: '다른 자전거 확인하기',
+            onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
+          ),
+          const SizedBox(height: 18),
+          Center(
+            child: _UnderlinedAction(
+              label: '판단 근거 확인하기',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => BikeEvidencePage(
+                      bike: bike,
+                      updatedAt: updatedAt,
+                      feed: feed,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BikeCheckMessagePage extends StatelessWidget {
+  const BikeCheckMessagePage({
+    super.key,
+    required this.title,
+    required this.message,
+    this.bikeId,
+    this.onCheckAnother,
+  });
+
+  final String title;
+  final String message;
+  final String? bikeId;
+  final VoidCallback? onCheckAnother;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+        children: [
+          const _CheckBackTitle(),
+          const SizedBox(height: 28),
+          if (bikeId != null) ...[
+            Text(
+              bikeId!,
+              style: theme.textTheme.headlineLarge?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          Text(title, style: theme.textTheme.headlineLarge),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 28),
+          RideyButton.signal(
+            label: '다른 자전거 확인하기',
+            onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BikeEvidencePage extends StatelessWidget {
+  const BikeEvidencePage({
     super.key,
     required this.bike,
     required this.updatedAt,
@@ -22,213 +153,170 @@ class BikeDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.ridey;
-    final label = bike.isHighAlert ? '피하세요.' : '주의해서 확인하세요.';
-    final detail = bike.isHighAlert
-        ? '서로 다른 사람들이 빌리자마자 반납한 기록이 여러 번 이어졌어요. 옆 자전거를 골라 주세요.'
-        : '빌리자마자 반납한 기록이 이어져 경보가 켜졌어요. 타기 전에 브레이크·타이어를 살펴보세요.';
     final station = bike.stationName.isEmpty ? bike.station : bike.stationName;
 
     return Scaffold(
-      appBar: AppBar(),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-          children: [
-            RideyPopIn(
-              child: RideyCard(
-                padding: const EdgeInsets.all(22),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [c.signalSoft, theme.colorScheme.surface],
-                  stops: const [0, .55],
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+        children: [
+          const _CheckBackTitle(title: '판단 근거'),
+          const SizedBox(height: 22),
+          Text(
+            bike.bike,
+            style: context
+                .rideyNumbers(theme.textTheme.titleLarge)
+                ?.copyWith(fontSize: 20),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            station,
+            style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
+          ),
+          const SizedBox(height: 16),
+          RideyDataConfidence(
+            updatedAt: updatedAt,
+            isHealthy: feed?.isHealthy ?? true,
+            ratio: feed?.ratio,
+          ),
+          const RideySectionTitle('왜 경보가 켜졌나요?'),
+          RideyCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ChainStrip(chain: bike.chain),
+                const SizedBox(height: 16),
+                Text(
+                  '서로 다른 ${bike.chain}명의 기록으로 경보',
+                  style: theme.textTheme.titleMedium,
                 ),
-                borderColor: Color.lerp(c.line, c.signal, .35),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                const SizedBox(height: 4),
+                Text(
+                  '빌리자마자 반납한 사람 하나하나가 점이에요. 첫 점은 실수일 수 있어 비워 두고, '
+                  '서로 다른 다음 사람이 이어 반납하면 고리를 두른 점 — 경보가 돼요.',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+                ),
+              ],
+            ),
+          ),
+          if (bike.probability != null) ...[
+            const SizedBox(height: 14),
+            RideyCard(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '다음 사람도 바로 반납할 확률',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                  RideyNumber(
+                    '${bike.probability}%',
+                    size: 18,
+                    color: c.signalText,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (bike.reasons.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                '확률을 올리고 내린 것',
+                style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+              ),
+            ),
+            const SizedBox(height: 8),
+            RideyListCard(
+              children: [
+                for (final reason in bike.reasons)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    child: Row(
                       children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          size: 34,
-                          color: c.signalText,
+                        Expanded(
+                          child: Text(
+                            reason.text,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
-                        const Spacer(),
-                        RideyTag(
-                          bike.isHighAlert ? '강한 경보' : '경보',
-                          background: bike.isHighAlert
-                              ? c.signal
-                              : c.signalSoft,
-                          foreground: bike.isHighAlert
-                              ? RideyColors.ink
+                        const SizedBox(width: 12),
+                        RideyNumber(
+                          reason.deltaLabel,
+                          size: 13,
+                          color: (reason.deltaPoints ?? 0) < 0
+                              ? c.calmText
                               : c.signalText,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      bike.bike,
-                      style: context
-                          .rideyNumbers(theme.textTheme.headlineLarge)
-                          ?.copyWith(fontSize: 24, letterSpacing: -0.7),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(label, style: theme.textTheme.headlineLarge),
-                    const SizedBox(height: 8),
-                    Text(
-                      detail,
-                      style: theme.textTheme.bodyLarge?.copyWith(color: c.body),
-                    ),
-                    const SizedBox(height: 14),
-                    _Facts(
-                      rows: [
-                        if (bike.probability != null)
-                          ('다음 사람도 바로 반납할 확률', '${bike.probability}%', true),
-                        ('연쇄', '서로 다른 ${bike.chain}명', false),
-                        if (bike.lastDud.isNotEmpty)
-                          ('마지막 바로 반납', bike.lastDud, false),
-                        ('대여소', station, false),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: RideyDataConfidence(
-                updatedAt: updatedAt,
-                isHealthy: feed?.isHealthy ?? true,
-                ratio: feed?.ratio,
-              ),
-            ),
-            const RideySectionTitle('왜 경보가 켜졌나요?'),
-            RideyCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ChainStrip(chain: bike.chain),
-                  const SizedBox(height: 16),
-                  Text(
-                    '서로 다른 ${bike.chain}명의 기록으로 경보',
-                    style: theme.textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '빌리자마자 반납한 사람 하나하나가 점이에요. 첫 점은 실수일 수 있어 비워 두고, '
-                    '서로 다른 다음 사람이 이어 반납하면 고리를 두른 점 — 경보가 돼요.',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
-                  ),
-                ],
-              ),
-            ),
-            if (bike.reasons.isNotEmpty) ...[
-              const RideySectionTitle('판단 근거', note: '확률을 올리고 내린 것'),
-              RideyListCard(
-                children: [
-                  for (final reason in bike.reasons)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              reason.text,
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontSize: 15,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          RideyNumber(
-                            reason.deltaLabel,
-                            size: 13,
-                            color: (reason.deltaPoints ?? 0) < 0
-                                ? c.calmText
-                                : c.signalText,
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 14),
-            _DataNote(updatedAt: updatedAt, feed: feed),
-            const SizedBox(height: 18),
-            RideyButton.secondary(
-              label: '다른 자전거 확인',
-              icon: Icons.qr_code_scanner_rounded,
-              onPressed: () => Navigator.of(context).pop(),
+              ],
             ),
           ],
-        ),
+          const SizedBox(height: 14),
+          _DataNote(updatedAt: updatedAt, feed: feed),
+        ],
       ),
     );
   }
 }
 
-/// Grey fact box inside the result card (web `.facts`); rows rise in turn.
-class _Facts extends StatelessWidget {
-  const _Facts({required this.rows});
+class _CheckBackTitle extends StatelessWidget {
+  const _CheckBackTitle({this.title = '자전거 확인'});
 
-  final List<(String, String, bool)> rows;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: context.ridey.fill,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < rows.length; i++)
-            RideyEnter(
-              index: i + 2,
-              step: const Duration(milliseconds: 60),
-              offset: 8,
-              child: Padding(
-                padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        rows[i].$1,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 15,
-                          color: context.ridey.muted,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (rows[i].$3)
-                      RideyNumber(
-                        rows[i].$2,
-                        size: 18,
-                        color: context.ridey.signalText,
-                      )
-                    else
-                      Flexible(
-                        child: Text(
-                          rows[i].$2,
-                          textAlign: TextAlign.end,
-                          style: theme.textTheme.titleSmall,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+    return Row(
+      children: [
+        IconButton(
+          tooltip: '뒤로',
+          onPressed: () => Navigator.of(context).maybePop(),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          icon: const Icon(Icons.chevron_left_rounded, size: 30),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UnderlinedAction extends StatelessWidget {
+  const _UnderlinedAction({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+    return RideyPressable(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: color,
+            decoration: TextDecoration.underline,
+            decorationColor: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

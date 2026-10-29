@@ -23,16 +23,17 @@ void main() {
             isHighAlert: true,
             lastDud: '10-20 14:58',
             probability: 48,
-            reasons: [
-              AlertReason(text: '서로 다른 3명이 연달아 반납', deltaPoints: 12),
-            ],
+            reasons: [AlertReason(text: '서로 다른 3명이 연달아 반납', deltaPoints: 12)],
           ),
           updatedAt: DateTime.now(),
         ),
       ),
     );
 
-    expect(find.text('피하세요.'), findsOneWidget);
+    expect(find.text('고장이 의심되는 자전거예요.'), findsOneWidget);
+    expect(find.textContaining('서로 다른 3명'), findsOneWidget);
+    await tester.tap(find.text('판단 근거 확인하기'));
+    await tester.pumpAndSettle();
     expect(find.text('판단 근거'), findsOneWidget);
     expect(find.text('서로 다른 3명이 연달아 반납'), findsOneWidget);
     expect(find.text('+12%p'), findsOneWidget);
