@@ -1,4 +1,4 @@
-# 올릴 때마다: 엔진·서버 단위 테스트 + 클라우드 SQL 과 파이썬이 같은 답인지(진짜 Postgres) + 웹앱 휴대폰 화면 검사 + 진짜 오프라인 시연 검사 (원본 자료·인증키 불필요)
+# 올릴 때마다: 엔진·서버 단위 테스트 + 클라우드 SQL 과 파이썬이 같은 답인지(진짜 Postgres) + 사이트·QR 검사
 name: test
 on:
   push:
@@ -24,6 +24,4 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
       - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
-      - run: node tests/web/route.test.js && node tests/web/smoke.js && node tests/web/qr.test.js && node tests/web/site.test.js
-      - run: |
-          for m in normal evict notiles; do PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 node tests/web/offline.js $m; done
+      - run: node tests/web/qr.test.js && node tests/web/site.test.js

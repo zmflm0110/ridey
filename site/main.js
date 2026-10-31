@@ -1020,7 +1020,7 @@
     const root = $("#stk"); if (!root) return;
     const st = await stationsP.catch(() => null);
     if (!st || !Object.keys(st).length) { root.hidden = true; return; }
-    const APP = "https://zmflm0110.github.io/ridey/app/?s=", DEFAULT = "02720";   // 기본: SPB-69683 이 서 있던 강서구 힐스테이트에코
+    const APP = "https://zmflm0110.github.io/ridey/?s=", DEFAULT = "02720";   // 기본: SPB-69683 이 서 있던 강서구 힐스테이트에코
     const sticker = $("#sticker"), sugg = $("#stk-sugg"), q = $("#stk-q"), open = $("#stk-open");
     const loadQR = () => window.RideyQR ? Promise.resolve() : new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "qr.js"; sc.onload = ok; sc.onerror = no; document.head.append(sc); });
     const logo = $(".nav .wordmark")?.outerHTML || "";
@@ -1035,7 +1035,7 @@
         `<div><div class="s-name">${esc(name)}</div><div class="s-gu">${esc(s.gu || "")} · ${esc(id)}</div></div>` +
         `<p class="s-foot">RIDEY. 점 하나가 신호다 · zmflm0110.github.io/ridey</p>`;
       sticker.setAttribute("aria-label", `${name} 대여소 스티커 미리보기. QR 을 스캔하면 이 대여소의 고장 의심 자전거 번호가 열립니다.`);
-      open.href = `app/?s=${id}`;
+      open.href = "#try";
     };
     const find = (text) => {
       const k = text.replace(/\s+/g, ""); if (!k) return [];

@@ -2,7 +2,7 @@
 
 > 사람들이 귀찮아서 안 하는 고장 신고를, 앞사람들의 헛걸음 기록이 대신한다.
 
-- **플랫폼 분리(2026-10-25, 로컬 구현).** 이용자는 `app/` Flutter만 본다. 직원은 `dashboard/`(RIDEY Operations)에서 보고, 로그인·`ops.staff`·RLS가 세 번 확인한다. 분석 엔진과 `live.sql`·`model.sql`·`calib.sql`·`ev.sql`은 안 바꿨다. 새 cron도 없다. `supabase/staff.sql`은 저장소에만 있고, 클라우드 적용은 psql로 직접 하기 전이다. 적용 전 웹의 익명 쓰기는 그대로다. `web/`·`site/`·루트 `ios/`·`android-app/`은 나중에 지우고, 그때 `test.yml`·`pages.yml`·`ios.yml`도 정리한다. 설정 순서는 [`dashboard/README.md`](dashboard/README.md).
+- **앱 하나(2026-11-01).** 이용자와 직원은 `app/` Flutter에서 모드로 나뉜다. 직원 모드는 로그인 없이 읽기만. `web/`·`dashboard/`·루트 `ios/`·`android-app/`은 지웠다. 분석 엔진과 `live.sql`·`model.sql`·`calib.sql`·`ev.sql`은 안 바꿨다. `site/`는 작품 소개.
 
 근거(초안 단계, `~/ideas/drafts/04-bike-doctor`): 서로 다른 두 사람이 연달아 빌리자마자 반납한 자전거는 다음 사람도 34% 가 헛걸음(평소 2.5%, 약 14배).
 서울 1·3·6월 + 대전 타슈 5·10월 재현, 경보가 고장 신고보다 중앙값 20시간 먼저, 그 사이 평균 4.4명 헛걸음, 서울 하루 84\~223명 예방 가능.
@@ -32,7 +32,7 @@
 - **실시간 채점 (업데이트형)**: 9/27 10:20 시작(그 전 경보는 늦게 채운 것이라 live_only 에서 빠짐). 18:15 첫 100건 — 108명 중 49명(45%), 19:20 140명 중 54명(39%). 정해진 결과는 `live.alarms.next_dud` 에 적음(`live.settle`, 다음 대여가 7시간 지난 뒤). 주 1회 숫자 갱신(README·보고서; 사이트는 자동).
 - **규칙 vs 머신러닝 (2026-09-27)**: `analysis/ml_compare.py` → `docs/ml_compare.md`. 부스팅이 실시간 목록 +4.0%p(6월)·+3.2%p(3월), 아침·정비 순서는 들쭉날쭉 → 규칙 유지. 연쇄 재시도 버그(재시도면 연쇄 −1)도 이때 찾아 고침 — 6/15 목록 79→81대.
 - **브랜드 새로(2026-10-08 밤, 사용자 "디자인 전부 다시·로고도 새로·애니메이션 고급지게")**: 콘셉트 '점 하나가 신호다', 로고 `RIDEY.`(Unbounded 760 도형 + 신호 점), 아이콘 `R.`, 색 잉크 #111317·종이 #F7F5F0·신호 #FF4F1F(글자 #B82D07)·파랑 #2D5BFF. 규칙은 docs/brand.md.
-  다시 만들기: `python tools/make_brand.py`(스크래치 venv 에 fonttools·brotli — 로고 SVG·web/icon.svg·숫자 woff2·아이폰 Wordmark/UnboundedNumbers, HTML 의 `<!-- brand:wordmark -->` 자리) → `node tools/make_icons.js` → `node tools/make_android_assets.js`.
+  다시 만들기: `python tools/make_brand.py`(스크래치 venv 에 fonttools·brotli — 로고 SVG·site/img/mark.svg·숫자 woff2·아이폰 Wordmark/UnboundedNumbers, HTML 의 `<!-- brand:wordmark -->` 자리) → `node tools/make_icons.js` → `node tools/make_flutter_assets.js`.
   사이트는 site/index.html·style.css·main.js(첫 화면 실시간 점 지도), 진행 기록 쪽도 main.js 를 씀. 녹화(tests/web/record_demo.js)는 사이트 첫 장면만 시계를 3배 느리게.
 - **운영 성적표(2026-10-08)**: 공개 뷰 `ops_alarm_days`(경보가 울린 날마다 결과가 정해진 15분 안 경보·그중 다음 다른 사람도 반납). 사이트 #livescore·웹앱·아이폰 지금 화면·발표 7장·README(`analysis/ops_days.py` → docs/img/ops-days*.svg)·시연 영상.
   9/27\~10/7 11일 모두 24\~39%. 숫자 갱신 때 사이트 기본값(LS_DAYS)·발표 7장·README 그림은 손으로(사이트·앱은 뷰에서 자동).

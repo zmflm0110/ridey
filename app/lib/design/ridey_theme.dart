@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Same values as the web demo (web/style.css) and docs/brand.md.
+/// Same values as docs/brand.md.
 abstract final class RideyColors {
   static const ink = Color(0xFF111317);
   static const paper = Color(0xFFF7F5F0);

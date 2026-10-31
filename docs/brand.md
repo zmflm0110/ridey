@@ -55,7 +55,7 @@
 
 ## 4. 글꼴
 
-- **Unbounded** — 숫자·워드마크. 넓고 둥근 형태가 숫자판·속도감과 맞고, 숫자 칸 너비가 같아(`tnum`) 5분마다 바뀌는 수가 흔들리지 않는다. 숫자·대문자·기호만 잘라 woff2 8.5KB(`web/fonts/unbounded-ridey.woff2`, 라이선스 `OFL-Unbounded.txt`).
+- **Unbounded** — 숫자·워드마크. 넓고 둥근 형태가 숫자판·속도감과 맞고, 숫자 칸 너비가 같아(`tnum`) 5분마다 바뀌는 수가 흔들리지 않는다. 숫자·대문자·기호만 잘라 woff2 8.5KB(`site/fonts/unbounded-ridey.woff2`, 라이선스 `OFL-Unbounded.txt`).
 - **Pretendard** — 본문·제목(한글). 제목은 굵기 800, 자간 −0.045em, 줄 간격 1.05 안팎으로 빽빽하게.
 - 크기 대비를 크게: 제목 56~112px ↔ 설명 15~17px. 큰 숫자는 120~200px.
 
@@ -109,8 +109,6 @@
 | | 파일 |
 |---|---|
 | 소개 사이트 | `site/`(style.css·main.js, 로고 자리 `<!-- brand:wordmark -->`) |
-| 웹 데모 | `web/style.css`, 아이콘 `web/icon.svg` → `tools/make_icons.js` |
-| 이용자 앱(Flutter) | `app/lib/design/ridey_theme.dart` 색·숫자 글꼴(`RideyNumbers` = `app/assets/fonts/unbounded-ridey-800.ttf`), 아이콘 'R.'·시작 화면 'RIDEY.' → `tools/make_flutter_assets.js` |
-| 운영 화면 | `dashboard/app/globals.css` 같은 색 변수·Unbounded 숫자, 신호색은 경보와 가장 최근 막대에만 |
+| Flutter 앱 | `app/lib/design/ridey_theme.dart` 색·숫자 글꼴(`RideyNumbers` = `app/assets/fonts/unbounded-ridey-800.ttf`), 아이콘 'R.'·시작 화면 'RIDEY.' → `tools/make_flutter_assets.js` |
 | 발표·보고서·README | `docs/slides.html`, `docs/build_pdf.js`, `README.md` |
 | 다시 만들기 | `python tools/make_brand.py`(로고·아이콘·글꼴) → `node tools/make_icons.js` → `node tools/make_flutter_assets.js` |

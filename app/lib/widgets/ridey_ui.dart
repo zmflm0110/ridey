@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 
-/// Building blocks shared with the web demo (web/style.css): the wordmark,
-/// 1px-line cards with one-line rows, round icons, pills, and the brand motion.
+/// Building blocks for the wordmark, 1px-line cards with one-line rows,
+/// round icons, pills, and the brand motion.
 
 /// 'RIDEY' in Unbounded with the signal dot sitting on the baseline.
 class RideyWordmark extends StatelessWidget {

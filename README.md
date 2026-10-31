@@ -7,16 +7,13 @@
 
 <p align="center">
   <a href="https://zmflm0110.github.io/ridey/"><img alt="웹사이트" src="https://img.shields.io/badge/웹사이트-zmflm0110.github.io-111317"></a>
-  <a href="https://zmflm0110.github.io/ridey/app/"><img alt="웹앱" src="https://img.shields.io/badge/웹앱-써_보기-FF4F1F"></a>
   <a href="https://github.com/zmflm0110/ridey/actions/workflows/test.yml"><img alt="검사" src="https://github.com/zmflm0110/ridey/actions/workflows/test.yml/badge.svg"></a>
-  <a href="https://github.com/zmflm0110/ridey/actions/workflows/flutter.yml"><img alt="이용자 앱(Flutter)" src="https://github.com/zmflm0110/ridey/actions/workflows/flutter.yml/badge.svg"></a>
-  <a href="https://github.com/zmflm0110/ridey/actions/workflows/dashboard.yml"><img alt="운영 화면" src="https://github.com/zmflm0110/ridey/actions/workflows/dashboard.yml/badge.svg"></a>
+  <a href="https://github.com/zmflm0110/ridey/actions/workflows/flutter.yml"><img alt="앱(Flutter)" src="https://github.com/zmflm0110/ridey/actions/workflows/flutter.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="라이선스 MIT" src="https://img.shields.io/badge/라이선스-MIT-555"></a>
 </p>
 
 <p align="center">
   <a href="https://zmflm0110.github.io/ridey/">웹사이트</a> ·
-  <a href="https://zmflm0110.github.io/ridey/app/">웹앱 써 보기</a> ·
   <a href="docs/report.pdf">보고서</a> ·
   <a href="docs/slides.pdf">발표</a> ·
   <a href="docs/demo/demo.mp4">시연 영상</a> ·
@@ -161,7 +158,7 @@
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python data/download.py          # 원본 자료 (약 1.7GB)
 .venv/bin/python analysis/report.py        # 핵심 표 → docs/results.md
-.venv/bin/python server/app.py             # 웹앱 → http://localhost:8765
+.venv/bin/python server/app.py             # 소개 사이트 → http://localhost:8765
 .venv/bin/python -m pytest -q tests        # 파이썬 테스트
 ```
 
@@ -178,7 +175,7 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 
 1. Supabase 프로젝트에 `supabase/schema.sql`(쓰기 표) → `supabase/staff.sql`(직원 명단·권한) → `supabase/model.sql`(AI 식) → `supabase/live.sql`(5분 작업) → `supabase/ev.sql`(충전기) → `supabase/calib.sql`(보정) 순서로 적용. 클라우드 적용은 DB 비밀번호로 psql 에서 직접 한다.
 2. Vault 에 `seoul_openapi`(·`datagokr`), 처음 채우기 `tools/supabase_live_load.py --stations --backfill 8`.
-3. 공개(publishable) 키를 `web/cloud.js`·`app/lib/config/ridey_config.dart`·운영 화면 환경 변수(`dashboard/.env.local`)에.
+3. 공개(publishable) 키를 `app/lib/config/ridey_config.dart`에.
 
 확인: `select at, ms from live.tick_log order by at desc limit 5` (단계별 ms·DB 크기). 파이썬과 같은 답인지 `tools/supabase_live_load.py --parity` · `--parity-model`.
 충전기 기록은 클라우드에 3일만 남으니 3일 안에 `tools/ev_pull.py` → `analysis/ev_validate.py`. 실시간으로 AI 점검·다시 배우기는 `tools/retrain.py` (`--deploy` 는 나을 때만 바꿈).
@@ -189,8 +186,7 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 
 - **안드로이드(APK)**: GitHub Actions 의 `flutter` 실행 화면에서 `ridey-apk` 를 받는다(테스트를 통과해야 만들어짐). 직접 만들려면 `cd app && flutter build apk --release` — `app/android/key.properties`(git 밖)가 있으면 그 키로, 없으면 디버그 키로 서명.
 - **아이폰 앱**: `cd app && flutter build ios`, 또는 Xcode 로 `app/ios/Runner.xcworkspace` → Team 고르고 ▶.
-- **아이콘·시작 화면**: `node tools/make_flutter_assets.js` (`web/icon.svg`·`docs/brand/wordmark-dark.svg` 에서).
-- **아이폰 웹앱**: 사파리로 웹앱 주소 → 공유 → 홈 화면에 추가.
+- **아이콘·시작 화면**: `node tools/make_flutter_assets.js` (`docs/brand/icon.svg`·`docs/brand/wordmark-dark.svg` 에서).
 </details>
 
 <details>
@@ -204,31 +200,28 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 
 ```sh
 npm i playwright marked
-node tests/web/smoke.js                                                          # 웹앱 다섯 탭 휴대폰 화면 검사
-PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 node tests/web/offline.js evict  # 진짜 오프라인 시연
-SHOTS=docs/shots node tests/web/smoke.js                                         # 앱 화면 사진
+node tests/web/qr.test.js && node tests/web/site.test.js                         # 사이트·QR 검사
 node tests/web/record_demo.js                                                    # 시연 영상 (ffmpeg 필요)
 node docs/build_pdf.js                                                           # 보고서·제안서·발표 PDF
 .venv/bin/python tools/build_site.py                                             # 웹사이트
-(cd app && flutter test)                                                         # 이용자 앱
-(cd dashboard && npm test)                                                       # 운영 화면 (같은 계산인지 포함)
+(cd app && flutter test)                                                         # Flutter 앱
 python tools/live_sql_compare.py --old <커밋>                                     # 클라우드 SQL 을 고칠 때: 옛·새 같은 답인지 (로컬 Postgres)
 ```
 대회 제출 zip: `python tools/make_submission.py --id <학번> --name <이름>` (APK·소스·출처·영상·보고서·발표를 규칙대로 한 파일로).
 </details>
 
-## 이용자 앱과 운영 화면
+## 앱 모드
 
-이용자가 보는 앱과 직원이 보는 화면을 나눴다. 고장 판단 엔진(`engine/`)과 분석 SQL(`supabase/live.sql`, `model.sql`, `calib.sql`, `ev.sql`)은 그대로다.
+고장 판단 엔진(`engine/`)과 분석 SQL(`supabase/live.sql`, `model.sql`, `calib.sql`, `ev.sql`)은 그대로다. 화면은 Flutter 앱(`app/`) 하나다. 첫 실행에서 시민 모드와 직원 모드를 고른다.
 
-| | 어디 | 누가 |
+| | 누가 | 무엇을 |
 |---|---|---|
-| 이용자 | [`app/`](app/README.md) Flutter. 홈, 번호·QR·OCR 조회, 대여소, 상세(판단 근거·주변 의심 자전거). 조회 습관과 알림은 이 폰 안에만 있다. | 누구나. 직원 화면은 없다. |
-| 운영 | [`dashboard/`](dashboard/README.md) Next.js, RIDEY Operations. 개요, 우선순위, 자치구, 근무 경로, 현장 점검, 기록·아침 목록 CSV, 직원 명단. | 초대한 직원만. 세션과 `ops.staff`, RLS가 같이 막는다. |
+| 시민 | 따릉이를 타기 전에 번호를 확인하는 사람 | 홈, 번호·QR·OCR 조회, 대여소, 상세(판단 근거·주변 의심 자전거). 조회 습관과 알림은 이 폰 안에만 있다. |
+| 직원 | 담당 구의 고장 의심 목록을 읽는 사람 | 구별 현황, 대여소별 목록(아침 목록·실시간), 더보기. 현장 판정이나 사진 업로드는 없다. |
 
-공개로 남는 읽기 뷰는 `live_snapshot`, `ops_lists`, `ops_scores`, `ops_alarm_days` 네 개다. `rescue`·`survey`·사진·`checked`·`field_records`는 활성 직원만 읽고 쓴다. 직원 명단 스키마 `ops`는 API에 열어 두지 않는다. 클라우드에 `staff.sql`을 적용하는 일은 개발자가 psql로 한다. 적용 전에는 기존 웹의 익명 쓰기가 그대로다.
+공개로 남는 읽기 뷰는 `live_snapshot`, `ops_lists`, `ops_scores`, `ops_alarm_days` 네 개다. 앱은 publishable 키로 이 뷰만 읽는다.
 
-루트 `ios/`, `android-app/`은 Flutter 앱으로 바뀌어 지웠다(`ios.yml` 도). `web/`은 설치 없이 보는 웹 데모이자 대여소 QR 스티커가 여는 곳이라 남긴다(`test.yml`, `pages.yml` 이 쓴다). `site/`는 작품 소개. 대여소 목록을 다시 만들면 `analysis/export_web.py`가 `web/data/stations.json`을 쓰고, 그 파일을 `app/assets/data/stations.json`과 `dashboard/data/stations.json`에 복사한다.
+루트 `ios/`, `android-app/`, `web/`, `dashboard/`는 지웠다. `site/`는 작품 소개. 대여소 목록을 다시 만들면 `analysis/export_web.py`가 `data/stations.json`을 쓰고 `app/assets/data/stations.json`에 복사한다.
 
 ## 폴더
 
@@ -236,14 +229,12 @@ python tools/live_sql_compare.py --old <커밋>                                 
 |---|---|
 | [`engine/`](engine) | 헛대여·연쇄·경보 규칙(`core.py`), 아침 목록(`morning.py`), 충전기 헛충전(`ev.py`) |
 | [`supabase/`](supabase) | 클라우드 5분 작업(`live.sql`), AI 식(`model.sql`), 충전기(`ev.sql`), 쓰기 표(`schema.sql`), 직원 명단(`staff.sql`) |
-| [`app/`](app/README.md) | 이용자 Flutter 앱. 직원 기능은 없다. |
-| [`dashboard/`](dashboard/README.md) | 직원용 RIDEY Operations (Next.js). 로그인 없이는 화면이 열리지 않는다(심사·시연용 읽기 전용 둘러보기는 `RIDEY_DEMO=1`). |
+| [`app/`](app/README.md) | Flutter 앱 — 시민 모드와 직원 모드 |
 | [`analysis/`](analysis) | 검증 스크립트 — 기준 선택, 실시간 대조, AI 학습·비교, 공단 순회 효과, 그림 |
-| [`web/`](web) | 웹 데모(설치 없이) — 지금 목록·조회(QR)·현장 확인·하루 재생·현장 조사, 오프라인 동작 |
 | [`site/`](site) | 작품 소개 웹사이트 (GitHub Pages) |
 | [`docs/`](docs/README.md) | 보고서·발표·대본·결과 표·조사 — [문서 목록](docs/README.md) · [스토리라인](docs/story.md) |
 | [`tools/`](tools) | 클라우드 적재·대조, SQL 비교, 다시 배우기, 제출물 만들기 |
-| [`tests/`](tests) | 파이썬·웹 화면·오프라인 검사 (앱·운영 화면 검사는 각 폴더 안) |
+| [`tests/`](tests) | 파이썬·사이트·QR 검사 (앱 검사는 `app/` 안) |
 
 자세한 측정과 실패 기록은 [`PLAN.md`](PLAN.md), 바뀐 점은 [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -252,7 +243,7 @@ python tools/live_sql_compare.py --old <커밋>                                 
 - **자료**: 서울 열린데이터광장 — 따릉이 대여이력([OA-15182](https://data.seoul.go.kr/dataList/OA-15182/F/1/datasetView.do), 실시간 API `tbCycleRentData`), 고장신고([OA-15644](https://data.seoul.go.kr/dataList/OA-15644/F/1/datasetView.do)), 대여소 정보 · 공공데이터포털 — 대전 타슈 대여이력, 한국환경공단 전기차 충전기 상태 (모두 공공누리 제1유형).
   앱과 공개 화면에는 이용자 정보(생년·성별)가 없다. 클라우드는 대여 기록을 8일만 둔다.
 - **참고 연구**: Kaspi·Raviv·Tzur, [Detection of Unusable Bicycles in Bike-Sharing Systems](https://www.researchgate.net/publication/290496984_Detection_of_Unusable_Bicycles_in_Bike-Sharing_Systems) (Omega, 2016) · [Self-Supervised Transformer for Unusable Shared Bike Detection](https://arxiv.org/pdf/2505.00932) (2025) — 비교는 [related_work](docs/related_work.md).
-- **포함한 라이브러리**: [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2), [jsQR](https://github.com/cozmo/jsQR) 1.4.0 (Apache-2.0) — `web/vendor/` 에 라이선스 동봉. 지도 © OpenStreetMap 기여자. 글꼴 [Pretendard](https://github.com/orioncactus/pretendard) (OFL).
+- **포함한 라이브러리**: [jsQR](https://github.com/cozmo/jsQR) 1.4.0 (Apache-2.0) — `tests/vendor/jsqr/` 에 라이선스 동봉. 지도 © OpenStreetMap 기여자. 글꼴 [Pretendard](https://github.com/orioncactus/pretendard) (OFL).
 - **라이선스**: 코드는 [MIT](LICENSE). 자료는 각 출처의 공공누리 제1유형(출처 표시).
 
 <p align="center"><b>신고를 기다리지 말고, 흔적을 읽자.</b></p>

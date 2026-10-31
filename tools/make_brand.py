@@ -1,8 +1,8 @@
 """RIDEY 브랜드 — 로고·앱 아이콘·큰 숫자 글꼴을 코드로 만든다 (docs/brand.md).
 
     pip install fonttools brotli          # 한 번 (brotli 는 woff2 압축)
-    python tools/make_brand.py            # → web/icon.svg · site/img/mark.svg · docs/brand/*.svg · web/fonts/unbounded-ridey.woff2
-                                          #   + web/index.html · site/index.html 안의 <!-- brand:wordmark --> 자리를 새 로고로
+    python tools/make_brand.py            # → docs/brand/*.svg · site/img/mark.svg · site/fonts/unbounded-ridey.woff2
+                                          #   + site/index.html 안의 <!-- brand:wordmark --> 자리를 새 로고로
     그다음 node tools/make_icons.js && node tools/make_flutter_assets.js (PNG 아이콘·Flutter 앱 아이콘과 시작 화면)
 
 로고 = 'RIDEY' + 신호 점. 글자는 Unbounded(SIL OFL 1.1, 예약 글꼴 이름 없음)의 굵기 760 을 도형으로 바꾼 것이고,
@@ -73,8 +73,8 @@ def numbers_font():
     o = subset.Options(); o.flavor = "woff2"; o.layout_features = ["kern", "tnum", "lnum"]; o.name_IDs = ["*"]
     s = subset.Subsetter(o); s.populate(text="0123456789%+-–~.,:/·×xABCDEFGHIJKLMNOPQRSTUVWXYZ "); s.subset(f)
     f.flavor = "woff2"; f.recalcTimestamp = False   # 다시 만들어도 같은 파일(쓸데없는 바뀜 없게)
-    out = ROOT / "web" / "fonts" / "unbounded-ridey.woff2"; out.parent.mkdir(exist_ok=True); f.save(out)
-    lic = ROOT / "web" / "fonts" / "OFL-Unbounded.txt"
+    out = ROOT / "site" / "fonts" / "unbounded-ridey.woff2"; out.parent.mkdir(exist_ok=True); f.save(out)
+    lic = ROOT / "site" / "fonts" / "OFL-Unbounded.txt"
     if not lic.exists():
         lic.write_bytes(urllib.request.urlopen("https://raw.githubusercontent.com/google/fonts/main/ofl/unbounded/OFL.txt", timeout=60).read())
     return out
@@ -94,7 +94,7 @@ def app_number_font():
         elif rec.nameID == 6: rec.string = "UnboundedRIDEY-ExtraBold"
     D = ROOT / "app" / "assets" / "fonts"; D.mkdir(parents=True, exist_ok=True)
     g.recalcTimestamp = False; g.save(D / "unbounded-ridey-800.ttf")
-    lic = ROOT / "web" / "fonts" / "OFL-Unbounded.txt"
+    lic = ROOT / "site" / "fonts" / "OFL-Unbounded.txt"
     if lic.exists():
         shutil.copyfile(lic, D / "OFL-Unbounded.txt")
 
@@ -113,7 +113,6 @@ def put(path, html):
 
 def main():
     f = font()
-    (ROOT / "web" / "icon.svg").write_text(icon(f) + "\n")
     (ROOT / "site" / "img").mkdir(parents=True, exist_ok=True)
     (ROOT / "site" / "img" / "mark.svg").write_text(icon(f) + "\n")
     B = ROOT / "docs" / "brand"; B.mkdir(parents=True, exist_ok=True)
@@ -123,7 +122,7 @@ def main():
     (B / "icon.svg").write_text(icon(f) + "\n")
     (B / "icon-light.svg").write_text(icon(f, bg=PAPER, fg=INK) + "\n")
     w = wordmark(f, label=False)
-    n = put("web/index.html", w) + put("site/index.html", w) + put("site/releases.html", w)
+    n = put("site/index.html", w) + put("site/releases.html", w)
     try:
         out = numbers_font(); print(f"{out.relative_to(ROOT)} {out.stat().st_size / 1024:.1f}KB")
         app_number_font()

@@ -1,6 +1,6 @@
 """Supabase 실시간 DB(live 스키마) 처음 채우기·검사 — supabase/live.sql 을 적용한 뒤.
 
-    python tools/supabase_live_load.py --stations          # 대여소 이름 (web/data/stations.json)
+    python tools/supabase_live_load.py --stations          # 대여소 이름 (data/stations.json)
     python tools/supabase_live_load.py --backfill 8         # 지난 8일 대여이력을 서울 API 로 받아 한꺼번에 넣기 (맥에서 몇 분)
     python tools/supabase_live_load.py --parity             # SQL 로 만든 지금 목록 = 파이썬 엔진(server/live.py live_state) 인지
     python tools/supabase_live_load.py --parity-model       # 자체 모델 특징: SQL live.p_features = 파이썬 features
@@ -33,7 +33,7 @@ def copy_rows(table, cols, rows):
 
 
 def stations():
-    st = json.load(open(ROOT / "web/data/stations.json"))
+    st = json.load(open(ROOT / "data/stations.json"))
     psql("truncate live.stations")
     copy_rows("live.stations", ["id", "name"], [(s["id"], s["name"].strip()) for s in st])
     print("대여소", psql("select count(*) from live.stations").strip())

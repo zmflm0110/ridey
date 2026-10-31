@@ -36,7 +36,7 @@ def main():
     ap.add_argument("--start", default="2026-06-08")
     ap.add_argument("--days", type=int, default=7)
     a = ap.parse_args()
-    stn = {s["id"]: s["name"] for s in json.load(open(ROOT / "web" / "data" / "stations.json"))}
+    stn = {s["id"]: s["name"] for s in json.load(open(ROOT / "data" / "stations.json"))}
     R = load_seoul(ROOT / "data" / "raw" / f"rent_{a.month}.csv")
     out = ["# Phase 3 예행연습 (자동 생성: `python server/rehearse.py`)", "",
            f"서울 {a.month} 파일로 운영과 같은 매일 아침 작업을 {a.days}일 연속. 매일 최근 N일 기록만 넘김.", ""]

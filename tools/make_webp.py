@@ -1,6 +1,6 @@
 """앱 화면 사진(docs/shots/*.png)을 사이트용 가벼운 WebP 로 (가로 600px — 사이트는 폰 그림 안에 300px 남짓으로 보여 줌, 2배 선명도).
 
-    python tools/make_webp.py        # SHOTS=docs/shots node tests/web/smoke.js 로 사진을 새로 찍은 뒤에
+    python tools/make_webp.py        # docs/shots 의 png 를 webp 로
 
 GitHub 의 사이트 만들기(tools/build_site.py)는 표준 라이브러리만 써서 거기서 줄일 수 없다 — 그래서 여기서 만들어 저장소에 둔다.
 """

@@ -1,11 +1,11 @@
-"""매일 새벽 작업 — 어제까지의 자전거별 대여기록으로 오늘 아침 목록을 만든다 → web/data/morning/<오늘>.json
+"""매일 새벽 작업 — 어제까지의 자전거별 대여기록으로 오늘 아침 목록을 만든다 → data/morning/<오늘>.json
 
 출처:
   --source file --month 2606      월별 파일(열린데이터광장 OA-15182). 시연용. 한 달 치 전부의 아침 목록을 만든다.
   --source api --api-url <주소>    공공데이터포털 '서울시설공단_공공자전거 대여이력 정보'(키 2). 명세의 요청주소만 넣으면
                                   최근 7일을 하루씩·쪽마다 받아 목록을 만든다. 열 이름이 낯설면 받은 열을 보여 주며 멈춤
                                   → engine/core.py FIELDS 에 한 줄. 날짜 인자 이름이 다르면 --date-param.
-그리고 키 1 이 있으면 실시간 대여소 현황을 web/data/status.json 에 남긴다(지도의 지금 자전거 수).
+그리고 키 1 이 있으면 실시간 대여소 현황을 data/ops/status.json 에 남긴다.
 """
 import argparse, datetime as dt, json, os, pathlib, sqlite3, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -15,8 +15,8 @@ from engine.core import load_seoul, load_faults, mark
 from engine.morning import RULE, morning_lists
 from server import seoul_api
 
-OUT = ROOT / "web" / "data" / "morning"   # 시연용(월별 파일) — git 에 들어감
-OPS = pathlib.Path(os.environ.get("OPS_DIR", ROOT / "web" / "data" / "ops"))       # 운영(API·실시간) 매일 목록·채점·대여소 현황 — git 에서 뺌(매일 바뀜), 앱이 둘을 합쳐 보여 줌
+OUT = ROOT / "data" / "morning"   # 시연용(월별 파일)
+OPS = pathlib.Path(os.environ.get("OPS_DIR", ROOT / "data" / "ops"))       # 운영 매일 목록·채점 — git 에서 뺌
 DB = pathlib.Path(os.environ.get("DAILY_DB", ROOT / "data" / "daily.sqlite"))
 LOOKBACK_DAYS = 7   # 연쇄는 며칠씩 이어지기도 한다 — 일주일 치를 보고 오늘 아침 목록을 만든다 (server/rehearse.py 로 확인)
 
@@ -111,7 +111,7 @@ def fetch_rentals_api(start, end, url=None, key=None, per_page=1000, date_params
 
 
 def write_scores(c, out=None):
-    """다음 날 아침 채점 결과를 앱이 읽게 → web/data/ops/scores.json {목록 날짜: {listed, rode, first_dud}}"""
+    """다음 날 아침 채점 결과를 앱이 읽게 → data/ops/scores.json {목록 날짜: {listed, rode, first_dud}}"""
     out = out or OPS / "scores.json"
     rows = c.execute("select day, listed, rode, first_dud from scores order by day").fetchall()
     json.dump({d: {"listed": n, "rode": r, "first_dud": k} for d, n, r, k in rows}, open(out, "w"))
@@ -140,7 +140,7 @@ def main(argv=None):
     ap.add_argument("--date-param", help="날짜 인자 이름 (기본 searchDate, 또는 RENT_API_DATE_PARAM)")
     ap.add_argument("--today", help="이 날 아침인 것처럼 (놓친 날 다시 만들기·검사용, YYYY-MM-DD)")
     a = ap.parse_args(argv)
-    stn = {s["id"]: s["name"] for s in json.load(open(ROOT / "web" / "data" / "stations.json"))}
+    stn = {s["id"]: s["name"] for s in json.load(open(ROOT / "data" / "stations.json"))}
     if a.source == "file":
         R = load_seoul(ROOT / "data" / "raw" / f"rent_{a.month}.csv")
         F = load_faults(ROOT / "data" / "raw" / "fault_2601-2606.csv")

@@ -1,4 +1,4 @@
-// Flutter 이용자 앱(app/)의 아이콘·시작 화면 — 브랜드(docs/brand.md)에서: 아이콘 'R.'(web/icon.svg), 시작 화면은 잉크 바탕 가운데 'RIDEY.'
+// Flutter 이용자 앱(app/)의 아이콘·시작 화면 — 브랜드(docs/brand.md)에서: 아이콘 'R.'(docs/brand/icon.svg), 시작 화면은 잉크 바탕 가운데 'RIDEY.'
 //   node tools/make_flutter_assets.js      (NODE_PATH 에 playwright — 저장소 루트의 tests/web/browser.js 를 씀)
 //   안드로이드: mipmap-*/ic_launcher.png(둥근 네모) + 적응형(ic_launcher_foreground + 잉크 바탕, mipmap-anydpi-v26), 시작 화면 drawable-*/splash_wordmark.png
 //   아이폰: AppIcon.appiconset 의 모든 크기(투명 없는 꽉 찬 네모 — 모서리는 iOS 가 깎음), LaunchImage.imageset 의 워드마크 + 바탕 잉크
@@ -7,7 +7,7 @@ const { launch } = require("../tests/web/browser");
 const ROOT = path.resolve(__dirname, ".."), APP = path.join(ROOT, "app");
 const RES = path.join(APP, "android/app/src/main/res"), XC = path.join(APP, "ios/Runner/Assets.xcassets");
 const INK = "#111317";
-const icon = fs.readFileSync(path.join(ROOT, "web/icon.svg"), "utf8");
+const icon = fs.readFileSync(path.join(ROOT, "docs/brand/icon.svg"), "utf8");
 const glyph = icon.match(/<g transform="[^"]*">[\s\S]*?<\/g>/)[0];                       // 'R' + 신호 점 (512 칸 안 자리 그대로)
 const square = icon.replace(/<rect([^>]*?)\srx="[^"]*"/, "<rect$1");                      // 아이폰: 모서리 없이(iOS 가 깎음)
 const fg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g transform="translate(256 256) scale(.74) translate(-256 -256)">${glyph}</g></svg>`;   // 적응형 앞면: 108 칸 중 가운데 66 칸 안에

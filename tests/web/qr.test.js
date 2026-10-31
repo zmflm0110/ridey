@@ -5,10 +5,10 @@ const ROOT = path.resolve(__dirname, "../..");
 const sandbox = { TextEncoder, console }; sandbox.window = sandbox; vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(ROOT, "site/qr.js"), "utf8"), sandbox);
 const m = { exports: {} };
-new Function("module", "exports", "self", fs.readFileSync(path.join(ROOT, "web/vendor/jsqr/jsQR.js"), "utf8"))(m, m.exports, {});
+new Function("module", "exports", "self", fs.readFileSync(path.join(ROOT, "tests/vendor/jsqr/jsQR.js"), "utf8"))(m, m.exports, {});
 const jsQR = typeof m.exports === "function" ? m.exports : (m.exports.default || m.exports.jsQR);
-const stations = JSON.parse(fs.readFileSync(path.join(ROOT, "web/data/stations.json"), "utf8"));
-const APP = "https://zmflm0110.github.io/ridey/app/?s=";
+const stations = JSON.parse(fs.readFileSync(path.join(ROOT, "app/assets/data/stations.json"), "utf8"));
+const APP = "https://zmflm0110.github.io/ridey/?s=";
 const texts = stations.map((s) => APP + (Array.isArray(s) ? s[0] : s.id));
 // 길이·글자 종류가 다른 경우도: 짧은 글, 한글, 106자(버전 6 끝), 107자(오류)
 const extra = ["A", "https://zmflm0110.github.io/ridey/", "한글 주소 테스트 " + "가".repeat(10), "x".repeat(106)];

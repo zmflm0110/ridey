@@ -1,4 +1,4 @@
-"""작은 서버 — 웹앱(web/)을 내보내고, 구조대 확인을 받아 SQLite 에 쌓는다. 표준 라이브러리만.
+"""작은 서버 — 소개 사이트(site/)를 내보내고, 구조대 확인을 받아 SQLite 에 쌓는다. 표준 라이브러리만.
 
     python server/app.py            # http://localhost:8765
     python server/app.py 8443 --https   # 집 와이파이 안 https (아이폰 위치·QR) — 먼저 server/https_local.sh
@@ -57,7 +57,7 @@ def save_photo(data_url):
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
-        super().__init__(*a, directory=str(ROOT / "web"), **kw)
+        super().__init__(*a, directory=str(ROOT / "site"), **kw)
 
     def _json(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False).encode()

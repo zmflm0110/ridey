@@ -1,7 +1,7 @@
 """실시간 경보 — 서울 대여이력 API(tbCycleRentData)는 반납하자마자 자전거별 기록이 올라온다(2026-09-25 실측: 지연 약 0분).
 그래서 '하루 늦은 아침 목록' 대신, 서로 다른 두 번째 사람이 빌리자마자 반납하는 그 순간 경보를 낼 수 있다.
 
-    python server/live.py                 # 처음엔 최근 7일을 채우고, 그 뒤 1분마다 받아 web/data/live.json 갱신 (Ctrl+C 로 멈춤)
+    python server/live.py                 # 처음엔 최근 7일을 채우고, 그 뒤 1분마다 받아 data/live.json 갱신 (Ctrl+C 로 멈춤)
     python server/live.py --once          # 한 번만 받고 끝 (시험용)
     python server/live.py --report        # 지금까지 낸 경보가 맞았나: 경보 뒤 '다른 사람' 첫 대여도 헛대여였나
 
@@ -23,8 +23,8 @@ from server import seoul_api
 
 # 경로는 환경변수로 바꿀 수 있다 — GitHub 에서 돌 때(.github/workflows/cloud.yml) 캐시에 둔 DB 와 올릴 폴더를 쓴다
 DB = pathlib.Path(os.environ.get("LIVE_DB", ROOT / "data" / "live.sqlite"))
-OUT = pathlib.Path(os.environ.get("LIVE_OUT", ROOT / "web" / "data" / "live.json"))
-OPS = pathlib.Path(os.environ.get("OPS_DIR", ROOT / "web" / "data" / "ops"))
+OUT = pathlib.Path(os.environ.get("LIVE_OUT", ROOT / "data" / "live.json"))
+OPS = pathlib.Path(os.environ.get("OPS_DIR", ROOT / "data" / "ops"))
 SEEN_MIN = int(os.environ.get("LIVE_SEEN_MIN", "10"))   # 이 안에 알아챈 경보만 '실시간' 채점 (GitHub 은 10분마다라 30)
 LOOKBACK_DAYS = 7          # 연쇄는 며칠 이어지기도 한다 (아침 목록과 같게)
 FRESH_HOURS = 24           # 마지막 헛대여가 이보다 오래된 연쇄는 목록에서 뺌 — 2일+ 서 있던 연쇄는 다음 사람 헛걸음 10~12% (docs/report.md 5-4)
@@ -252,7 +252,7 @@ def main():
         return
     if not seoul_api.key():
         raise SystemExit("서울 열린데이터광장 인증키가 없습니다: security add-generic-password -a bike-doctor -s seoul-openapi -w")
-    stn = {s["id"]: s["name"].strip() for s in json.load(open(ROOT / "web" / "data" / "stations.json"))}
+    stn = {s["id"]: s["name"].strip() for s in json.load(open(ROOT / "data" / "stations.json"))}
     n = backfill(c, dt.datetime.now())
     print(f"지난 {LOOKBACK_DAYS}일 채움: 새로 {n:,}건", flush=True)
     i, last = 0, None

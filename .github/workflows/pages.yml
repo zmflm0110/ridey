@@ -1,10 +1,10 @@
-# 작품 소개 웹사이트(site/) + 시연용 웹앱(web/ → app/) + 진행 기록(CHANGELOG.md → releases.html) 을 GitHub Pages 로
-#   https://zmflm0110.github.io/ridey/  ·  /app/  ·  /releases.html
+# 작품 소개 웹사이트(site/) + 진행 기록(CHANGELOG.md → releases.html) 을 GitHub Pages 로
+#   https://zmflm0110.github.io/ridey/  ·  /releases.html
 name: pages
 on:
   push:
     branches: [master]
-    paths: ["site/**", "web/**", "CHANGELOG.md", "tools/build_site.py", "docs/shots/**", ".github/workflows/pages.yml"]
+    paths: ["site/**", "CHANGELOG.md", "tools/build_site.py", "docs/shots/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python tools/build_site.py --out _site    # 표준 라이브러리만
+      - run: python tools/build_site.py --out _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
