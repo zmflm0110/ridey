@@ -145,7 +145,10 @@ class _StaffShellState extends State<StaffShell> {
                 child: RideyTabBar(
                   index: _index,
                   items: _navigationItems,
-                  onChanged: (index) => setState(() => _index = index),
+                  onChanged: (index) {
+                    if (index != 1) _session.clearFocus();
+                    setState(() => _index = index);
+                  },
                 ),
               ),
             ],

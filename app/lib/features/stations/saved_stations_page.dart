@@ -101,13 +101,16 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
     super.initState();
     _stationRepository = widget.stationRepository ?? BundledStationRepository();
     _store = widget.store ?? SavedStationsStore();
-    _loading = _load().then((_) {
-      return rememberLookup(
+    _loading = _load();
+    // 위치 읽기(최대 몇 초)를 화면이 기다리지 않게 따로 돌린다. 저장한 대여소가 없으면 '조회'로 치지 않는다.
+    _loading.then((_) {
+      if (_saved.isEmpty) return;
+      rememberLookup(
         kind: LookupKind.station,
-        subject: _saved.isEmpty ? null : _saved.first,
+        subject: _saved.first,
         readLocation: widget.readLocation,
       );
-    });
+    }, onError: (_) {});
   }
 
   Future<void> _load() async {
@@ -345,6 +348,7 @@ class _Content extends StatelessWidget {
                   station: station,
                   bikes: _bikesAt(snapshot.bikes, station.id),
                   updatedAt: updatedAt,
+                  feed: snapshot.feed,
                   onRemove: () => onRemove(station),
                 ),
             ],
@@ -417,12 +421,14 @@ class _SavedStationRow extends StatelessWidget {
     required this.station,
     required this.bikes,
     required this.updatedAt,
+    required this.feed,
     required this.onRemove,
   });
 
   final BikeStation station;
   final List<LiveBike> bikes;
   final DateTime updatedAt;
+  final FeedHealth feed;
   final VoidCallback onRemove;
 
   @override
@@ -474,7 +480,11 @@ class _SavedStationRow extends StatelessWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) =>
-                              BikeDetailPage(bike: bike, updatedAt: updatedAt),
+                              BikeDetailPage(
+                                bike: bike,
+                                updatedAt: updatedAt,
+                                feed: feed,
+                              ),
                         ),
                       );
                     },

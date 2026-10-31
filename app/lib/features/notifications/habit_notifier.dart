@@ -221,6 +221,13 @@ Future<void> deliverHabitNotification({
 
   final snapshot = await (snapshots ?? SupabaseLiveSnapshotRepository())
       .fetch();
+  // 네트워크가 안 돼 폰에 저장해 둔 옛 사본이 오거나 대여 기록이 늦으면 '지금' 이라고 알리지 않는다.
+  // 오늘 알림을 쓴 것으로 치지 않으니 창 안에서 다음 실행 때 다시 해 본다.
+  if (snapshot.isOffline ||
+      !snapshot.feed.isHealthy ||
+      clock.difference(snapshot.updatedAt) > const Duration(minutes: 30)) {
+    return;
+  }
   final catalog = await (stations ?? BundledStationRepository()).fetch();
   final message = habitNotificationBody(
     enabled: enabled,

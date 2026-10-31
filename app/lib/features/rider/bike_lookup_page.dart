@@ -32,17 +32,37 @@ class BikeLookupPage extends StatefulWidget {
 class _BikeLookupPageState extends State<BikeLookupPage> {
   final _controller = TextEditingController();
   late LiveSnapshot _snapshot;
+  late DateTime _fetchedAt;
+  var _busy = false;
+
+  /// 탭은 앱을 켤 때 한 번 받은 목록을 들고 있다. 그 뒤 켜진 경보를 놓치지 않도록
+  /// 이보다 오래된 목록이면 조회 직전에 다시 받는다(실패하면 들고 있던 목록으로).
+  static const _maxAge = Duration(minutes: 2);
 
   @override
   void initState() {
     super.initState();
     _snapshot = widget.snapshot;
+    _fetchedAt = DateTime.now();
   }
 
   @override
   void didUpdateWidget(BikeLookupPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.snapshot != oldWidget.snapshot) _snapshot = widget.snapshot;
+    if (widget.snapshot != oldWidget.snapshot) {
+      _snapshot = widget.snapshot;
+      _fetchedAt = DateTime.now();
+    }
+  }
+
+  Future<void> _refreshIfOld() async {
+    if (DateTime.now().difference(_fetchedAt) < _maxAge) return;
+    try {
+      _snapshot = await widget.repository.fetch();
+      _fetchedAt = DateTime.now();
+    } catch (_) {
+      // 네트워크가 안 되면 들고 있던 목록으로 판단한다.
+    }
   }
 
   @override
@@ -72,7 +92,8 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     );
   }
 
-  void _lookup(LookupKind kind, {String? raw}) {
+  Future<void> _lookup(LookupKind kind, {String? raw}) async {
+    if (_busy) return;
     FocusScope.of(context).unfocus();
     final bikeId = normalizeBikeId(raw ?? _controller.text);
     if (bikeId == null) {
@@ -88,6 +109,13 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       subject: bikeId,
       readLocation: widget.readLocation,
     );
+    _busy = true;
+    try {
+      await _refreshIfOld();
+    } finally {
+      _busy = false;
+    }
+    if (!mounted) return;
     final bike = findBike(_snapshot.bikes, bikeId);
     if (bike == null) {
       _showMessage(

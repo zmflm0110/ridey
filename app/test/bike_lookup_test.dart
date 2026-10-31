@@ -30,4 +30,10 @@ void main() {
     expect(bikeIdFromRecognizedText('RIDEY\nspb 69683\n대여소'), 'SPB-69683');
     expect(bikeIdFromRecognizedText('번호를 읽지 못했어요'), isNull);
   });
+
+  test('ignores a partly read plate instead of padding it into another bike', () {
+    expect(bikeIdFromRecognizedText('SPB-123'), isNull);
+    expect(bikeIdFromRecognizedText('SPB-1234'), isNull);
+    expect(bikeIdFromRecognizedText('SPB-1234567'), isNull);
+  });
 }

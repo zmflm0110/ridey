@@ -113,7 +113,8 @@ class StaffListPage extends StatelessWidget {
                           MaterialPageRoute<void>(
                             builder: (_) => BikeDetailPage(
                               bike: bike,
-                              updatedAt: DateTime.now(),
+                              updatedAt: session.updatedAt ?? DateTime.now(),
+                              feed: session.feed,
                             ),
                           ),
                         );

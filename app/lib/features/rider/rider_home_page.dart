@@ -166,13 +166,10 @@ class _LoadedHomeState extends State<_LoadedHome> {
 
   void _reloadArea() => setState(() => _area = _load());
 
+  /// 지도에서 대여소를 누르면 그곳의 강한 경보 자전거를 먼저 연다(없으면 첫 자전거).
   void _openStation(String stationId, List<NearbyBike> bikes) {
-    for (final item in bikes) {
-      if (item.bike.station == stationId) {
-        widget.onBikeSelected(item.bike);
-        return;
-      }
-    }
+    final bike = firstBikeAt([for (final item in bikes) item.bike], stationId);
+    if (bike != null) widget.onBikeSelected(bike);
   }
 
   @override
