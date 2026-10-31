@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/app/legacy_preferences.dart';
+import 'package:ridey_app/app/mode_switch.dart';
+import 'package:ridey_app/app/onboarding_page.dart';
 import 'package:ridey_app/app/ridey_actions.dart';
+import 'package:ridey_app/app/user_mode.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/habits/lookup_habits_page.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/notifications/notification_settings_page.dart';
+import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/rider/bike_check_tab.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
+import 'package:ridey_app/features/staff/staff_shell.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -20,12 +25,14 @@ class RideyApp extends StatefulWidget {
     super.key,
     this.liveRepository,
     this.stationRepository,
+    this.opsListRepository,
     this.readLocation,
     this.enableCamera = true,
   });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final OpsListRepository? opsListRepository;
   final Future<DeviceLocation?> Function()? readLocation;
   final bool enableCamera;
 
@@ -35,13 +42,30 @@ class RideyApp extends StatefulWidget {
 
 class _RideyAppState extends State<RideyApp> {
   ThemeMode _themeMode = ThemeMode.system;
-  late final Future<void> _ready;
+  UserMode? _mode;
+  var _ready = false;
   final _pendingCheck = ValueNotifier<RideyCheckRequest?>(null);
 
   @override
   void initState() {
     super.initState();
-    _ready = clearLegacyPreferences();
+    _boot();
+  }
+
+  Future<void> _boot() async {
+    await clearLegacyPreferences();
+    final mode = await readUserMode();
+    if (!mounted) return;
+    setState(() {
+      _mode = mode;
+      _ready = true;
+    });
+  }
+
+  Future<void> _chooseMode(UserMode mode) async {
+    await writeUserMode(mode);
+    if (!mounted) return;
+    setState(() => _mode = mode);
   }
 
   @override
@@ -69,23 +93,34 @@ class _RideyAppState extends State<RideyApp> {
         theme: RideyTheme.light(),
         darkTheme: RideyTheme.dark(),
         themeMode: _themeMode,
-        home: FutureBuilder<void>(
-          future: _ready,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const _StartupPage();
-            }
-            return RideyShell(
-              liveRepository: widget.liveRepository,
-              stationRepository: widget.stationRepository,
-              readLocation: widget.readLocation,
-              enableCamera: widget.enableCamera,
-              themeMode: _themeMode,
-              onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
-              pendingCheck: _pendingCheck,
-            );
-          },
-        ),
+        home: !_ready
+            ? const _StartupPage()
+            : switch (_mode) {
+                null => OnboardingPage(onChosen: _chooseMode),
+                UserMode.rider => RideyShell(
+                  liveRepository: widget.liveRepository,
+                  stationRepository: widget.stationRepository,
+                  readLocation: widget.readLocation,
+                  enableCamera: widget.enableCamera,
+                  themeMode: _themeMode,
+                  onThemeModeChanged: (mode) =>
+                      setState(() => _themeMode = mode),
+                  onSwitchToStaff: () => _chooseMode(UserMode.staff),
+                  pendingCheck: _pendingCheck,
+                ),
+                UserMode.staff => StaffShell(
+                  liveRepository:
+                      widget.liveRepository ?? SupabaseLiveSnapshotRepository(),
+                  stationRepository:
+                      widget.stationRepository ?? BundledStationRepository(),
+                  opsListRepository:
+                      widget.opsListRepository ?? SupabaseOpsListRepository(),
+                  themeMode: _themeMode,
+                  onThemeModeChanged: (mode) =>
+                      setState(() => _themeMode = mode),
+                  onSwitchToRider: () => _chooseMode(UserMode.rider),
+                ),
+              },
       ),
     );
   }
@@ -100,6 +135,7 @@ class RideyShell extends StatefulWidget {
     required this.enableCamera,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.onSwitchToStaff,
     required this.pendingCheck,
   });
 
@@ -109,6 +145,7 @@ class RideyShell extends StatefulWidget {
   final bool enableCamera;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final VoidCallback onSwitchToStaff;
   final ValueNotifier<RideyCheckRequest?> pendingCheck;
 
   @override
@@ -186,6 +223,7 @@ class _RideyShellState extends State<RideyShell> {
                       _MorePage(
                         themeMode: widget.themeMode,
                         onThemeModeChanged: widget.onThemeModeChanged,
+                        onSwitchToStaff: widget.onSwitchToStaff,
                         liveRepository: widget.liveRepository,
                         stationRepository: widget.stationRepository,
                         readLocation: widget.readLocation,
@@ -252,6 +290,7 @@ class _MorePage extends StatelessWidget {
   const _MorePage({
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.onSwitchToStaff,
     required this.liveRepository,
     required this.stationRepository,
     required this.readLocation,
@@ -259,6 +298,7 @@ class _MorePage extends StatelessWidget {
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final VoidCallback onSwitchToStaff;
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
   final Future<DeviceLocation?> Function()? readLocation;
@@ -338,6 +378,22 @@ class _MorePage extends StatelessWidget {
                   onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light);
                 },
               ),
+            ),
+            RideyRow(
+              leading: const RideyIco(icon: Icons.swap_horiz_rounded),
+              title: '이용 목적 바꾸기',
+              subtitle: '직원 모드로 전환해요',
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: context.ridey.muted,
+              ),
+              onTap: () async {
+                final confirmed = await confirmModeSwitch(
+                  context,
+                  next: UserMode.staff,
+                );
+                if (confirmed) onSwitchToStaff();
+              },
             ),
           ],
         ),

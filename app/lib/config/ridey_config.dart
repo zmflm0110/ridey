@@ -19,6 +19,12 @@ abstract final class RideyConfig {
 
   static Uri get liveSnapshotUri => rest('live_snapshot?select=at,body');
 
+  static Uri get opsListDaysUri =>
+      rest('ops_lists?select=day&order=day.desc&limit=14');
+
+  static Uri opsListDayUri(String day) =>
+      rest('ops_lists?select=body&day=eq.$day');
+
   /// `--dart-define=NAVER_MAP_CLIENT_ID=...` wins over [loadLocalEnv].
   static const naverMapClientIdFromDefine = String.fromEnvironment(
     'NAVER_MAP_CLIENT_ID',

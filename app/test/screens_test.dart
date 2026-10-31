@@ -124,6 +124,7 @@ void main() {
   setUp(
     () => SharedPreferences.setMockInitialValues({
       'my_stations': ['02720', '00207'],
+      'user_mode': 'rider',
     }),
   );
 

@@ -8,6 +8,8 @@ void main() {
       'app_purpose': 'worker',
       'field_verification_queue': '[]',
       'my_stations': ['02720'],
+      'user_mode': 'staff',
+      'staff_districts': ['강남구'],
     });
 
     await clearLegacyPreferences();
@@ -16,5 +18,7 @@ void main() {
     expect(preferences.getString('app_purpose'), isNull);
     expect(preferences.getString('field_verification_queue'), isNull);
     expect(preferences.getStringList('my_stations'), ['02720']);
+    expect(preferences.getString('user_mode'), 'staff');
+    expect(preferences.getStringList('staff_districts'), ['강남구']);
   });
 }
