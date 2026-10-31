@@ -1,6 +1,7 @@
 // Renders the main screens to PNG for design review — the CI 'screens' job
 // uploads them. Skipped unless RIDEY_SCREENS (output folder) and RIDEY_FONT
 // (Korean font files, ':'-separated) are set, so plain `flutter test` ignores it.
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -11,6 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/ops/ops_list.dart';
+import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,6 +98,17 @@ class _Live implements LiveSnapshotRepository {
   );
 }
 
+class _Ops implements OpsListRepository {
+  @override
+  Future<List<String>> days() async => const ['2026-10-25', '2026-10-24'];
+
+  @override
+  Future<OpsList> fetch(String day) async {
+    final live = await _Live().fetch();
+    return OpsList(day: day, bikes: live.bikes.take(5).toList());
+  }
+}
+
 class _Stations implements StationRepository {
   @override
   Future<List<BikeStation>> fetch() async => _stations;
@@ -114,6 +128,23 @@ Future<void> _loadFonts() async {
   await load('Roboto', Platform.environment['RIDEY_FONT']!.split(':'));
   await load('MaterialIcons', [Platform.environment['RIDEY_ICONS']!]);
   await load('RideyNumbers', ['assets/fonts/unbounded-ridey-800.ttf']);
+  // 앱 아이콘(material_symbols_icons)의 글꼴: 패키지 위치를 package_config 에서 찾는다.
+  final config =
+      jsonDecode(File('.dart_tool/package_config.json').readAsStringSync())
+          as Map;
+  final pkg =
+      (config['packages'] as List).firstWhere(
+            (p) => p['name'] == 'material_symbols_icons',
+          )
+          as Map;
+  final raw = pkg['rootUri'] as String;
+  final root = Uri.parse(raw.endsWith('/') ? raw : '$raw/');
+  final dir = root.isAbsolute
+      ? root.toFilePath()
+      : Directory('.dart_tool').uri.resolveUri(root).toFilePath();
+  await load('packages/material_symbols_icons/MaterialSymbolsRounded', [
+    '${dir}lib/fonts/MaterialSymbolsRounded.ttf',
+  ]);
 }
 
 void main() {
@@ -152,7 +183,9 @@ void main() {
     WidgetTester tester, {
     bool dark = false,
     double height = 844,
+    Map<String, Object>? prefs,
   }) async {
+    if (prefs != null) SharedPreferences.setMockInitialValues(prefs);
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = Size(390 * 3, height * 3);
     tester.platformDispatcher.platformBrightnessTestValue = dark
@@ -166,6 +199,7 @@ void main() {
         child: RideyApp(
           liveRepository: _Live(),
           stationRepository: _Stations(),
+          opsListRepository: _Ops(),
           readLocation: () async => (latitude: 37.5610, longitude: 126.8350),
           enableCamera: false,
         ),
@@ -223,5 +257,32 @@ void main() {
       await tester.tap(find.text('더보기'));
       await shot(tester, '07_more$tag');
     }, skip: _out == null);
+
+    testWidgets('onboarding$tag', (tester) async {
+      await open(tester, dark: dark, prefs: {});
+      await shot(tester, '08_onboarding$tag');
+    }, skip: _out == null);
+
+    testWidgets('staff overview$tag', (tester) async {
+      await open(tester, dark: dark, height: 1100, prefs: _staff);
+      await shot(tester, '09_staff_overview$tag');
+    }, skip: _out == null);
+
+    testWidgets('staff list$tag', (tester) async {
+      await open(tester, dark: dark, height: 1100, prefs: _staff);
+      await tester.tap(find.text('목록'));
+      await shot(tester, '10_staff_list$tag');
+    }, skip: _out == null);
+
+    testWidgets('staff more$tag', (tester) async {
+      await open(tester, dark: dark, prefs: _staff);
+      await tester.tap(find.text('더보기'));
+      await shot(tester, '11_staff_more$tag');
+    }, skip: _out == null);
   }
 }
+
+const _staff = <String, Object>{
+  'user_mode': 'staff',
+  'staff_districts': ['강서구', '마포구'],
+};

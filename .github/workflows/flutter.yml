@@ -21,6 +21,10 @@ jobs:
           channel: stable
           flutter-version: "3.47.7"
           cache: true
+      # pubspec 이 .env 를 앱 파일로 지정하므로 파일이 꼭 있어야 한다(git 에는 없음). 지도 키는 저장소 Secret NAVER_MAP_CLIENT_ID, 없으면 빈 값 = 지도 없이 목록만
+      - run: printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" > .env
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
@@ -40,6 +44,10 @@ jobs:
           flutter-version: "3.47.7"
           cache: true
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-cjk-extra
+      # pubspec 이 .env 를 앱 파일로 지정하므로 파일이 꼭 있어야 한다(git 에는 없음). 지도 키는 저장소 Secret NAVER_MAP_CLIENT_ID, 없으면 빈 값 = 지도 없이 목록만
+      - run: printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" > .env
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
       - run: flutter pub get
       - run: |
           export RIDEY_SCREENS="$PWD/build/screens"
@@ -71,6 +79,10 @@ jobs:
           channel: stable
           flutter-version: "3.47.7"
           cache: true
+      # pubspec 이 .env 를 앱 파일로 지정하므로 파일이 꼭 있어야 한다(git 에는 없음). 지도 키는 저장소 Secret NAVER_MAP_CLIENT_ID, 없으면 빈 값 = 지도 없이 목록만
+      - run: printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" > .env
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
