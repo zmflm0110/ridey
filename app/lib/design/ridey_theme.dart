@@ -285,11 +285,34 @@ abstract final class RideyTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: ink,
+        selectedColor: signal,
+        color: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return signal;
+          return surface;
+        }),
+        checkmarkColor: Colors.white,
+        showCheckmark: false,
         side: BorderSide(color: line),
         shape: pill,
-        labelStyle: textTheme.labelLarge,
+        labelStyle: textTheme.labelLarge?.copyWith(
+          color: WidgetStateColor.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return Colors.white;
+            return ink;
+          }),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return signal;
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return Colors.white;
+            return ink;
+          }),
+        ),
       ),
       extensions: <ThemeExtension<dynamic>>[
         RideySemanticColors(

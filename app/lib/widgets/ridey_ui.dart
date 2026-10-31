@@ -404,6 +404,48 @@ class RideyNumber extends StatelessWidget {
   }
 }
 
+/// A selectable pill. Selected uses the signal fill and a white label.
+class RideySelectBadge extends StatelessWidget {
+  const RideySelectBadge({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final fill = context.ridey.signal;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: onSelected,
+      color: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return fill;
+        return scheme.surface;
+      }),
+      backgroundColor: scheme.surface,
+      selectedColor: fill,
+      checkmarkColor: Colors.white,
+      labelStyle: theme.textTheme.labelLarge?.copyWith(
+        color: selected ? Colors.white : scheme.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+      side: BorderSide(
+        color: selected ? fill : context.ridey.line,
+      ),
+    );
+  }
+}
+
 /// A small pill (web `.tag`).
 class RideyTag extends StatelessWidget {
   const RideyTag(

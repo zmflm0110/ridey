@@ -45,8 +45,8 @@ class _StaffDistrictPickerPageState extends State<StaffDistrictPickerPage> {
               runSpacing: 8,
               children: [
                 for (final district in widget.districts)
-                  FilterChip(
-                    label: Text(district),
+                  RideySelectBadge(
+                    label: district,
                     selected: _selected.contains(district),
                     onSelected: (selected) {
                       setState(() {

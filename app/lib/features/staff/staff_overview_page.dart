@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
+import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
@@ -43,6 +44,23 @@ class StaffOverviewPage extends StatelessWidget {
             style: theme.textTheme.bodyLarge?.copyWith(
               color: context.ridey.muted,
             ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              RideySelectBadge(
+                label: '실시간',
+                selected: session.source == ListSource.live,
+                onSelected: (_) => session.setSource(ListSource.live),
+              ),
+              RideySelectBadge(
+                label: '아침 목록',
+                selected: session.source == ListSource.morning,
+                onSelected: (_) => session.setSource(ListSource.morning),
+              ),
+            ],
           ),
           const SizedBox(height: 18),
           if (rows.isEmpty)

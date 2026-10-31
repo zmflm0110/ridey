@@ -43,25 +43,34 @@ class StaffListPage extends StatelessWidget {
         children: [
           Text('목록', style: theme.textTheme.displayLarge),
           const SizedBox(height: 14),
-          SegmentedButton<ListSource>(
-            segments: const [
-              ButtonSegment(value: ListSource.live, label: Text('실시간')),
-              ButtonSegment(value: ListSource.morning, label: Text('아침 목록')),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              RideySelectBadge(
+                label: '실시간',
+                selected: session.source == ListSource.live,
+                onSelected: (_) => session.setSource(ListSource.live),
+              ),
+              RideySelectBadge(
+                label: '아침 목록',
+                selected: session.source == ListSource.morning,
+                onSelected: (_) => session.setSource(ListSource.morning),
+              ),
             ],
-            selected: {session.source},
-            onSelectionChanged: (next) => session.setSource(next.single),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               for (final filter in AlertLevelFilter.values)
-                ChoiceChip(
-                  label: Text(switch (filter) {
+                RideySelectBadge(
+                  label: switch (filter) {
                     AlertLevelFilter.all => '전체',
                     AlertLevelFilter.high => '강한 경보',
                     AlertLevelFilter.alert => '경보',
-                  }),
+                  },
                   selected: session.levelFilter == filter,
                   onSelected: (_) => session.setLevelFilter(filter),
                 ),
