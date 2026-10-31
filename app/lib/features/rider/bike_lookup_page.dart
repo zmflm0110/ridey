@@ -7,7 +7,7 @@ import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
 import 'package:ridey_app/features/rider/bike_ocr_scanner_page.dart';
-import 'package:ridey_app/features/rider/qr_preview.dart';
+import 'package:ridey_app/features/rider/bike_qr_scanner_page.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -16,29 +16,22 @@ class BikeLookupPage extends StatefulWidget {
     super.key,
     required this.snapshot,
     required this.repository,
-    required this.routeObserver,
     this.readLocation,
     this.cameraEnabled = true,
-    this.visible = true,
   });
 
   final LiveSnapshot snapshot;
   final LiveSnapshotRepository repository;
-  final RouteObserver<PageRoute<dynamic>> routeObserver;
   final Future<DeviceLocation?> Function()? readLocation;
   final bool cameraEnabled;
-  final bool visible;
 
   @override
   State<BikeLookupPage> createState() => _BikeLookupPageState();
 }
 
-class _BikeLookupPageState extends State<BikeLookupPage> with RouteAware {
+class _BikeLookupPageState extends State<BikeLookupPage> {
   final _controller = TextEditingController();
   late LiveSnapshot _snapshot;
-  String? _detectedId;
-  var _covered = false;
-  PageRoute<dynamic>? _route;
 
   @override
   void initState() {
@@ -53,33 +46,12 @@ class _BikeLookupPageState extends State<BikeLookupPage> with RouteAware {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route == _route) return;
-    if (_route != null) widget.routeObserver.unsubscribe(this);
-    _route = route is PageRoute<dynamic> ? route : null;
-    if (_route != null) widget.routeObserver.subscribe(this, _route!);
-  }
-
-  @override
   void dispose() {
-    widget.routeObserver.unsubscribe(this);
     _controller.dispose();
     super.dispose();
   }
 
-  @override
-  void didPushNext() {
-    if (mounted) setState(() => _covered = true);
-  }
-
-  @override
-  void didPopNext() {
-    if (mounted) setState(() => _covered = false);
-  }
-
-  void _backToScanner() {
+  void _backToForm() {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -94,17 +66,20 @@ class _BikeLookupPageState extends State<BikeLookupPage> with RouteAware {
           title: title,
           message: message,
           bikeId: bikeId,
-          onCheckAnother: _backToScanner,
+          onCheckAnother: _backToForm,
         ),
       ),
     );
   }
 
-  void _lookup(LookupKind kind) {
+  void _lookup(LookupKind kind, {String? raw}) {
     FocusScope.of(context).unfocus();
-    final bikeId = normalizeBikeId(_controller.text);
+    final bikeId = normalizeBikeId(raw ?? _controller.text);
     if (bikeId == null) {
-      _showMessage(title: '판단 어려움', message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.');
+      _showMessage(
+        title: '판단 어려움',
+        message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.',
+      );
       return;
     }
 
@@ -131,50 +106,41 @@ class _BikeLookupPageState extends State<BikeLookupPage> with RouteAware {
           bike: bike,
           updatedAt: _snapshot.updatedAt,
           feed: _snapshot.feed,
-          onCheckAnother: _backToScanner,
+          onCheckAnother: _backToForm,
         ),
       ),
     );
   }
 
-  Future<void> _typeNumber() async {
-    final entered =
-        await showModalBottomSheet<({String text, LookupKind kind})>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          builder: (context) => _NumberSheet(
-            onScanPlate: () async {
-              final bikeId = await Navigator.of(context, rootNavigator: true)
-                  .push<String>(
-                    MaterialPageRoute<String>(
-                      builder: (_) => const BikeOcrScannerPage(),
-                    ),
-                  );
-              if (!context.mounted || bikeId == null) return;
-              Navigator.of(context).pop((text: bikeId, kind: LookupKind.ocr));
-            },
-          ),
-        );
-    if (!mounted || entered == null) return;
-    _controller.text = entered.text;
-    _lookup(entered.kind);
-  }
-
-  void _lookupDetected() {
-    final bikeId = _detectedId;
-    if (bikeId == null) {
-      _showMessage(title: '판단 어려움', message: '따릉이 QR을 카드 안에 맞춰 주세요.');
+  Future<void> _scanQr() async {
+    if (!widget.cameraEnabled) {
+      _showMessage(title: '판단 어려움', message: '이 화면에서는 카메라를 쓸 수 없어요.');
       return;
     }
+    final bikeId = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const BikeQrScannerPage()),
+    );
+    if (!mounted || bikeId == null) return;
     _controller.text = bikeId;
-    _lookup(LookupKind.qr);
+    _lookup(LookupKind.qr, raw: bikeId);
+  }
+
+  Future<void> _scanPlate() async {
+    if (!widget.cameraEnabled) {
+      _showMessage(title: '판단 어려움', message: '이 화면에서는 카메라를 쓸 수 없어요.');
+      return;
+    }
+    final bikeId = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const BikeOcrScannerPage()),
+    );
+    if (!mounted || bikeId == null) return;
+    _controller.text = bikeId;
+    _lookup(LookupKind.ocr, raw: bikeId);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scanning = widget.cameraEnabled && widget.visible && !_covered;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
@@ -187,107 +153,43 @@ class _BikeLookupPageState extends State<BikeLookupPage> with RouteAware {
           ),
         ),
         const SizedBox(height: 18),
-        QrPreview(
-          active: scanning,
-          onDetected: (bikeId) {
-            if (_detectedId == bikeId) return;
-            setState(() => _detectedId = bikeId);
-          },
-        ),
-        const SizedBox(height: 22),
-        RideyButton.signal(label: '이 자전거 조회하기', onPressed: _lookupDetected),
-        const SizedBox(height: 18),
-        Center(
-          child: RideyPressable(
-            onTap: _typeNumber,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Text(
-                '자전거 번호 직접 입력하기',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  decoration: TextDecoration.underline,
-                  decorationColor: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+        Semantics(
+          textField: true,
+          label: '자전거 번호',
+          child: TextField(
+            controller: _controller,
+            textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _lookup(LookupKind.number),
+            style: context
+                .rideyNumbers(theme.textTheme.titleLarge)
+                ?.copyWith(fontSize: 20),
+            decoration: InputDecoration(
+              hintText: 'SPB-00000',
+              hintStyle: context
+                  .rideyNumbers(theme.textTheme.titleLarge)
+                  ?.copyWith(
+                    fontSize: 20,
+                    color: context.ridey.muted.withValues(alpha: .6),
+                  ),
             ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        RideyButton(
+          label: '조회하기',
+          onPressed: () => _lookup(LookupKind.number),
+        ),
+        const SizedBox(height: 10),
+        RideyButton.secondary(label: 'QR로 찍기', onPressed: _scanQr),
+        const SizedBox(height: 8),
+        Center(
+          child: TextButton(
+            onPressed: _scanPlate,
+            child: const Text('번호판으로 읽기'),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _NumberSheet extends StatefulWidget {
-  const _NumberSheet({required this.onScanPlate});
-
-  final Future<void> Function() onScanPlate;
-
-  @override
-  State<_NumberSheet> createState() => _NumberSheetState();
-}
-
-class _NumberSheetState extends State<_NumberSheet> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    Navigator.of(
-      context,
-    ).pop((text: _controller.text, kind: LookupKind.number));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('자전거 번호', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 14),
-          Semantics(
-            textField: true,
-            label: '자전거 번호',
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              textCapitalization: TextCapitalization.characters,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _submit(),
-              style: context
-                  .rideyNumbers(theme.textTheme.titleLarge)
-                  ?.copyWith(fontSize: 20),
-              decoration: InputDecoration(
-                hintText: 'SPB-00000',
-                hintStyle: context
-                    .rideyNumbers(theme.textTheme.titleLarge)
-                    ?.copyWith(
-                      fontSize: 20,
-                      color: context.ridey.muted.withValues(alpha: .6),
-                    ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          RideyButton(label: '조회하기', onPressed: _submit),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: widget.onScanPlate,
-            child: const Text('번호판으로 읽기'),
-          ),
-        ],
-      ),
     );
   }
 }

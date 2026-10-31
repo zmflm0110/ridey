@@ -19,15 +19,14 @@ class RideyCheckRequest {
   final FeedHealth feed;
 }
 
-/// Bike-check tab. The scanner stays under the shell, and a result or the
-/// evidence page is pushed on a navigator that does not cover the tab bar.
+/// Bike-check tab. A result or the evidence page is pushed on a navigator
+/// that does not cover the tab bar.
 class BikeCheckTab extends StatefulWidget {
   const BikeCheckTab({
     super.key,
     required this.repository,
     required this.readLocation,
     required this.cameraEnabled,
-    required this.visible,
     this.request,
     this.onRequestHandled,
   });
@@ -35,7 +34,6 @@ class BikeCheckTab extends StatefulWidget {
   final LiveSnapshotRepository? repository;
   final Future<DeviceLocation?> Function()? readLocation;
   final bool cameraEnabled;
-  final bool visible;
   final RideyCheckRequest? request;
   final VoidCallback? onRequestHandled;
 
@@ -45,7 +43,6 @@ class BikeCheckTab extends StatefulWidget {
 
 class _BikeCheckTabState extends State<BikeCheckTab> {
   final _navKey = GlobalKey<NavigatorState>();
-  final _routes = RouteObserver<PageRoute<dynamic>>();
   late final LiveSnapshotRepository _repository =
       widget.repository ?? SupabaseLiveSnapshotRepository();
   late Future<LiveSnapshot> _snapshot = _repository.fetch();
@@ -105,13 +102,10 @@ class _BikeCheckTabState extends State<BikeCheckTab> {
           snapshot: snapshot,
           onRetry: _retry,
           repository: _repository,
-          routes: _routes,
           readLocation: widget.readLocation,
           cameraEnabled: widget.cameraEnabled,
-          visible: widget.visible,
           child: Navigator(
             key: _navKey,
-            observers: [_routes],
             onGenerateRoute: (settings) {
               return MaterialPageRoute<void>(
                 settings: settings,
@@ -130,20 +124,16 @@ class _CheckScope extends InheritedWidget {
     required this.snapshot,
     required this.onRetry,
     required this.repository,
-    required this.routes,
     required this.readLocation,
     required this.cameraEnabled,
-    required this.visible,
     required super.child,
   });
 
   final AsyncSnapshot<LiveSnapshot> snapshot;
   final VoidCallback onRetry;
   final LiveSnapshotRepository repository;
-  final RouteObserver<PageRoute<dynamic>> routes;
   final Future<DeviceLocation?> Function()? readLocation;
   final bool cameraEnabled;
-  final bool visible;
 
   static _CheckScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<_CheckScope>();
@@ -158,7 +148,6 @@ class _CheckScope extends InheritedWidget {
         snapshot.hasError != oldWidget.snapshot.hasError ||
         snapshot.data != oldWidget.snapshot.data ||
         cameraEnabled != oldWidget.cameraEnabled ||
-        visible != oldWidget.visible ||
         readLocation != oldWidget.readLocation;
   }
 }
@@ -179,10 +168,8 @@ class _CheckEntry extends StatelessWidget {
     return BikeLookupPage(
       snapshot: snapshot.requireData,
       repository: scope.repository,
-      routeObserver: scope.routes,
       readLocation: scope.readLocation,
       cameraEnabled: scope.cameraEnabled,
-      visible: scope.visible,
     );
   }
 }

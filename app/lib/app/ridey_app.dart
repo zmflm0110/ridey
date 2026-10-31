@@ -179,7 +179,6 @@ class _RideyShellState extends State<RideyShell> {
                         repository: widget.liveRepository,
                         readLocation: widget.readLocation,
                         cameraEnabled: widget.enableCamera,
-                        visible: _index == 1,
                         request: widget.pendingCheck.value,
                         onRequestHandled: () =>
                             widget.pendingCheck.value = null,

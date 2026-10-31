@@ -91,8 +91,9 @@ void main() {
     await pumpRidey(tester);
     await tester.tap(find.text('자전거 확인'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('자전거 번호 직접 입력하기'));
-    await tester.pumpAndSettle();
+    expect(find.text('조회하기'), findsOneWidget);
+    expect(find.text('QR로 찍기'), findsOneWidget);
+    expect(find.text('자전거 번호 직접 입력하기'), findsNothing);
     await tester.enterText(find.byType(TextField), 'spb-69683');
     await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
@@ -141,8 +142,6 @@ void main() {
 
     await tester.tap(find.text('자전거 확인'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('자전거 번호 직접 입력하기'));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-69683');
     await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
@@ -160,8 +159,6 @@ void main() {
     await pumpRidey(tester);
 
     await tester.tap(find.text('자전거 확인'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('자전거 번호 직접 입력하기'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'spb-12345');
     await tester.tap(find.text('조회하기'));

@@ -176,8 +176,6 @@ void main() {
   Future<void> lookup(WidgetTester tester, String number) async {
     await tester.tap(find.text('자전거 확인'));
     await settle(tester);
-    await tester.tap(find.text('자전거 번호 직접 입력하기'));
-    await settle(tester);
     await tester.enterText(find.byType(TextField).first, number);
     await tester.tap(find.text('조회하기'));
     await settle(tester);
@@ -200,8 +198,6 @@ void main() {
       await open(tester, dark: dark);
       await tester.tap(find.text('자전거 확인'));
       await shot(tester, '03_lookup$tag');
-      await tester.tap(find.text('자전거 번호 직접 입력하기'));
-      await settle(tester);
       await tester.enterText(find.byType(TextField).first, 'spb-12345');
       await tester.tap(find.text('조회하기'));
       await shot(tester, '04_lookup_none$tag');
