@@ -3,6 +3,7 @@ import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
+import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
@@ -110,6 +111,7 @@ void main() {
     );
 
     expect(find.text('구별 현황'), findsWidgets);
+    expect(find.byType(NearbyMap), findsOneWidget);
     expect(find.text('목록'), findsOneWidget);
     expect(find.text('더보기'), findsOneWidget);
     expect(find.text('홈'), findsNothing);

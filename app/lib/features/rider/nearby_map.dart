@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -130,6 +131,42 @@ class _NearbyMapState extends State<NearbyMap> {
     }
     await controller.clearOverlays();
     if (markers.isNotEmpty) await controller.addOverlayAll(markers);
+    await _fitStations();
+  }
+
+  Future<void> _fitStations() async {
+    final controller = _controller;
+    if (controller == null || widget.location != null) return;
+    final stations = widget.stations;
+    if (stations.isEmpty) return;
+    if (stations.length == 1) {
+      await controller.updateCamera(
+        NCameraUpdate.scrollAndZoomTo(
+          target: NLatLng(stations.first.latitude, stations.first.longitude),
+          zoom: 14,
+        ),
+      );
+      return;
+    }
+    var south = stations.first.latitude;
+    var north = south;
+    var west = stations.first.longitude;
+    var east = west;
+    for (final station in stations.skip(1)) {
+      south = math.min(south, station.latitude);
+      north = math.max(north, station.latitude);
+      west = math.min(west, station.longitude);
+      east = math.max(east, station.longitude);
+    }
+    await controller.updateCamera(
+      NCameraUpdate.fitBounds(
+        NLatLngBounds(
+          southWest: NLatLng(south, west),
+          northEast: NLatLng(north, east),
+        ),
+        padding: const EdgeInsets.all(48),
+      ),
+    );
   }
 
   Future<NOverlayImage> _stationIcon(NearbyMapStation station) async {

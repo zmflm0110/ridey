@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
@@ -65,6 +66,18 @@ class StaffOverviewPage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           StaffSourceLine(session: session),
+          const SizedBox(height: 14),
+          NearbyMap(
+            stations: _alertStations(session),
+            onStationTap: (id) {
+              final station = session.stations[id];
+              onOpenDistrict(
+                station == null || station.district.trim().isEmpty
+                    ? '기타'
+                    : station.district.trim(),
+              );
+            },
+          ),
           const SizedBox(height: 18),
           if (rows.isEmpty)
             Text(
@@ -96,6 +109,23 @@ class StaffOverviewPage extends StatelessWidget {
       ),
     );
   }
+}
+
+List<NearbyMapStation> _alertStations(StaffSession session) {
+  final pins = <String, NearbyMapStation>{};
+  for (final bike in session.bikes) {
+    final catalog = session.stations[bike.station];
+    if (catalog == null) continue;
+    final current = pins[catalog.id];
+    pins[catalog.id] = NearbyMapStation(
+      id: catalog.id,
+      latitude: catalog.latitude,
+      longitude: catalog.longitude,
+      isHighAlert: bike.isHighAlert || (current?.isHighAlert ?? false),
+      alertCount: (current?.alertCount ?? 0) + 1,
+    );
+  }
+  return pins.values.toList(growable: false);
 }
 
 class _StaffFailure extends StatelessWidget {
