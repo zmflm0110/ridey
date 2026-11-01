@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/live/station_status.dart';
+import 'package:ridey_app/features/live/station_status_repository.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
@@ -28,6 +31,13 @@ class _FakeLiveSnapshotRepository implements LiveSnapshotRepository {
       feed: const FeedHealth(isHealthy: true),
     );
   }
+}
+
+class _FakeStationStatusRepository implements StationStatusRepository {
+  @override
+  Future<List<StationOccupancy>> fetch() async => const [
+    StationOccupancy(id: '02720', name: '힐스테이트에코', bikes: 4, racks: 10),
+  ];
 }
 
 class _FakeStationRepository implements StationRepository {
@@ -56,12 +66,19 @@ void main() {
   });
 
   Future<void> pumpRidey(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
+        stationStatusRepository: _FakeStationStatusRepository(),
         readLocation: () async => null,
         enableCamera: false,
+        openOfficialApp: () async {},
+        nearbyAlertReminder: const SilentNearbyAlertReminder(),
       ),
     );
     await tester.pumpAndSettle();
@@ -79,6 +96,8 @@ void main() {
     expect(find.textContaining('1대'), findsOneWidget);
     expect(find.text('SPB-69683'), findsOneWidget);
     expect(find.textContaining('힐스테이트에코'), findsOneWidget);
+    expect(find.text('고장 의심 따릉이'), findsOneWidget);
+    expect(find.text('주변 대여소 현황'), findsOneWidget);
     for (final label in _staffLabels) {
       expect(find.text(label), findsNothing);
     }
@@ -180,6 +199,18 @@ void main() {
 
     expect(find.text('경보 없음'), findsOneWidget);
     expect(find.textContaining('안전이 확인된 것은 아니니'), findsOneWidget);
+    expect(find.text('따릉이 앱에서 대여하기'), findsOneWidget);
+  });
+
+  testWidgets('lists nearby stations instead of bike numbers', (tester) async {
+    await pumpRidey(tester);
+    await tester.tap(find.text('주변 대여소 현황'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('1대'), findsWidgets);
+    expect(find.text('SPB-69683'), findsNothing);
+    expect(find.textContaining('고장 의심 1 / 선택 가능 약 3'), findsOneWidget);
+    expect(find.text('따릉이 앱에서 대여하기'), findsOneWidget);
   });
 
   testWidgets('opens saved stations from the rider tab', (tester) async {

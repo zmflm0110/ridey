@@ -4,10 +4,13 @@ import 'package:ridey_app/app/ridey_actions.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
+import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
@@ -19,14 +22,20 @@ class RiderHomePage extends StatefulWidget {
     super.key,
     this.repository,
     this.stationRepository,
+    this.stationStatusRepository,
     this.savedStationsStore,
     this.readLocation,
+    this.openOfficialApp,
+    this.nearbyAlertReminder,
   });
 
   final LiveSnapshotRepository? repository;
   final StationRepository? stationRepository;
+  final StationStatusRepository? stationStatusRepository;
   final SavedStationsStore? savedStationsStore;
   final Future<DeviceLocation?> Function()? readLocation;
+  final Future<void> Function()? openOfficialApp;
+  final NearbyAlertReminder? nearbyAlertReminder;
 
   @override
   State<RiderHomePage> createState() => _RiderHomePageState();
@@ -76,14 +85,20 @@ class _RiderHomePageState extends State<RiderHomePage> {
           ConnectionState.done when snapshot.hasError => _LoadFailure(
             onRetry: _refresh,
           ),
-          ConnectionState.done => _LoadedHome(
+          ConnectionState.done =>           _LoadedHome(
             snapshot: snapshot.requireData,
             stationRepository:
                 widget.stationRepository ?? BundledStationRepository(),
+            stationStatusRepository:
+                widget.stationStatusRepository ??
+                SupabaseStationStatusRepository(),
             savedStationsStore:
                 widget.savedStationsStore ?? SavedStationsStore(),
             readLocation: widget.readLocation ?? readDeviceLocation,
             onBikeSelected: (bike) => _openBike(bike, snapshot.requireData),
+            openOfficialApp: widget.openOfficialApp ?? openOfficialBikeApp,
+            nearbyAlertReminder:
+                widget.nearbyAlertReminder ?? PlatformNearbyAlertReminder(),
           ),
           _ => const _LoadingHome(),
         };
@@ -103,12 +118,14 @@ const _pagePadding = EdgeInsets.fromLTRB(20, 4, 20, rideyTabClearance);
 class _HomeArea {
   const _HomeArea({
     required this.bikes,
+    required this.stations,
     required this.usingDeviceLocation,
     required this.hasSavedStations,
     this.location,
   });
 
   final List<NearbyBike> bikes;
+  final List<NearbyStationRow> stations;
   final bool usingDeviceLocation;
   final bool hasSavedStations;
   final DeviceLocation? location;
@@ -118,16 +135,22 @@ class _LoadedHome extends StatefulWidget {
   const _LoadedHome({
     required this.snapshot,
     required this.stationRepository,
+    required this.stationStatusRepository,
     required this.savedStationsStore,
     required this.readLocation,
     required this.onBikeSelected,
+    required this.openOfficialApp,
+    required this.nearbyAlertReminder,
   });
 
   final LiveSnapshot snapshot;
   final StationRepository stationRepository;
+  final StationStatusRepository stationStatusRepository;
   final SavedStationsStore savedStationsStore;
   final Future<DeviceLocation?> Function() readLocation;
   final ValueChanged<LiveBike> onBikeSelected;
+  final Future<void> Function() openOfficialApp;
+  final NearbyAlertReminder nearbyAlertReminder;
 
   @override
   State<_LoadedHome> createState() => _LoadedHomeState();
@@ -135,15 +158,25 @@ class _LoadedHome extends StatefulWidget {
 
 class _LoadedHomeState extends State<_LoadedHome> {
   late Future<_HomeArea> _area = _load();
+  var _showStations = false;
+  String? _reminderKey;
 
   Future<_HomeArea> _load() async {
     final stations = await widget.stationRepository.fetch();
+    final occupancy = await widget.stationStatusRepository.fetch();
     final location = await widget.readLocation();
     if (location != null) {
       return _HomeArea(
         bikes: bikesNear(
           bikes: widget.snapshot.bikes,
           stations: stations,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        ),
+        stations: nearbyStationRows(
+          stations: stations,
+          bikes: widget.snapshot.bikes,
+          occupancy: occupancy,
           latitude: location.latitude,
           longitude: location.longitude,
         ),
@@ -159,6 +192,12 @@ class _LoadedHomeState extends State<_LoadedHome> {
         stations: stations,
         stationIds: saved,
       ),
+      stations: savedStationRows(
+        stations: stations,
+        bikes: widget.snapshot.bikes,
+        occupancy: occupancy,
+        stationIds: saved,
+      ),
       usingDeviceLocation: false,
       hasSavedStations: saved.isNotEmpty,
     );
@@ -166,10 +205,46 @@ class _LoadedHomeState extends State<_LoadedHome> {
 
   void _reloadArea() => setState(() => _area = _load());
 
+  void _syncReminder(_HomeArea area) {
+    final ids = [for (final item in area.bikes) item.bike.bike];
+    final key = ids.join(',');
+    if (_reminderKey == key) return;
+    _reminderKey = key;
+    widget.nearbyAlertReminder.sync(ids);
+  }
+
   /// 지도에서 대여소를 누르면 그곳의 강한 경보 자전거를 먼저 연다(없으면 첫 자전거).
   void _openStation(String stationId, List<NearbyBike> bikes) {
     final bike = firstBikeAt([for (final item in bikes) item.bike], stationId);
     if (bike != null) widget.onBikeSelected(bike);
+  }
+
+  List<Widget> _stationList(_HomeArea area) {
+    if (area.stations.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+          child: Text(
+            area.usingDeviceLocation
+                ? '이 근처 2km 안에는 대여소가 없어요.'
+                : area.hasSavedStations
+                ? '저장한 대여소 현황을 아직 받지 못했어요.'
+                : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
+          ),
+        ),
+      ];
+    }
+    return [
+      for (var i = 0; i < area.stations.length; i++)
+        _StationRow(
+          station: area.stations[i],
+          showDivider: i < area.stations.length - 1,
+          onOpenOfficialApp: widget.openOfficialApp,
+        ),
+    ];
   }
 
   @override
@@ -184,19 +259,34 @@ class _LoadedHomeState extends State<_LoadedHome> {
           return _LoadFailure(onRetry: _reloadArea);
         }
         final area = loaded.requireData;
+        _syncReminder(area);
         final pins = <String, NearbyMapStation>{};
+        for (final station in area.stations) {
+          final latitude = station.latitude;
+          final longitude = station.longitude;
+          if (latitude == null || longitude == null) continue;
+          pins[station.id] = NearbyMapStation(
+            id: station.id,
+            latitude: latitude,
+            longitude: longitude,
+            isHighAlert: station.highAlertCount > 0,
+            alertCount: station.alertCount,
+            parkedBikes: station.parkedBikes,
+          );
+        }
         for (final item in area.bikes) {
           final latitude = item.latitude;
           final longitude = item.longitude;
           if (latitude == null || longitude == null) continue;
-          final strong =
-              item.bike.isHighAlert ||
-              (pins[item.bike.station]?.isHighAlert ?? false);
+          final current = pins[item.bike.station];
           pins[item.bike.station] = NearbyMapStation(
             id: item.bike.station,
             latitude: latitude,
             longitude: longitude,
-            isHighAlert: strong,
+            isHighAlert:
+                item.bike.isHighAlert || (current?.isHighAlert ?? false),
+            alertCount: current?.alertCount ?? 1,
+            parkedBikes: current?.parkedBikes,
           );
         }
 
@@ -213,14 +303,21 @@ class _LoadedHomeState extends State<_LoadedHome> {
                   child: Text(area.hasSavedStations ? '내 위치로 보기' : '위치 허용하기'),
                 ),
               ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             NearbyMap(
               stations: pins.values.toList(growable: false),
               location: area.location,
               onStationTap: (id) => _openStation(id, area.bikes),
             ),
-            const SizedBox(height: 8),
-            if (area.bikes.isEmpty)
+            const SizedBox(height: 12),
+            _HomeListTabs(
+              showStations: _showStations,
+              onChanged: (showStations) =>
+                  setState(() => _showStations = showStations),
+            ),
+            if (_showStations)
+              ..._stationList(area)
+            else if (area.bikes.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
                 child: Text(
@@ -244,6 +341,76 @@ class _LoadedHomeState extends State<_LoadedHome> {
           ],
         );
       },
+    );
+  }
+}
+
+class _HomeListTabs extends StatelessWidget {
+  const _HomeListTabs({required this.showStations, required this.onChanged});
+
+  final bool showStations;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _HomeListTab(
+            label: '고장 의심 따릉이',
+            selected: !showStations,
+            onTap: () => onChanged(false),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _HomeListTab(
+            label: '주변 대여소 현황',
+            selected: showStations,
+            onTap: () => onChanged(true),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeListTab extends StatelessWidget {
+  const _HomeListTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ridey;
+    return RideyPressable(
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: selected ? Theme.of(context).colorScheme.onSurface : c.fill,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? Colors.transparent : c.line),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: selected
+                  ? Theme.of(context).colorScheme.surface
+                  : c.muted,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -391,6 +558,76 @@ class _BikeRow extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StationRow extends StatelessWidget {
+  const _StationRow({
+    required this.station,
+    required this.showDivider,
+    required this.onOpenOfficialApp,
+  });
+
+  final NearbyStationRow station;
+  final bool showDivider;
+  final Future<void> Function() onOpenOfficialApp;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final choosable = station.choosableCount;
+    final parked = station.parkedBikes;
+    final counts = parked == null
+        ? '고장 의심 ${station.alertCount}대'
+        : '고장 의심 ${station.alertCount} / 선택 가능 약 $choosable';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: showDivider
+            ? Border(bottom: BorderSide(color: context.ridey.line))
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    station.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (station.meters != null)
+                  Text(
+                    formatDistance(station.meters!),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: context.ridey.muted,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              parked == null ? '$counts · 실시간 대수 없음' : counts,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: context.ridey.muted,
+              ),
+            ),
+            const SizedBox(height: 10),
+            RideyButton.secondary(
+              label: '따릉이 앱에서 대여하기',
+              compact: true,
+              onPressed: () => onOpenOfficialApp(),
+            ),
+          ],
         ),
       ),
     );

@@ -19,6 +19,9 @@ abstract final class RideyConfig {
 
   static Uri get liveSnapshotUri => rest('live_snapshot?select=at,body');
 
+  static Uri get liveStationStatusUri =>
+      rest('live_station_status?select=id,name,bikes,racks,lat,lon,at');
+
   static Uri get opsListDaysUri =>
       rest('ops_lists?select=day&order=day.desc&limit=14');
 

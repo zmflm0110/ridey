@@ -13,6 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/live/station_status.dart';
+import 'package:ridey_app/features/live/station_status_repository.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
@@ -70,6 +73,14 @@ LiveBike _bike(
   probability: p,
   reasons: why,
 );
+
+class _Status implements StationStatusRepository {
+  @override
+  Future<List<StationOccupancy>> fetch() async => const [
+    StationOccupancy(id: '02720', name: '힐스테이트에코', bikes: 6, racks: 15),
+    StationOccupancy(id: '00207', name: '망원역 1번 출구 앞', bikes: 4, racks: 12),
+  ];
+}
 
 class _Live implements LiveSnapshotRepository {
   @override
@@ -200,9 +211,12 @@ void main() {
         child: RideyApp(
           liveRepository: _Live(),
           stationRepository: _Stations(),
+          stationStatusRepository: _Status(),
           opsListRepository: _Ops(),
           readLocation: () async => (latitude: 37.5610, longitude: 126.8350),
           enableCamera: false,
+          openOfficialApp: () async {},
+          nearbyAlertReminder: const SilentNearbyAlertReminder(),
         ),
       ),
     );
@@ -228,6 +242,16 @@ void main() {
     testWidgets('home full$tag', (tester) async {
       await open(tester, dark: dark, height: 2300);
       await shot(tester, '02_home_full$tag');
+    }, skip: _out == null);
+
+    testWidgets('home stations$tag', (tester) async {
+      await open(tester, dark: dark);
+      await tester.ensureVisible(find.text('주변 대여소 현황'));
+      await tester.drag(find.byType(ListView).first, const Offset(0, -140));
+      await settle(tester);
+      await tester.tap(find.text('주변 대여소 현황'));
+      await settle(tester);
+      await shot(tester, '02b_home_stations$tag');
     }, skip: _out == null);
 
     testWidgets('lookup$tag', (tester) async {

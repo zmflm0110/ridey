@@ -12,6 +12,8 @@ class NearbyMapStation {
     required this.latitude,
     required this.longitude,
     this.isHighAlert = false,
+    this.alertCount = 0,
+    this.parkedBikes,
   });
 
   final String id;
@@ -20,6 +22,8 @@ class NearbyMapStation {
 
   /// 이 대여소에 연쇄 3명 이상 자전거가 있으면 꽉 찬 신호 점, 아니면 옅은 점.
   final bool isHighAlert;
+  final int alertCount;
+  final int? parkedBikes;
 }
 
 /// Rounded map of the user's area. Signal dots are stations with an alert bike
@@ -44,8 +48,7 @@ class NearbyMap extends StatefulWidget {
 
 class _NearbyMapState extends State<NearbyMap> {
   NaverMapController? _controller;
-  NOverlayImage? _strongIcon;
-  NOverlayImage? _alertIcon;
+  final _countIcons = <String, NOverlayImage>{};
   NOverlayImage? _userIcon;
   Brightness? _iconBrightness;
   var _syncing = 0;
@@ -83,16 +86,11 @@ class _NearbyMapState extends State<NearbyMap> {
           size: Size.square(size),
           widget: widget,
         );
-    final strong = await draw(const _StationDot(strong: true), 18);
-    if (!mounted) return;
-    final alert = await draw(const _StationDot(strong: false), 18);
-    if (!mounted) return;
     final user = await draw(const _UserDot(), 22);
     if (!mounted) return;
-    _strongIcon = strong;
-    _alertIcon = alert;
     _userIcon = user;
     _iconBrightness = brightness;
+    _countIcons.clear();
   }
 
   Future<void> _syncMarkers() async {
@@ -116,11 +114,15 @@ class _NearbyMapState extends State<NearbyMap> {
       );
     }
     for (final station in widget.stations) {
+      final icon = await _stationIcon(station);
+      if (!mounted || generation != _syncing || _controller != controller) {
+        return;
+      }
       final marker = NMarker(
         id: station.id,
         position: NLatLng(station.latitude, station.longitude),
-        icon: station.isHighAlert ? _strongIcon : _alertIcon,
-        size: const Size(18, 18),
+        icon: icon,
+        size: const Size(28, 28),
         anchor: const NPoint(0.5, 0.5),
       );
       marker.setOnTapListener((_) => widget.onStationTap(station.id));
@@ -128,6 +130,24 @@ class _NearbyMapState extends State<NearbyMap> {
     }
     await controller.clearOverlays();
     if (markers.isNotEmpty) await controller.addOverlayAll(markers);
+  }
+
+  Future<NOverlayImage> _stationIcon(NearbyMapStation station) async {
+    final key =
+        '${station.parkedBikes ?? 'x'}-${station.alertCount}-${station.isHighAlert}';
+    final cached = _countIcons[key];
+    if (cached != null) return cached;
+    final image = await NOverlayImage.fromWidget(
+      context: context,
+      size: const Size.square(28),
+      widget: _StationCountDot(
+        count: station.parkedBikes,
+        alert: station.alertCount > 0,
+        strong: station.isHighAlert,
+      ),
+    );
+    _countIcons[key] = image;
+    return image;
   }
 
   void _zoom(double delta) {
@@ -183,22 +203,49 @@ class _NearbyMapState extends State<NearbyMap> {
   }
 }
 
-/// 경보 두 단계(docs/brand.md): 강한 경보 = 꽉 찬 신호 점, 연쇄 2명 = 옅은 점에 신호 테.
-class _StationDot extends StatelessWidget {
-  const _StationDot({required this.strong});
+/// 거치 대수를 그린 점. 고장 의심이 있으면 신호색, 없으면 차분한 파랑.
+class _StationCountDot extends StatelessWidget {
+  const _StationCountDot({
+    required this.count,
+    required this.alert,
+    required this.strong,
+  });
 
+  final int? count;
+  final bool alert;
   final bool strong;
 
   @override
   Widget build(BuildContext context) {
     final c = context.ridey;
+    final fill = !alert
+        ? c.calm
+        : strong
+        ? c.signal
+        : c.signalSoft;
+    final ink = !alert
+        ? Colors.white
+        : strong
+        ? RideyColors.ink
+        : c.signalText;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: strong ? c.signal : c.signalSoft,
+        color: fill,
         shape: BoxShape.circle,
         border: Border.all(
-          color: strong ? Theme.of(context).colorScheme.surface : c.signal,
+          color: Theme.of(context).colorScheme.surface,
           width: 2,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          count == null ? '·' : '$count',
+          style: TextStyle(
+            color: ink,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            height: 1,
+          ),
         ),
       ),
     );

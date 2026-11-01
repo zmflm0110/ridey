@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/live/station_status.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 
@@ -96,5 +97,22 @@ void main() {
     expect(nearby.map((item) => item.bike.bike), ['SPB-00001', 'SPB-00002']);
     expect(nearby.first.stationName, '힐스테이트에코');
     expect(nearby.first.meters, lessThan(nearbyAlertRadiusMeters));
+  });
+
+  test('counts choosable bikes as parked minus alerts', () {
+    final rows = nearbyStationRows(
+      stations: [near, far],
+      bikes: bikes,
+      occupancy: const [
+        StationOccupancy(id: '02720', name: '힐스테이트에코', bikes: 7, racks: 15),
+      ],
+      latitude: 37.501,
+      longitude: 127.001,
+    );
+
+    expect(rows.single.id, '02720');
+    expect(rows.single.alertCount, 2);
+    expect(rows.single.parkedBikes, 7);
+    expect(rows.single.choosableCount, 5);
   });
 }

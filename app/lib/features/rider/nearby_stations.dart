@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/live/station_status.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 
 const nearbyAlertRadiusMeters = 2000.0;
@@ -236,4 +237,100 @@ List<NearbyBike> bikesAtStations({
     return a.bike.bike.compareTo(b.bike.bike);
   });
   return listed;
+}
+
+/// Nearby (or saved) station with live rack counts and RIDEY alert counts.
+class NearbyStationRow {
+  const NearbyStationRow({
+    required this.id,
+    required this.name,
+    required this.alertCount,
+    required this.highAlertCount,
+    this.parkedBikes,
+    this.latitude,
+    this.longitude,
+    this.meters,
+  });
+
+  final String id;
+  final String name;
+  final int alertCount;
+  final int highAlertCount;
+  final int? parkedBikes;
+  final double? latitude;
+  final double? longitude;
+  final double? meters;
+
+  /// Estimate: parked bikes minus RIDEY alerts. Null when occupancy is unknown.
+  int? get choosableCount {
+    final parked = parkedBikes;
+    if (parked == null) return null;
+    return math.max(0, parked - alertCount);
+  }
+}
+
+List<NearbyStationRow> nearbyStationRows({
+  required List<BikeStation> stations,
+  required List<LiveBike> bikes,
+  required List<StationOccupancy> occupancy,
+  required double latitude,
+  required double longitude,
+  double withinMeters = nearbyAlertRadiusMeters,
+}) {
+  final alerts = {
+    for (final group in stationAlertGroups(bikes: bikes, stations: stations))
+      group.id: group,
+  };
+  final byOcc = {for (final row in occupancy) row.id: row};
+  final rows = <NearbyStationRow>[];
+  for (final station in stations) {
+    final meters = metersBetween(
+      latitude,
+      longitude,
+      station.latitude,
+      station.longitude,
+    );
+    if (meters > withinMeters) continue;
+    final alert = alerts[station.id];
+    rows.add(
+      NearbyStationRow(
+        id: station.id,
+        name: station.name.isNotEmpty ? station.name : station.id,
+        alertCount: alert?.count ?? 0,
+        highAlertCount: alert?.highAlertCount ?? 0,
+        parkedBikes: byOcc[station.id]?.bikes,
+        latitude: station.latitude,
+        longitude: station.longitude,
+        meters: meters,
+      ),
+    );
+  }
+  rows.sort((a, b) => a.meters!.compareTo(b.meters!));
+  return rows;
+}
+
+List<NearbyStationRow> savedStationRows({
+  required List<BikeStation> stations,
+  required List<LiveBike> bikes,
+  required List<StationOccupancy> occupancy,
+  required List<String> stationIds,
+}) {
+  final byId = {for (final station in stations) station.id: station};
+  final alerts = {
+    for (final group in stationAlertGroups(bikes: bikes, stations: stations))
+      group.id: group,
+  };
+  final byOcc = {for (final row in occupancy) row.id: row};
+  return [
+    for (final id in stationIds)
+      NearbyStationRow(
+        id: id,
+        name: byId[id]?.name.isNotEmpty == true ? byId[id]!.name : id,
+        alertCount: alerts[id]?.count ?? 0,
+        highAlertCount: alerts[id]?.highAlertCount ?? 0,
+        parkedBikes: byOcc[id]?.bikes,
+        latitude: byId[id]?.latitude,
+        longitude: byId[id]?.longitude,
+      ),
+  ];
 }

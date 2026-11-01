@@ -1,6 +1,7 @@
 -- 실시간 경보를 Supabase 안에서 — GitHub 예약이 몇 시간씩 건너뛰어서(2026-09-26~27), DB 가 스스로 5분마다 돈다.
 --   pg_cron(예약) → pg_net 으로 서울 대여이력 API(tbCycleRentData) → live.rentals → SQL 로 연쇄·경보(engine/core.py mark 와 같은 규칙)
 --   → live.snapshot(live.json 과 같은 모양) → 앱은 public.live_snapshot 을 읽는다(공개 키로 읽기만).
+--   같은 5분 작업이 bikeList 도 받아 live.station_status 에 둔다(대여소별 거치 대수). 앱은 public.live_station_status.
 -- 적용: psql 로 supabase/model.sql 다음에 이 파일(여러 번 돌려도 됨). 인증키는 Vault 'seoul_openapi'(코드·git 에 없음).
 -- 규칙(engine/core.py): 헛대여 = 같은 대여소, 180초 안, 300m 미만. 같은 사람 = 바로 앞 대여와 생년+성별(who)이 같음.
 --   streak = 앞선 헛대여 줄의 '서로 다른 사람' 수, 경보 = 헛대여 & 재시도 아님 & streak = 1(두 번째 사람), 목록 = 마지막 대여 기준 연쇄 2+ 이고 24시간 안.
@@ -32,10 +33,19 @@ create table if not exists live.hours (hour text primary key, total int, fetched
 create table if not exists live.req (id bigint primary key, hour text not null, page int not null, made_at timestamptz not null default now());
 create table if not exists live.stations (id text primary key, name text);
 create table if not exists live.snapshot (id int primary key default 1 check (id = 1), at timestamp, body jsonb);
+-- 서울 bikeList 실시간 거치 대수. id 는 5자리 대여소 번호(이름 앞 숫자). ST-ID 는 쓰지 않음.
+create table if not exists live.station_status (
+  id text primary key, name text, bikes int not null, racks int not null,
+  lat double precision, lon double precision, at timestamp not null
+);
 
 -- 대여소 번호: '02720' 과 2720 을 같게 (server 쪽 from_rows 와 같음)
 create or replace function live.stn(x text) returns text language sql immutable as $$
   select case when btrim(x) ~ '^[0-9]+$' then lpad(btrim(x), 5, '0') else btrim(x) end $$;
+
+-- bikeList 대여소 이름 '102. 망원역 1번출구 앞' → 00102
+create or replace function live.station_id_from_name(name text) returns text language sql immutable as $$
+  select live.stn((regexp_match(btrim(name), '^([0-9]+)'))[1]) $$;
 create or replace function live.ts(x text) returns timestamp language plpgsql immutable as $$
 begin return nullif(btrim(x), '')::timestamp; exception when others then return null; end $$;
 
@@ -63,6 +73,26 @@ begin
   return n;
 end $$;
 
+-- 실시간 대여소 현황(bikeList). 이름은 앞 숫자로 5자리 번호가 되고, 없으면 건너뛴다.
+create or replace function live.ingest_stations(body jsonb) returns int language plpgsql as $$
+declare n int; now_ timestamp := (now() at time zone 'Asia/Seoul')::timestamp;
+begin
+  insert into live.station_status(id, name, bikes, racks, lat, lon, at)
+  select live.station_id_from_name(v->>'stationName'), btrim(v->>'stationName'),
+         coalesce(nullif(v->>'parkingBikeTotCnt', '')::int, 0),
+         coalesce(nullif(v->>'rackTotCnt', '')::int, 0),
+         nullif(v->>'stationLatitude', '')::double precision,
+         nullif(v->>'stationLongitude', '')::double precision,
+         now_
+  from jsonb_array_elements(coalesce(body->'rentBikeStatus'->'row', '[]'::jsonb)) e(v)
+  where live.station_id_from_name(v->>'stationName') is not null
+  on conflict (id) do update set
+    name = excluded.name, bikes = excluded.bikes, racks = excluded.racks,
+    lat = excluded.lat, lon = excluded.lon, at = excluded.at;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
 -- 한 시간 칸의 쪽들을 요청 (아는 전체 수 + 1쪽, 모르면 2쪽 — 첫 쪽을 받으면 나머지를 더 청함)
 create or replace function live.request(hour text, first_page int default 1) returns int language plpgsql as $$
 declare k text; tot int; last_page int; p int; n int := 0;
@@ -74,6 +104,22 @@ begin
     insert into live.req(id, hour, page) values (
       net.http_get(format('http://openapi.seoul.go.kr:8088/%s/json/tbCycleRentData/%s/%s/%s', k, (p - 1) * 1000 + 1, p * 1000, hour), timeout_milliseconds := 30000),
       hour, p);
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+-- 대여소 현황은 list_total_count 가 그 쪽 건수라 1/1000, 1001/2000, 2001/3000 을 매번 받는다.
+create or replace function live.request_stations() returns int language plpgsql as $$
+declare k text; p int; n int := 0;
+begin
+  select decrypted_secret into k from vault.decrypted_secrets where name = 'seoul_openapi';
+  if k is null then return 0; end if;
+  for p in 0..2 loop
+    insert into live.req(id, hour, page) values (
+      net.http_get(format('http://openapi.seoul.go.kr:8088/%s/json/bikeList/%s/%s/', k, p * 1000 + 1, (p + 1) * 1000),
+                   timeout_milliseconds := 30000),
+      'bikeList', p + 1);
     n := n + 1;
   end loop;
   return n;
@@ -93,6 +139,8 @@ begin
         on conflict (hour) do update set total = excluded.total, fetched_at = excluded.fetched_at;
       select max(page) into asked from live.req where hour = q.hour;
       if tot > asked * 1000 then perform live.request(q.hour, asked + 1); end if;
+    elsif b ? 'rentBikeStatus' then
+      n := n + live.ingest_stations(b);
     elsif b is not null then   -- 자료 없음(INFO-200): 그 시간은 0건
       insert into live.hours(hour, total, fetched_at) values (q.hour, 0, now())
         on conflict (hour) do update set fetched_at = excluded.fetched_at;
@@ -482,6 +530,7 @@ begin
     exit when miss >= 6;
     perform live.request(h); miss := miss + 1;
   end loop;
+  perform live.request_stations();
   -- 8일만 둔다(쓰는 범위가 최대 8일: AI 특징 = 마지막 헛대여(24시간 안) 앞 7일). 무료 DB 500MB 중 대여 표가 346MB 까지 커져서 9일 → 8일(2026-10-06)
   delete from live.rentals where t1 < now_ - interval '8 days';   -- t1 색인으로 (t0 로는 표 전체를 훑었다). t1 ≥ t0 라 8일 안 대여는 안 지워짐
   delete from live.alarms where at < now_ - interval '10 days' and next_dud is null;   -- 채점된 경보는 계속 둔다(작음)
@@ -494,13 +543,14 @@ end $$;
 
 -- 앱이 읽는 곳 — 공개 키로 읽기만 (행 자료·생년·성별은 안 보임, 목록 JSON 만)
 create or replace view public.live_snapshot as select at, body from live.snapshot;
+create or replace view public.live_station_status as select id, name, bikes, racks, lat, lon, at from live.station_status;
 create or replace view public.ops_lists as select day, body from live.lists;
 create or replace view public.ops_scores as select day, listed, rode, first_dud from live.scores;
 -- 운영 성적표: 경보가 울린 날마다, 결과가 정해진 실시간 경보(15분 안에 본 것) 중 다음 다른 사람도 바로 반납한 수 (사이트·앱의 날짜별 막대, 2026-10-08)
 create or replace view public.ops_alarm_days as
   select at::date as day, count(*) filter (where next_dud is not null)::int as scored, count(*) filter (where next_dud)::int as hit
   from live.alarms where seen_at - at <= interval '15 minutes' group by 1;
-grant select on public.live_snapshot, public.ops_lists, public.ops_scores, public.ops_alarm_days to anon, authenticated;
+grant select on public.live_snapshot, public.live_station_status, public.ops_lists, public.ops_scores, public.ops_alarm_days to anon, authenticated;
 revoke all on all tables in schema live from anon, authenticated;
 
 -- 예약 (5분마다). 다시 적용해도 하나만
