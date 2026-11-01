@@ -3,6 +3,7 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
+import 'package:ridey_app/features/staff/staff_source_line.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -40,7 +41,7 @@ class StaffOverviewPage extends StatelessWidget {
           Text('구별 현황', style: theme.textTheme.displayLarge),
           const SizedBox(height: 8),
           Text(
-            '지금 고장 의심 $total대 · 강한 경보 $high',
+            '지금 경보 $total대 · 그중 강한 경보 $high대',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: context.ridey.muted,
             ),
@@ -62,10 +63,12 @@ class StaffOverviewPage extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          StaffSourceLine(session: session),
           const SizedBox(height: 18),
           if (rows.isEmpty)
             Text(
-              '지금 목록에 고장 의심 자전거가 없어요.',
+              '지금 목록에 경보 자전거가 없어요.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: context.ridey.muted,
               ),
@@ -76,8 +79,11 @@ class StaffOverviewPage extends StatelessWidget {
                 for (final row in rows)
                   RideyRow(
                     title: row.district,
-                    subtitle:
-                        '강한 경보 ${row.highAlerts} · 기대값 ${formatExpected(row.expected)}',
+                    subtitle: [
+                      '강한 경보 ${row.highAlerts}대',
+                      if (row.expected != null)
+                        '다음에도 헛대여 예상 ${formatExpected(row.expected)}대',
+                    ].join(' · '),
                     trailing: Text(
                       '${row.bikes}대',
                       style: context.rideyNumbers(theme.textTheme.titleMedium),
@@ -111,10 +117,7 @@ class _StaffFailure extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
               const SizedBox(height: 18),
-              RideyButton.secondary(
-                label: '다시 시도',
-                onPressed: () => onRetry(),
-              ),
+              RideyButton.secondary(label: '다시 시도', onPressed: () => onRetry()),
             ],
           ),
         ),

@@ -63,8 +63,7 @@ class _RideySpring extends Curve {
   const _RideySpring();
 
   @override
-  double transformInternal(double t) =>
-      1 - math.exp(-6 * t) * math.cos(10 * t);
+  double transformInternal(double t) => 1 - math.exp(-6 * t) * math.cos(10 * t);
 }
 
 abstract final class RideyTheme {
@@ -233,14 +232,18 @@ abstract final class RideyTheme {
         ).copyWith(overlayColor: quietOverlay),
       ),
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(foregroundColor: muted)
-            .copyWith(overlayColor: quietOverlay),
+        style: IconButton.styleFrom(
+          foregroundColor: muted,
+        ).copyWith(overlayColor: quietOverlay),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: fill,
         hintStyle: textTheme.bodyLarge?.copyWith(color: muted),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Colors.transparent, width: 1.5),

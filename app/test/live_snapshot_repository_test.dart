@@ -55,7 +55,10 @@ void main() {
   test('says how old the data is in minutes, hours, then days', () {
     final now = DateTime(2026, 10, 25, 12);
     expect(rideyAgo(now, now: now), '방금');
-    expect(rideyAgo(now.subtract(const Duration(minutes: 12)), now: now), '12분 전');
+    expect(
+      rideyAgo(now.subtract(const Duration(minutes: 12)), now: now),
+      '12분 전',
+    );
     expect(rideyAgo(now.subtract(const Duration(hours: 3)), now: now), '3시간 전');
     expect(rideyAgo(now.subtract(const Duration(days: 2)), now: now), '2일 전');
   });

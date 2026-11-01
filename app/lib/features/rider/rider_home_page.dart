@@ -189,13 +189,14 @@ class _LoadedHomeState extends State<_LoadedHome> {
           final latitude = item.latitude;
           final longitude = item.longitude;
           if (latitude == null || longitude == null) continue;
-          pins.putIfAbsent(
-            item.bike.station,
-            () => NearbyMapStation(
-              id: item.bike.station,
-              latitude: latitude,
-              longitude: longitude,
-            ),
+          final strong =
+              item.bike.isHighAlert ||
+              (pins[item.bike.station]?.isHighAlert ?? false);
+          pins[item.bike.station] = NearbyMapStation(
+            id: item.bike.station,
+            latitude: latitude,
+            longitude: longitude,
+            isHighAlert: strong,
           );
         }
 
@@ -224,9 +225,9 @@ class _LoadedHomeState extends State<_LoadedHome> {
                 padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
                 child: Text(
                   area.usingDeviceLocation
-                      ? '이 근처 2km 안에는 고장 의심 자전거가 없어요.'
+                      ? '이 근처 2km 안에는 경보가 켜진 자전거가 없어요.'
                       : area.hasSavedStations
-                      ? '저장한 대여소에는 지금 고장 의심 자전거가 없어요.'
+                      ? '저장한 대여소에는 지금 경보가 켜진 자전거가 없어요.'
                       : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
                   style: Theme.of(
                     context,
@@ -273,19 +274,19 @@ class _Headline extends StatelessWidget {
               children: [
                 TextSpan(
                   text: area.usingDeviceLocation
-                      ? '현재 사용자님이 계신 지역에\n고장 의심 따릉이가 '
-                      : '저장한 대여소에\n고장 의심 따릉이가 ',
+                      ? '내 주변 2km에\n경보가 켜진 따릉이 '
+                      : '저장한 대여소에\n경보가 켜진 따릉이 ',
                 ),
                 TextSpan(
                   text: '$count대',
                   style: TextStyle(color: context.ridey.signal),
                 ),
-                const TextSpan(text: ' 있어요'),
+                const TextSpan(text: '가 있어요'),
               ],
             ),
           )
         else
-          Text('내 주변 고장 의심 따릉이를 보려면\n위치 권한이 필요해요', style: style),
+          Text('내 주변 경보를 보려면\n위치 권한이 필요해요', style: style),
         if (note != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -339,16 +340,22 @@ class _BikeRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Row(
               children: [
+                // 경보 두 단계(docs/brand.md): 연쇄 3명 이상 = 꽉 찬 신호, 2명 = 옅은 신호.
+                // 신호색 위 아이콘은 흰색이 아니라 잉크.
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: context.ridey.signal,
+                    color: item.bike.isHighAlert
+                        ? context.ridey.signal
+                        : context.ridey.signalSoft,
                     shape: BoxShape.circle,
                   ),
-                  child: const SizedBox.square(
+                  child: SizedBox.square(
                     dimension: 44,
                     child: Icon(
                       Symbols.pedal_bike_rounded,
-                      color: Colors.white,
+                      color: item.bike.isHighAlert
+                          ? RideyColors.ink
+                          : context.ridey.signalText,
                       size: 24,
                     ),
                   ),
@@ -366,7 +373,7 @@ class _BikeRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        item.stationName,
+                        '${item.stationName} · 연쇄 ${item.bike.chain}명',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: context.ridey.muted,
                         ),

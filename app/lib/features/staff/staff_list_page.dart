@@ -3,8 +3,8 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
-import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
+import 'package:ridey_app/features/staff/staff_source_line.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -43,23 +43,9 @@ class StaffListPage extends StatelessWidget {
         children: [
           Text('목록', style: theme.textTheme.displayLarge),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              RideySelectBadge(
-                label: '실시간',
-                selected: session.source == ListSource.live,
-                onSelected: (_) => session.setSource(ListSource.live),
-              ),
-              RideySelectBadge(
-                label: '아침 목록',
-                selected: session.source == ListSource.morning,
-                onSelected: (_) => session.setSource(ListSource.morning),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // 실시간/아침 목록은 구별 현황에서 고른다. 여기서는 지금 무엇을 보는지만.
+          StaffSourceLine(session: session),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -79,7 +65,7 @@ class StaffListPage extends StatelessWidget {
           const SizedBox(height: 16),
           if (bikes.isEmpty)
             Text(
-              '이 조건에 맞는 고장 의심 자전거가 없어요.',
+              '이 조건에 맞는 경보 자전거가 없어요.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: context.ridey.muted,
               ),
@@ -89,7 +75,8 @@ class StaffListPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
                 child: Text(
-                  session.stations[group.key]?.name ?? group.value.first.stationName,
+                  session.stations[group.key]?.name ??
+                      group.value.first.stationName,
                   style: theme.textTheme.titleMedium,
                 ),
               ),
@@ -100,8 +87,9 @@ class StaffListPage extends StatelessWidget {
                       title: bike.bike,
                       subtitle: bike.isHighAlert ? '강한 경보' : '경보',
                       trailing: Text(
-                        '${bike.chain}명',
-                        style: context.rideyNumbers(theme.textTheme.titleMedium)
+                        '연쇄 ${bike.chain}명',
+                        style: context
+                            .rideyNumbers(theme.textTheme.titleMedium)
                             ?.copyWith(
                               color: bike.isHighAlert
                                   ? context.ridey.signalText

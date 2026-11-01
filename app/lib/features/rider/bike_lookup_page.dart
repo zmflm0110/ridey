@@ -97,10 +97,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     FocusScope.of(context).unfocus();
     final bikeId = normalizeBikeId(raw ?? _controller.text);
     if (bikeId == null) {
-      _showMessage(
-        title: '판단 어려움',
-        message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.',
-      );
+      _showMessage(title: '판단 어려움', message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.');
       return;
     }
 
@@ -204,18 +201,22 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
           ),
         ),
         const SizedBox(height: 12),
-        RideyButton(
-          label: '조회하기',
-          onPressed: () => _lookup(LookupKind.number),
-        ),
+        RideyButton(label: '조회하기', onPressed: () => _lookup(LookupKind.number)),
         const SizedBox(height: 10),
-        RideyButton.secondary(label: 'QR로 찍기', onPressed: _scanQr),
-        const SizedBox(height: 8),
-        Center(
-          child: TextButton(
-            onPressed: _scanPlate,
-            child: const Text('번호판으로 읽기'),
-          ),
+        // QR 과 번호판은 같은 무게의 두 방법이라 같은 알약 두 개로 나란히.
+        Row(
+          children: [
+            Expanded(
+              child: RideyButton.secondary(label: 'QR로 찍기', onPressed: _scanQr),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: RideyButton.secondary(
+                label: '번호판 읽기',
+                onPressed: _scanPlate,
+              ),
+            ),
+          ],
         ),
       ],
     );

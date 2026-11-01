@@ -11,16 +11,21 @@ class NearbyMapStation {
     required this.id,
     required this.latitude,
     required this.longitude,
+    this.isHighAlert = false,
   });
 
   final String id;
   final double latitude;
   final double longitude;
+
+  /// 이 대여소에 연쇄 3명 이상 자전거가 있으면 꽉 찬 신호 점, 아니면 옅은 점.
+  final bool isHighAlert;
 }
 
-/// Rounded map of the user's area. Red dots are stations that have a suspect
-/// bike. The blue pin is the device location. Without a Naver client id the
-/// same frame explains where to put the key.
+/// Rounded map of the user's area. Signal dots are stations with an alert bike
+/// (filled = strong, soft = 2 people). The calm-blue dot is the device
+/// location. Without a Naver client id the same frame explains where to put
+/// the key.
 class NearbyMap extends StatefulWidget {
   const NearbyMap({
     super.key,
@@ -39,8 +44,10 @@ class NearbyMap extends StatefulWidget {
 
 class _NearbyMapState extends State<NearbyMap> {
   NaverMapController? _controller;
-  NOverlayImage? _stationIcon;
+  NOverlayImage? _strongIcon;
+  NOverlayImage? _alertIcon;
   NOverlayImage? _userIcon;
+  Brightness? _iconBrightness;
   var _syncing = 0;
 
   NCameraPosition get _camera {
@@ -68,29 +75,24 @@ class _NearbyMapState extends State<NearbyMap> {
   }
 
   Future<void> _ensureIcons() async {
-    if (_stationIcon != null && _userIcon != null) return;
-    if (!mounted) return;
-    final stationIcon =
-        _stationIcon ??
-        await NOverlayImage.fromWidget(
+    final brightness = Theme.of(context).brightness;
+    if (_iconBrightness == brightness && _userIcon != null) return;
+    Future<NOverlayImage> draw(Widget widget, double size) =>
+        NOverlayImage.fromWidget(
           context: context,
-          size: const Size(18, 18),
-          widget: const _StationDot(),
+          size: Size.square(size),
+          widget: widget,
         );
+    final strong = await draw(const _StationDot(strong: true), 18);
     if (!mounted) return;
-    final userIcon =
-        _userIcon ??
-        await NOverlayImage.fromWidget(
-          context: context,
-          size: const Size(36, 36),
-          widget: const Icon(
-            Icons.location_on,
-            color: Color(0xFF2F6BFF),
-            size: 36,
-          ),
-        );
-    _stationIcon = stationIcon;
-    _userIcon = userIcon;
+    final alert = await draw(const _StationDot(strong: false), 18);
+    if (!mounted) return;
+    final user = await draw(const _UserDot(), 22);
+    if (!mounted) return;
+    _strongIcon = strong;
+    _alertIcon = alert;
+    _userIcon = user;
+    _iconBrightness = brightness;
   }
 
   Future<void> _syncMarkers() async {
@@ -108,7 +110,8 @@ class _NearbyMapState extends State<NearbyMap> {
           id: 'ridey-user',
           position: NLatLng(location.latitude, location.longitude),
           icon: _userIcon,
-          size: const Size(36, 36),
+          size: const Size(22, 22),
+          anchor: const NPoint(0.5, 0.5),
         ),
       );
     }
@@ -116,7 +119,7 @@ class _NearbyMapState extends State<NearbyMap> {
       final marker = NMarker(
         id: station.id,
         position: NLatLng(station.latitude, station.longitude),
-        icon: _stationIcon,
+        icon: station.isHighAlert ? _strongIcon : _alertIcon,
         size: const Size(18, 18),
         anchor: const NPoint(0.5, 0.5),
       );
@@ -180,21 +183,51 @@ class _NearbyMapState extends State<NearbyMap> {
   }
 }
 
+/// 경보 두 단계(docs/brand.md): 강한 경보 = 꽉 찬 신호 점, 연쇄 2명 = 옅은 점에 신호 테.
 class _StationDot extends StatelessWidget {
-  const _StationDot();
+  const _StationDot({required this.strong});
+
+  final bool strong;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.ridey;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFFF4F1F),
+        color: strong ? c.signal : c.signalSoft,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(
+          color: strong ? Theme.of(context).colorScheme.surface : c.signal,
+          width: 2,
+        ),
       ),
     );
   }
 }
 
+/// 내 위치: 차분한 파랑 점(확인·사람 = 파랑)에 면 색 테.
+class _UserDot extends StatelessWidget {
+  const _UserDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(3),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: context.ridey.calm,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.surface,
+            width: 3,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 확대·축소: 그림자 없이 면 색 + 1px 선의 세로 알약(어두운 화면에서도 맞춤).
 class _ZoomControls extends StatelessWidget {
   const _ZoomControls({required this.onZoom});
 
@@ -202,29 +235,29 @@ class _ZoomControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 2,
-      shadowColor: Colors.black26,
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 44,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ZoomButton(
-              tooltip: '확대',
-              icon: Icons.add,
-              onPressed: () => onZoom(1),
-            ),
-            Divider(height: 1, color: context.ridey.line),
-            _ZoomButton(
-              tooltip: '축소',
-              icon: Icons.remove,
-              onPressed: () => onZoom(-1),
-            ),
-          ],
-        ),
+    final c = context.ridey;
+    return Container(
+      width: 44,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: c.line),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ZoomButton(
+            tooltip: '확대',
+            icon: Icons.add,
+            onPressed: () => onZoom(1),
+          ),
+          Divider(height: 1, color: c.line),
+          _ZoomButton(
+            tooltip: '축소',
+            icon: Icons.remove,
+            onPressed: () => onZoom(-1),
+          ),
+        ],
       ),
     );
   }
@@ -246,7 +279,7 @@ class _ZoomButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, color: const Color(0xFF111317)),
+      icon: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
     );
   }
 }

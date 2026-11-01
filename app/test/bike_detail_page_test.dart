@@ -30,9 +30,10 @@ void main() {
       ),
     );
 
-    expect(find.text('고장이 의심되는 자전거예요.'), findsOneWidget);
+    expect(find.textContaining('경보가 켜졌어요.'), findsOneWidget);
     expect(find.textContaining('서로 다른 3명'), findsOneWidget);
-    await tester.tap(find.text('판단 근거 확인하기'));
+    await tester.ensureVisible(find.text('판단 근거 자세히 보기'));
+    await tester.tap(find.text('판단 근거 자세히 보기'));
     await tester.pumpAndSettle();
     expect(find.text('판단 근거'), findsOneWidget);
     expect(find.text('서로 다른 3명이 연달아 반납'), findsOneWidget);

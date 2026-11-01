@@ -326,7 +326,7 @@ class _MorePage extends StatelessWidget {
             RideyRow(
               leading: const RideyIco(icon: Icons.pedal_bike_outlined),
               title: '자주 쓰는 대여소',
-              subtitle: '저장해 둔 곳의 고장 의심 자전거',
+              subtitle: '저장해 둔 곳의 경보 자전거',
               trailing: Icon(
                 Icons.chevron_right_rounded,
                 color: context.ridey.muted,

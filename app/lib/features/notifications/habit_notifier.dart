@@ -184,7 +184,7 @@ String? habitNotificationBody({
     longitude: place.longitude,
   );
   if (count < 1) return null;
-  return '현재 계신 지역에 $count개의 고장 의심 자전거가 있어요';
+  return '내 주변에 경보가 켜진 따릉이가 $count대 있어요';
 }
 
 @pragma('vm:entry-point')
@@ -262,7 +262,7 @@ Future<void> showHabitNotification(String message) async {
       android: AndroidNotificationDetails(
         'habit-alerts',
         '습관 알림',
-        channelDescription: '자주 확인하는 시간대에 주변 고장 의심 자전거를 알려 줘요.',
+        channelDescription: '자주 확인하는 시간대에 주변에 경보가 켜진 자전거를 알려 줘요.',
       ),
       iOS: DarwinNotificationDetails(),
     ),

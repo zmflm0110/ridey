@@ -81,7 +81,8 @@ class _LookupHabitsPageState extends State<LookupHabitsPage> {
               else ...[
                 RideyListCard(
                   children: [
-                    for (final event in events.reversed) _HabitTile(event: event),
+                    for (final event in events.reversed)
+                      _HabitTile(event: event),
                   ],
                 ),
                 const SizedBox(height: 14),

@@ -4,7 +4,11 @@ import 'package:ridey_app/design/ridey_theme.dart';
 enum RideySignalState { avoid, noSignal, uncertain, completed }
 
 class RideySignalBadge extends StatelessWidget {
-  const RideySignalBadge({super.key, required this.state, this.compact = false});
+  const RideySignalBadge({
+    super.key,
+    required this.state,
+    this.compact = false,
+  });
 
   final RideySignalState state;
   final bool compact;
@@ -92,7 +96,9 @@ class RideyDataConfidence extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fresh = '${rideyAgo(updatedAt)} 갱신';
-    final state = isHealthy ? RideySignalState.noSignal : RideySignalState.uncertain;
+    final state = isHealthy
+        ? RideySignalState.noSignal
+        : RideySignalState.uncertain;
     final message = isOffline
         ? '연결 안 됨 · 마지막 기록 $fresh'
         : isHealthy

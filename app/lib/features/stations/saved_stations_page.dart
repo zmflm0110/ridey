@@ -479,12 +479,11 @@ class _SavedStationRow extends StatelessWidget {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) =>
-                              BikeDetailPage(
-                                bike: bike,
-                                updatedAt: updatedAt,
-                                feed: feed,
-                              ),
+                          builder: (_) => BikeDetailPage(
+                            bike: bike,
+                            updatedAt: updatedAt,
+                            feed: feed,
+                          ),
                         ),
                       );
                     },

@@ -89,7 +89,7 @@ void main() {
   });
 
   test('sends once inside the window when a nearby suspect bike exists', () {
-    expect(body(), '현재 계신 지역에 1개의 고장 의심 자전거가 있어요');
+    expect(body(), '내 주변에 경보가 켜진 따릉이가 1대 있어요');
   });
 
   test(

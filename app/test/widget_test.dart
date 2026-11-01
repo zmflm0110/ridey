@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,7 +78,7 @@ void main() {
     expect(find.textContaining('저장한 대여소에'), findsOneWidget);
     expect(find.textContaining('1대'), findsOneWidget);
     expect(find.text('SPB-69683'), findsOneWidget);
-    expect(find.text('힐스테이트에코'), findsOneWidget);
+    expect(find.textContaining('힐스테이트에코'), findsOneWidget);
     for (final label in _staffLabels) {
       expect(find.text(label), findsNothing);
     }
@@ -100,7 +101,8 @@ void main() {
     await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('고장이 의심되는 자전거예요.'), findsOneWidget);
+    expect(find.textContaining('경보가 켜졌어요.'), findsOneWidget);
+    await tester.ensureVisible(find.text('다른 자전거 확인하기'));
     await tester.tap(find.text('다른 자전거 확인하기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('더보기'));
@@ -148,8 +150,18 @@ void main() {
     await tester.tap(find.text('조회하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('고장이 의심되는 자전거예요.'), findsOneWidget);
-    await tester.tap(find.text('판단 근거 확인하기'));
+    expect(find.textContaining('경보가 켜졌어요.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('판단 근거 자세히 보기'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(BikeDetailPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.text('판단 근거 자세히 보기'));
     await tester.pumpAndSettle();
     expect(find.text('왜 경보가 켜졌나요?'), findsOneWidget);
     expect(find.text('현장에서 확인하기'), findsNothing);

@@ -110,7 +110,7 @@ class StaffMorePage extends StatelessWidget {
         Text(
           '자료: 서울 열린데이터광장 따릉이 대여이력·대여소 정보. '
           '경보 규칙: 서로 다른 사람이 3분·300m 안 반납을 2번 이상 이어서 함. '
-          '직원 모드는 구별 고장 의심 목록만 읽습니다.',
+          '직원 모드는 구별 경보 목록만 읽어요.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontSize: 12,

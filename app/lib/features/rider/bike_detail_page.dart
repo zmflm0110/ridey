@@ -24,46 +24,77 @@ class BikeDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final c = context.ridey;
+    final station = bike.stationName.isEmpty ? bike.station : bike.stationName;
 
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
         children: [
           const _CheckBackTitle(),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
           Text(
             bike.bike,
+            style: context
+                .rideyNumbers(theme.textTheme.titleLarge)
+                ?.copyWith(fontSize: 22),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            station,
+            style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            bike.isHighAlert ? '강한 경보가 켜졌어요.' : '경보가 켜졌어요.',
             style: theme.textTheme.headlineLarge?.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
+              color: c.signalText,
+              fontSize: 28,
+              height: 1.3,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            '고장이 의심되는 자전거예요.',
-            style: theme.textTheme.headlineLarge?.copyWith(
-              color: context.ridey.signal,
-              fontSize: 26,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '서로 다른 ${bike.chain}명이 짧은 시간 안에 반납한 이력이 확인된 자전거예요.',
+            '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurface,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 28),
-          RideyButton.signal(
+          const SizedBox(height: 20),
+          RideyCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ChainStrip(chain: bike.chain),
+                const SizedBox(height: 14),
+                _Fact(label: '연쇄', value: '${bike.chain}명', strong: true),
+                if (bike.lastDud.isNotEmpty)
+                  _Fact(label: '마지막 헛대여', value: bike.lastDud),
+                if (bike.probability != null)
+                  _Fact(
+                    label: '다음 사람도 바로 반납할 확률',
+                    value: '${bike.probability}%',
+                    strong: true,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          RideyDataConfidence(
+            updatedAt: updatedAt,
+            isHealthy: feed?.isHealthy ?? true,
+            ratio: feed?.ratio,
+          ),
+          const SizedBox(height: 20),
+          RideyButton(
             label: '다른 자전거 확인하기',
             onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Center(
             child: _UnderlinedAction(
-              label: '판단 근거 확인하기',
+              label: '판단 근거 자세히 보기',
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -127,7 +158,7 @@ class BikeCheckMessagePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 28),
-          RideyButton.signal(
+          RideyButton(
             label: '다른 자전거 확인하기',
             onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
           ),
@@ -259,6 +290,41 @@ class BikeEvidencePage extends StatelessWidget {
           ],
           const SizedBox(height: 14),
           _DataNote(updatedAt: updatedAt, feed: feed),
+        ],
+      ),
+    );
+  }
+}
+
+/// One labelled number on the detail card: label on the left, Unbounded value
+/// on the right (signal text for the alert numbers).
+class _Fact extends StatelessWidget {
+  const _Fact({required this.label, required this.value, this.strong = false});
+
+  final String label;
+  final String value;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ridey;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: c.body, fontSize: 15),
+            ),
+          ),
+          RideyNumber(
+            value,
+            size: strong ? 18 : 15,
+            color: strong ? c.signalText : null,
+          ),
         ],
       ),
     );
@@ -478,7 +544,7 @@ class _DataNote extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.ridey.calmSoft,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         '${feed?.isHealthy == false ? '자료가 지연되고 있어 판단을 보수적으로 해 주세요. ' : ''}$freshness 갱신된 대여 기록을 기준으로 했어요. 고장 확정이 아니므로, 직접 상태도 확인해 주세요.',

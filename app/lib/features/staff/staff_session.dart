@@ -139,7 +139,8 @@ class StaffSession extends ChangeNotifier {
         ? (assigned ?? const <String>[])
         : <String>[focusedDistrict!];
     return bikes.where((bike) {
-      if (selected.isNotEmpty && !selected.contains(districtOf(bike, stations))) {
+      if (selected.isNotEmpty &&
+          !selected.contains(districtOf(bike, stations))) {
         return false;
       }
       return switch (levelFilter) {

@@ -90,7 +90,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
             children: [
               Text(
-                '자주 확인하던 시간 15분 전부터, 그 근처의 고장 의심 자전거가 있을 때만 알려 드려요. 하루 한 번이고, 끄면 보내지 않아요.',
+                '자주 확인하던 시간 15분 전부터, 그 근처에 경보가 켜진 자전거가 있을 때만 알려 드려요. 하루 한 번이고, 끄면 보내지 않아요.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: context.ridey.muted,
                 ),

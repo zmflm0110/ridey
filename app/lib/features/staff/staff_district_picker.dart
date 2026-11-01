@@ -16,7 +16,8 @@ class StaffDistrictPickerPage extends StatefulWidget {
   final bool allowSkip;
 
   @override
-  State<StaffDistrictPickerPage> createState() => _StaffDistrictPickerPageState();
+  State<StaffDistrictPickerPage> createState() =>
+      _StaffDistrictPickerPageState();
 }
 
 class _StaffDistrictPickerPageState extends State<StaffDistrictPickerPage> {

@@ -218,7 +218,9 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
                             tooltip: '손전등 켜기 또는 끄기',
                             onPressed: _toggleTorch,
                             style: IconButton.styleFrom(
-                              backgroundColor: Colors.black.withValues(alpha: .5),
+                              backgroundColor: Colors.black.withValues(
+                                alpha: .5,
+                              ),
                               foregroundColor: Colors.white,
                             ),
                             icon: Icon(
@@ -232,7 +234,9 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
                             tooltip: '카메라 닫기',
                             onPressed: () => Navigator.of(context).pop(),
                             style: IconButton.styleFrom(
-                              backgroundColor: Colors.black.withValues(alpha: .5),
+                              backgroundColor: Colors.black.withValues(
+                                alpha: .5,
+                              ),
                               foregroundColor: Colors.white,
                             ),
                             icon: const Icon(Icons.close_rounded),
@@ -254,7 +258,9 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
                           const SizedBox(height: 6),
                           TextButton.icon(
                             onPressed: () => Navigator.of(context).pop(),
-                            style: TextButton.styleFrom(foregroundColor: Colors.white),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                            ),
                             icon: const Icon(Icons.keyboard_outlined),
                             label: const Text('번호 직접 입력'),
                           ),

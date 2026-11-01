@@ -151,8 +151,9 @@ class RideyButton extends StatelessWidget {
         : primary
         ? theme.colorScheme.onSurface
         : context.ridey.fill;
+    // 신호색 위 글자는 흰색(3.3:1)이 아니라 잉크(5.7:1) — docs/brand.md
     final foreground = signal
-        ? Colors.white
+        ? RideyColors.ink
         : primary
         ? theme.scaffoldBackgroundColor
         : theme.colorScheme.onSurface;
@@ -404,7 +405,8 @@ class RideyNumber extends StatelessWidget {
   }
 }
 
-/// A selectable pill. Selected uses the signal fill and a white label.
+/// A selectable pill, like the site's `.seg` buttons: selected is an ink fill
+/// with a paper label. Signal orange stays for alerts only.
 class RideySelectBadge extends StatelessWidget {
   const RideySelectBadge({
     super.key,
@@ -421,7 +423,8 @@ class RideySelectBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final fill = context.ridey.signal;
+    final fill = scheme.onSurface;
+    final onFill = theme.scaffoldBackgroundColor;
 
     return ChoiceChip(
       label: Text(label),
@@ -434,14 +437,12 @@ class RideySelectBadge extends StatelessWidget {
       }),
       backgroundColor: scheme.surface,
       selectedColor: fill,
-      checkmarkColor: Colors.white,
+      checkmarkColor: onFill,
       labelStyle: theme.textTheme.labelLarge?.copyWith(
-        color: selected ? Colors.white : scheme.onSurface,
+        color: selected ? onFill : scheme.onSurface,
         fontWeight: FontWeight.w700,
       ),
-      side: BorderSide(
-        color: selected ? fill : context.ridey.line,
-      ),
+      side: BorderSide(color: selected ? fill : context.ridey.line),
     );
   }
 }
