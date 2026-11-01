@@ -25,10 +25,6 @@ def flutter_root
 end
 
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-require File.expand_path(
-  '.symlinks/plugins/google_mlkit_commons/ios/scripts/apple_silicon_simulator',
-  __dir__,
-)
 
 flutter_ios_podfile_setup
 
@@ -48,5 +44,10 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
     end
   end
+  # .symlinks 는 flutter_install_all_ios_pods 가 만들므로, 그 뒤인 여기서 불러와야 새로 받은 저장소에서도 된다.
+  require File.expand_path(
+    '.symlinks/plugins/google_mlkit_commons/ios/scripts/apple_silicon_simulator',
+    __dir__,
+  )
   mlkit_apple_silicon_simulator_patch(installer)
 end

@@ -20,5 +20,5 @@ Future<void> main() async {
   try {
     await Workmanager().initialize(habitNotificationDispatcher);
   } catch (_) {}
-  runApp(const RideyApp());
+  runApp(const RideyApp(showIntro: true));
 }

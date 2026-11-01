@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 시작 화면: 잉크 바탕 가운데 'RIDEY.' (tools/make_flutter_assets.js) -->
+<!-- 시작 화면: 잉크 바탕만. 'RIDEY.' 는 앱이 켜지며 점이 떨어지는 장면으로 그린다(app/lib/widgets/ridey_intro.dart, tools/make_flutter_assets.js) -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/ic_launcher_background" />
-    <item>
-        <bitmap android:gravity="center" android:src="@drawable/splash_wordmark" />
-    </item>
 </layer-list>

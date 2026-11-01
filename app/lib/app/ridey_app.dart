@@ -18,6 +18,7 @@ import 'package:ridey_app/features/staff/staff_shell.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
+import 'package:ridey_app/widgets/ridey_intro.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
 class RideyApp extends StatefulWidget {
@@ -28,6 +29,7 @@ class RideyApp extends StatefulWidget {
     this.opsListRepository,
     this.readLocation,
     this.enableCamera = true,
+    this.showIntro = false,
   });
 
   final LiveSnapshotRepository? liveRepository;
@@ -35,6 +37,9 @@ class RideyApp extends StatefulWidget {
   final OpsListRepository? opsListRepository;
   final Future<DeviceLocation?> Function()? readLocation;
   final bool enableCamera;
+
+  /// 켤 때 '떨어지는 점' 시작 장면(main 에서만 켬, 테스트는 바로 화면).
+  final bool showIntro;
 
   @override
   State<RideyApp> createState() => _RideyAppState();
@@ -44,6 +49,7 @@ class _RideyAppState extends State<RideyApp> {
   ThemeMode _themeMode = ThemeMode.system;
   UserMode? _mode;
   var _ready = false;
+  late var _intro = widget.showIntro;
   final _pendingCheck = ValueNotifier<RideyCheckRequest?>(null);
 
   @override
@@ -93,6 +99,15 @@ class _RideyAppState extends State<RideyApp> {
         theme: RideyTheme.light(),
         darkTheme: RideyTheme.dark(),
         themeMode: _themeMode,
+        builder: (context, child) => Stack(
+          children: [
+            ?child,
+            if (_intro)
+              Positioned.fill(
+                child: RideyIntro(onDone: () => setState(() => _intro = false)),
+              ),
+          ],
+        ),
         home: !_ready
             ? const _StartupPage()
             : switch (_mode) {

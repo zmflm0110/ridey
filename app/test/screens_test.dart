@@ -1,6 +1,7 @@
 // Renders the main screens to PNG for design review — the CI 'screens' job
 // uploads them. Skipped unless RIDEY_SCREENS (output folder) and RIDEY_FONT
 // (Korean font files, ':'-separated) are set, so plain `flutter test` ignores it.
+// README shots use one phone frame (390x844) so they line up in a row.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -239,7 +240,7 @@ void main() {
     }, skip: _out == null);
 
     testWidgets('detail$tag', (tester) async {
-      await open(tester, dark: dark, height: 1500);
+      await open(tester, dark: dark);
       await lookup(tester, 'spb-69683');
       await shot(tester, '05_detail$tag');
     }, skip: _out == null);
@@ -264,12 +265,12 @@ void main() {
     }, skip: _out == null);
 
     testWidgets('staff overview$tag', (tester) async {
-      await open(tester, dark: dark, height: 1100, prefs: _staff);
+      await open(tester, dark: dark, prefs: _staff);
       await shot(tester, '09_staff_overview$tag');
     }, skip: _out == null);
 
     testWidgets('staff list$tag', (tester) async {
-      await open(tester, dark: dark, height: 1100, prefs: _staff);
+      await open(tester, dark: dark, prefs: _staff);
       await tester.tap(find.text('목록'));
       await shot(tester, '10_staff_list$tag');
     }, skip: _out == null);

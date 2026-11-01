@@ -99,17 +99,19 @@
 
 | 모드 | 탭 | 하는 일 |
 |---|---|---|
-| 시민 | 홈, 자전거 확인, 더보기 | 홈 지도(네이버 지도)에서 내 주변 대여소의 고장 의심 대수를 본다. 자전거 확인에서는 번호를 넣거나 QR로 찍으면 경보가 켜졌는지, 다음 사람도 바로 반납할 확률과 판단 근거가 나온다. 조회 기록과 알림은 그 폰 안에만 남는다 |
-| 직원 | 구별 현황, 목록, 더보기 | 담당 구를 고르면 그 구의 고장 의심 대수와 대여소별 목록(그날 아침 목록과 실시간)을 읽는다. 현장 판정이나 사진 올리기는 없다 |
+| 시민 | 홈, 자전거 확인, 더보기 | 홈 지도(네이버 지도)에서 내 주변 2km의 경보 자전거를 본다. 강한 경보는 꽉 찬 주황 점, 연쇄 2명은 옅은 점이다. 자전거 확인에서 번호를 넣거나 QR, 번호판을 찍으면 경보가 켜졌는지와 연쇄 인원, 마지막 헛대여 시각, 다음 사람도 바로 반납할 확률이 한 화면에 나온다. 조회 기록과 알림은 그 폰 안에만 남는다 |
+| 직원 | 구별 현황, 목록, 더보기 | 담당 구를 고르면 구마다 경보 대수와 대여소별 목록을 본다. 실시간과 그날 07:00 아침 목록 중 고를 수 있고, 목록에는 언제 받은 자료인지와 받기 실패가 한 줄로 나온다. 현장 판정이나 사진 올리기는 없다 |
 
-직원 모드는 현장 직원이 재배치하러 다니는 길에 '이 번호는 먼저 가져가세요'를 한눈에 보게 하려는 것이다. 현장 업무는 [공단에 전화로 확인한 내용](docs/operations.md)을 따랐다.
+두 모드가 답하는 질문이 다르다. 시민은 '지금 내 앞의 이 자전거를 타도 되나', 직원은 '재배치하러 가는 대여소에 먼저 가져갈 자전거가 있나'다. 공단 직원은 고장을 찾아 순찰하지 않고 재배치하다 눈에 띄는 고장만 거둔다는 것을 [전화로 확인했고](docs/operations.md), 직원 모드는 그 길에 얹는 목록이다. 직원이 실제로 쓸지는 아직 확인하지 못했다.
+
+앱은 계산하지 않고 클라우드가 낸 결과만 읽는다. 읽는 뷰는 `live_snapshot`, `ops_lists`, `ops_scores`, `ops_alarm_days` 네 개이고 공개(publishable) 키로 읽기만 한다. 그래서 직원 모드에도 로그인이 없고, 보이는 것은 누구나 읽을 수 있는 자료뿐이다.
 
 <table>
   <tr>
     <td align="center"><img src="docs/shots/app/onboarding.png" alt="첫 실행 안내" width="200"><br>첫 실행<br><sub>시민인지 직원인지 한 번만 묻는다</sub></td>
-    <td align="center"><img src="docs/shots/app/check.png" alt="자전거 확인" width="200"><br>자전거 확인(시민)<br><sub>번호 입력, QR, 번호판</sub></td>
-    <td align="center"><img src="docs/shots/app/staff_overview.png" alt="구별 현황" width="200"><br>구별 현황(직원)<br><sub>담당 구의 의심 대수</sub></td>
-    <td align="center"><img src="docs/shots/app/staff_list.png" alt="대여소별 목록" width="200"><br>목록(직원)<br><sub>대여소별 의심 자전거, 단계 걸러 보기</sub></td>
+    <td align="center"><img src="docs/shots/app/check.png" alt="자전거 확인" width="200"><br>자전거 확인(시민)<br><sub>연쇄, 마지막 헛대여, 확률</sub></td>
+    <td align="center"><img src="docs/shots/app/staff_overview.png" alt="구별 현황" width="200"><br>구별 현황(직원)<br><sub>담당 구의 경보 대수</sub></td>
+    <td align="center"><img src="docs/shots/app/staff_list.png" alt="대여소별 목록" width="200"><br>목록(직원)<br><sub>대여소별 경보 자전거, 연쇄 인원</sub></td>
   </tr>
 </table>
 
@@ -117,7 +119,7 @@
 
 ## 디자인
 
-빌려서 제대로 탄 기록은 선, 빌리자마자 반납한 기록은 점으로 그린다. 서로 다른 두 사람의 점이 이어지면 경보이고, 로고 `RIDEY.`의 마침표가 그 점이다. 바탕은 잉크색과 종이색, 경보에만 주황을 쓰고 '확인함'은 파랑으로 한다. 초록 대신 파랑을 고른 건 색각 이상이 있으면 주황과 초록이 거의 같아 보이기 때문이다(ΔE 16). 숫자는 Unbounded 글꼴, 글은 기기 기본 글꼴이다. 자세한 규칙은 [docs/brand.md](docs/brand.md)에 있다.
+빌려서 제대로 탄 기록은 선, 빌리자마자 반납한 기록은 점으로 그린다. 서로 다른 두 사람의 점이 이어지면 경보이고, 로고 `RIDEY.`의 마침표가 그 점이다. 바탕은 잉크색과 종이색, 경보에만 주황을 쓰고 '확인함'은 파랑으로 한다. 초록 대신 파랑을 고른 건 색각 이상이 있으면 주황과 초록이 거의 같아 보이기 때문이다(ΔE 16). 숫자는 Unbounded 글꼴, 글은 기기 기본 글꼴이다. 앱을 켜면 사이트 로고처럼 점이 떨어져 바닥선에 튀며 앉고 RIDEY 글자가 올라온다(움직임 줄이기를 켜 두면 바로 넘어간다). 사이트, 앱, 발표가 같은 규칙을 쓴다. 자세한 규칙은 [docs/brand.md](docs/brand.md)에 있다.
 
 <p align="center"><img src="docs/brand/board.png" alt="RIDEY 브랜드 보드. 로고, 앱 아이콘, 색, 글꼴, 선과 점" width="860"></p>
 
@@ -133,7 +135,7 @@
 | 엔진 | 파이썬(`engine/`). 같은 규칙을 SQL로도 짰고 서로 같은 답이 나오는지 자동으로 검사한다 |
 | 클라우드 | Supabase Postgres. pg_cron으로 5분마다, pg_net으로 서울 API를 받고 SQL로 연쇄와 확률을 계산한다. 키는 DB의 Vault와 맥 키체인에만 둔다 |
 | 앱 | Flutter 하나로 안드로이드와 아이폰(시민 모드와 직원 모드, 네이버 지도, 카메라 QR, 번호판 글자 인식, 끊기면 마지막 기록) |
-| 검사 | 파이썬 35개, Flutter 50개, 사이트와 QR 검사. 올릴 때마다 GitHub Actions가 돌고 APK도 여기서 만든다 |
+| 검사 | 파이썬 45개, Flutter 50개, 사이트와 QR 검사. 올릴 때마다 GitHub Actions가 돌고 APK도 여기서 만든다 |
 
 무료 DB(메모리 0.5GB)가 10월 2일 밤 6시간 멈춘 적이 있다. 5분 작업 한 번이 145MB를 건드려서 DB 캐시가 디스크로 밀려난 탓이었다. '헛대여가 둘 이상 이어져야 경보'라는 조건으로 후보를 먼저 줄이고(답은 같다), 자전거별 기록을 색인에서 바로 읽게 고쳐 한 번에 40MB, 16\~20초로 줄였다. 옛 SQL과 새 SQL이 같은 답을 내는지는 로컬 Postgres에 6월 기록을 흘려 넣어 36시간 동안 73번 비교했다([`tools/live_sql_compare.py`](tools/live_sql_compare.py)).
 
@@ -178,10 +180,9 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 
 - 안드로이드 APK는 GitHub Actions의 `flutter` 실행 화면에서 `ridey-apk`로 받는다. 테스트를 통과해야 만들어진다. 직접 만들려면 `cd app && flutter build apk --release`. `app/android/key.properties`(git에 넣지 않음)가 있으면 그 키로, 없으면 디버그 키로 서명한다.
 - 아이폰은 `cd app && flutter build ios` 또는 Xcode에서 `app/ios/Runner.xcworkspace`를 열고 Team을 고른 뒤 실행한다.
-- 앱 아이콘과 시작 화면은 `node tools/make_flutter_assets.js`로 다시 만든다(`docs/brand/icon.svg`, `docs/brand/wordmark-dark.svg`에서).
+- 앱 아이콘은 `node tools/make_flutter_assets.js`로 다시 만든다(`docs/brand/icon.svg`에서). 기기의 시작 화면은 잉크색 바탕만 두고, 로고는 앱이 켜지며 그린다(`app/lib/widgets/ridey_intro.dart`).
 - 앱의 지도를 보려면 네이버 클라우드에서 지도 SDK 클라이언트 ID를 받아 `app/.env`에 `NAVER_MAP_CLIENT_ID=…`로 적는다(`app/.env.example` 참고, git에는 올리지 않는다). 빌드할 때 `--dart-define=NAVER_MAP_CLIENT_ID=…`로 줘도 된다.
 - 같은 Actions 실행의 `ridey-screens`에는 주요 화면을 밝은 화면과 어두운 화면으로 찍은 사진이 있다. Flutter가 없는 컴퓨터에서도 디자인을 확인할 수 있다.
-- 10월 25일 Flutter로 옮기기 전의 SwiftUI 아이폰 앱(`ios/`)과 Capacitor 안드로이드 앱(`android-app/`)은 커밋 `b561e16` 이전 기록에 남아 있다.
 </details>
 
 <details>
@@ -200,14 +201,6 @@ python tools/live_sql_compare.py --old <커밋>                                 
 대회 제출 zip은 `python tools/make_submission.py --id <학번> --name <이름>`으로 만든다. APK는 Actions에서 받은 것을 `dist/RIDEY.apk`로 두면 된다.
 </details>
 
-## 앱 모드와 읽는 자료
-
-고장 판단 엔진(`engine/`)과 분석 SQL(`supabase/live.sql`, `model.sql`, `calib.sql`, `ev.sql`)은 앱과 별개로 돌고, 앱은 결과만 읽는다. 앱이 읽는 뷰는 `live_snapshot`, `ops_lists`, `ops_scores`, `ops_alarm_days` 네 개이고, 공개(publishable) 키로 읽기만 한다. 직원 모드도 같은 뷰를 쓰므로 로그인은 없다. 그래서 직원 모드에서 볼 수 있는 것은 누구나 읽을 수 있는 자료뿐이다.
-
-대여소 목록을 새로 만들면 `analysis/export_web.py`가 `data/stations.json`을 쓰고, 이 파일을 `app/assets/data/stations.json`에 복사한다. `site/`는 작품 소개 사이트다.
-
-옛 SwiftUI 아이폰 앱, Capacitor 안드로이드 앱, 웹 데모(`web/`), 운영 대시보드(`dashboard/`)는 Flutter 앱으로 합치면서 지웠다. 이전 모습은 git 기록(커밋 `0a7be37` 이전)에 남아 있다.
-
 ## 폴더
 
 | 폴더 | 내용 |
@@ -220,6 +213,8 @@ python tools/live_sql_compare.py --old <커밋>                                 
 | [`docs/`](docs/README.md) | 보고서, 발표, 대본, 결과 표, 조사 자료([문서 목록](docs/README.md), [스토리라인](docs/story.md)) |
 | [`tools/`](tools) | 클라우드 적재와 대조, SQL 비교, 다시 배우기, 제출물 만들기 |
 | [`tests/`](tests) | 파이썬, 사이트, QR 검사(앱 검사는 `app/` 안) |
+
+대여소 목록을 새로 만들면 `analysis/export_web.py`가 `data/stations.json`을 쓰고, 이 파일을 `app/assets/data/stations.json`에 복사한다. 옛 SwiftUI 아이폰 앱, Capacitor 안드로이드 앱, 웹 데모(`web/`), 운영 대시보드(`dashboard/`)는 Flutter 앱 하나로 합치면서 지웠고, 이전 모습은 git 기록(커밋 `0a7be37` 이전)에 남아 있다.
 
 측정 과정과 실패한 시도는 [`PLAN.md`](PLAN.md)에, 바뀐 점은 [`CHANGELOG.md`](CHANGELOG.md)에 적어 두었다.
 

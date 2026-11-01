@@ -42,7 +42,9 @@ const DENS = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
     const w = Math.round(wmW * k), h = Math.round(wmH * k);
     await shot(wordmark.replace('<svg class="wordmark"', `<svg width="${w}" height="${h}"`), w, h, path.join(RES, `drawable-${d}`, "splash_wordmark.png"), true);
   }
-  const layer = `<?xml version="1.0" encoding="utf-8"?>\n<!-- 시작 화면: 잉크 바탕 가운데 'RIDEY.' (tools/make_flutter_assets.js) -->\n<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n    <item android:drawable="@color/ic_launcher_background" />\n    <item>\n        <bitmap android:gravity="center" android:src="@drawable/splash_wordmark" />\n    </item>\n</layer-list>\n`;
+  // 시작 화면은 잉크 바탕만 — 'RIDEY.' 는 앱이 켜지며 점이 떨어지는 장면(app/lib/widgets/ridey_intro.dart)이 그린다.
+  // 워드마크 그림(splash_wordmark·LaunchImage)은 만들어 두되 쓰지 않는다(아이폰 LaunchScreen 의 그림은 hidden).
+  const layer = `<?xml version="1.0" encoding="utf-8"?>\n<!-- 시작 화면: 잉크 바탕만. 'RIDEY.' 는 앱이 켜지며 점이 떨어지는 장면으로 그린다(app/lib/widgets/ridey_intro.dart, tools/make_flutter_assets.js) -->\n<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n    <item android:drawable="@color/ic_launcher_background" />\n</layer-list>\n`;
   for (const dir of ["drawable", "drawable-v21"]) fs.writeFileSync(path.join(RES, dir, "launch_background.xml"), layer);
 
   // 아이폰 아이콘: Contents.json 의 모든 칸
