@@ -184,7 +184,7 @@ String? habitNotificationBody({
     longitude: place.longitude,
   );
   if (count < 1) return null;
-  return '내 주변에 경보가 켜진 따릉이가 $count대 있어요';
+  return '내 주변에 고장 의심 따릉이가 $count대 있어요';
 }
 
 @pragma('vm:entry-point')

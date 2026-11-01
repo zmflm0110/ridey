@@ -441,14 +441,14 @@ class _Headline extends StatelessWidget {
               children: [
                 TextSpan(
                   text: area.usingDeviceLocation
-                      ? '내 주변 2km에\n경보가 켜진 따릉이 '
-                      : '저장한 대여소에\n경보가 켜진 따릉이 ',
+                      ? '내 주변 2km에\n고장 의심 따릉이가 '
+                      : '저장한 대여소에\n고장 의심 따릉이가 ',
                 ),
                 TextSpan(
                   text: '$count대',
                   style: TextStyle(color: context.ridey.signal),
                 ),
-                const TextSpan(text: '가 있어요'),
+                const TextSpan(text: ' 있어요'),
               ],
             ),
           )
