@@ -20,5 +20,8 @@ import workmanager_apple
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "RideyAlertActivity") {
       RideyAlertActivity.shared.register(messenger: registrar.messenger())
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "OfficialBikeApp") {
+      OfficialBikeApp.shared.register(messenger: registrar.messenger())
+    }
   }
 }

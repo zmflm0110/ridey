@@ -66,6 +66,10 @@ void main() {
   });
 
   Future<void> pumpRidey(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       RideyApp(
         liveRepository: _FakeLiveSnapshotRepository(),

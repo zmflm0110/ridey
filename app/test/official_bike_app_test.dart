@@ -18,17 +18,31 @@ void main() {
     expect(opened, [officialBikePlayStoreUri]);
   });
 
-  test('opens the seoul bike site on ios', () async {
+  test('opens the official ios app scheme before the app store', () async {
     final opened = <String>[];
     await openOfficialBikeApp(
       platform: TargetPlatform.iOS,
-      canLaunch: (uri) async => true,
+      canLaunch: (uri) async => uri.toString() == officialBikeIosSchemes.first,
       launch: (uri, {LaunchMode mode = LaunchMode.platformDefault}) async {
         opened.add(uri.toString());
         return true;
       },
     );
 
-    expect(opened, [officialBikeSiteUri]);
+    expect(opened, [officialBikeIosSchemes.first]);
+  });
+
+  test('opens the app store when no ios scheme is available', () async {
+    final opened = <String>[];
+    await openOfficialBikeApp(
+      platform: TargetPlatform.iOS,
+      canLaunch: (uri) async => uri.toString() == officialBikeAppStoreUri,
+      launch: (uri, {LaunchMode mode = LaunchMode.platformDefault}) async {
+        opened.add(uri.toString());
+        return true;
+      },
+    );
+
+    expect(opened, [officialBikeAppStoreUri]);
   });
 }

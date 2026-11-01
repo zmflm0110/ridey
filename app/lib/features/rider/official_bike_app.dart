@@ -1,19 +1,37 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+const officialBikeChannel = MethodChannel('ridey/official_bike');
 const officialBikeAndroidPackage = 'com.dki.spb_android';
 const officialBikePlayStoreUri =
     'https://play.google.com/store/apps/details?id=$officialBikeAndroidPackage';
-const officialBikeSiteUri = 'https://www.bikeseoul.com';
-const officialBikeAppStoreUri = 'https://apps.apple.com/app/id1037272004';
+const officialBikeAppStoreUri = 'itms-apps://itunes.apple.com/app/id1037272004';
+const officialBikeIosSchemes = [
+  'spb://',
+  'bikeseoul://',
+  'seoulbike://',
+  'ddarung://',
+  'ttareungi://',
+  'smartbike://',
+];
 
-/// Opens the official Seoul Bike app when possible. There is no public deep
-/// link that starts a rental for a bike number or station.
+/// Opens the official Seoul Bike mobile app. There is no public deep link
+/// that starts a rental for a bike number or station.
 Future<void> openOfficialBikeApp({
   Future<bool> Function(Uri uri, {LaunchMode mode})? launch,
   Future<bool> Function(Uri uri)? canLaunch,
   TargetPlatform? platform,
 }) async {
+  if (launch == null && canLaunch == null) {
+    try {
+      final opened = await officialBikeChannel.invokeMethod<bool>('open');
+      if (opened == true) return;
+    } on MissingPluginException {
+      // Widget tests and unsupported platforms fall through to URL launch.
+    }
+  }
+
   final open = launch ?? launchUrl;
   final ready = canLaunch ?? canLaunchUrl;
   final target = platform ?? defaultTargetPlatform;
@@ -35,7 +53,9 @@ Future<void> openOfficialBikeApp({
   }
 
   if (target == TargetPlatform.iOS) {
-    if (await tryOpen(officialBikeSiteUri)) return;
+    for (final scheme in officialBikeIosSchemes) {
+      if (await tryOpen(scheme)) return;
+    }
     await tryOpen(officialBikeAppStoreUri);
   }
 }

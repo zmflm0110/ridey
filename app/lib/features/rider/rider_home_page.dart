@@ -304,16 +304,16 @@ class _LoadedHomeState extends State<_LoadedHome> {
                 ),
               ),
             const SizedBox(height: 12),
-            _HomeListTabs(
-              showStations: _showStations,
-              onChanged: (showStations) =>
-                  setState(() => _showStations = showStations),
-            ),
-            const SizedBox(height: 12),
             NearbyMap(
               stations: pins.values.toList(growable: false),
               location: area.location,
               onStationTap: (id) => _openStation(id, area.bikes),
+            ),
+            const SizedBox(height: 12),
+            _HomeListTabs(
+              showStations: _showStations,
+              onChanged: (showStations) =>
+                  setState(() => _showStations = showStations),
             ),
             if (_showStations)
               ..._stationList(area)
