@@ -87,6 +87,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
           message: message,
           bikeId: bikeId,
           onCheckAnother: _backToForm,
+          offerOfficialApp: title == '경보 없음',
         ),
       ),
     );

@@ -9,6 +9,7 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/habits/lookup_habits_page.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/notifications/notification_settings_page.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
@@ -26,16 +27,20 @@ class RideyApp extends StatefulWidget {
     super.key,
     this.liveRepository,
     this.stationRepository,
+    this.stationStatusRepository,
     this.opsListRepository,
     this.readLocation,
     this.enableCamera = true,
     this.showIntro = false,
+    this.openOfficialApp,
   });
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final StationStatusRepository? stationStatusRepository;
   final OpsListRepository? opsListRepository;
   final Future<DeviceLocation?> Function()? readLocation;
+  final Future<void> Function()? openOfficialApp;
   final bool enableCamera;
 
   /// 켤 때 '떨어지는 점' 시작 장면(main 에서만 켬, 테스트는 바로 화면).
@@ -115,7 +120,9 @@ class _RideyAppState extends State<RideyApp> {
                 UserMode.rider => RideyShell(
                   liveRepository: widget.liveRepository,
                   stationRepository: widget.stationRepository,
+                  stationStatusRepository: widget.stationStatusRepository,
                   readLocation: widget.readLocation,
+                  openOfficialApp: widget.openOfficialApp,
                   enableCamera: widget.enableCamera,
                   themeMode: _themeMode,
                   onThemeModeChanged: (mode) =>
@@ -146,7 +153,9 @@ class RideyShell extends StatefulWidget {
     super.key,
     required this.liveRepository,
     required this.stationRepository,
+    required this.stationStatusRepository,
     required this.readLocation,
+    required this.openOfficialApp,
     required this.enableCamera,
     required this.themeMode,
     required this.onThemeModeChanged,
@@ -156,7 +165,9 @@ class RideyShell extends StatefulWidget {
 
   final LiveSnapshotRepository? liveRepository;
   final StationRepository? stationRepository;
+  final StationStatusRepository? stationStatusRepository;
   final Future<DeviceLocation?> Function()? readLocation;
+  final Future<void> Function()? openOfficialApp;
   final bool enableCamera;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
@@ -225,7 +236,9 @@ class _RideyShellState extends State<RideyShell> {
                       RiderHomePage(
                         repository: widget.liveRepository,
                         stationRepository: widget.stationRepository,
+                        stationStatusRepository: widget.stationStatusRepository,
                         readLocation: widget.readLocation,
+                        openOfficialApp: widget.openOfficialApp,
                       ),
                       BikeCheckTab(
                         repository: widget.liveRepository,

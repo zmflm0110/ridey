@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
@@ -121,12 +122,16 @@ class BikeCheckMessagePage extends StatelessWidget {
     required this.message,
     this.bikeId,
     this.onCheckAnother,
+    this.offerOfficialApp = false,
+    this.onOpenOfficialApp,
   });
 
   final String title;
   final String message;
   final String? bikeId;
   final VoidCallback? onCheckAnother;
+  final bool offerOfficialApp;
+  final Future<void> Function()? onOpenOfficialApp;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +163,20 @@ class BikeCheckMessagePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 28),
+          if (offerOfficialApp) ...[
+            RideyButton(
+              label: '따릉이 앱에서 대여하기',
+              onPressed: onOpenOfficialApp ?? openOfficialBikeApp,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '공식 앱이 열립니다. 해당 번호로 바로 대여되지는 않아요.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: context.ridey.muted,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           RideyButton(
             label: '다른 자전거 확인하기',
             onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
