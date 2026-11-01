@@ -36,13 +36,26 @@
       <a class="hide-sm" href="releases.html">진행 기록</a>
       <a class="icon-btn" href="https://github.com/zmflm0110/ridey" aria-label="GitHub 저장소"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg></a>
       <button class="icon-btn" id="theme" type="button" aria-label="밝은·어두운 화면 바꾸기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg></button>
-      <a class="btn sm solid" href="app/">웹앱 열기</a>
+      <a class="btn sm solid" href="./#try">번호로 확인</a>
     </nav>
   </div>
 </header>
 <main class="doc">
 <h1>진행 기록</h1>
 <p class="lede">RIDEY 가 달라진 점을 모았습니다. 자세한 측정과 실패 기록은 <a href="https://github.com/zmflm0110/ridey/blob/master/PLAN.md">PLAN.md</a> 의 진행 기록에 있습니다.</p>
+<h2>0.31.0<small>2026-11-01</small></h2>
+<ul>
+<li><b>앱 하나, 두 모드.</b> Flutter 앱에서 시민과 직원을 고른다. 시민은 번호·QR로 자전거를 확인하고, 직원은 담당 구의 고장 의심 목록만 읽는다.</li>
+<li><b>웹 데모와 운영 대시보드를 지움.</b> <code>web/</code>·<code>dashboard/</code>와 그 CI를 없앴다. GitHub Pages는 소개 사이트(<code>site/</code>)만 올린다.</li>
+<li>대여소 자료는 <code>data/stations.json</code>, 숫자 글꼴은 <code>site/fonts</code>, QR 디코더는 <code>tests/vendor/jsqr</code>.</li>
+</ul>
+<h2>0.30.0<small>2026-10-25</small></h2>
+<ul>
+<li><b>이용자 앱과 운영 화면을 나눔.</b> Flutter 앱(<code>app/</code>)은 따릉이를 타는 사람만 본다. 번호·QR·OCR 조회, 판단 근거, 주변 의심 자전거, 이 폰에만 남는 조회 습관과 알림. 직원 문구와 현장 기록 화면은 앱에서 뺐다.</li>
+<li><b>RIDEY Operations</b>(<code>dashboard/</code>). 초대한 직원만 들어간다. 개요, 우선순위(비교·판단 근거·지도), 자치구, 남은 근무 시간의 경로, 현장 점검(사진·오프라인 대기열), 기록과 아침 목록 CSV, 관리자용 직원 명단.</li>
+<li><b>직원 권한은 데이터베이스가 막는다.</b> <code>ops.staff</code>와 <code>staff_me</code>. 활성 직원만 점검 기록과 사진을 넣고 읽는다. 공개 뷰 네 개(<code>live_snapshot</code>, <code>ops_lists</code>, <code>ops_scores</code>, <code>ops_alarm_days</code>)는 그대로 누구나 읽는다. 클라우드 적용은 psql로 직접 한다.</li>
+<li><code>web/</code>, <code>site/</code>, 루트 <code>ios/</code>, <code>android-app/</code>은 아직 두었다. 지울 때 그 폴더를 도는 CI도 같이 끈다.</li>
+</ul>
 <h2>0.29.0<small>2026-10-11</small></h2>
 <ul>
 <li><b>대여소 QR 스티커</b>: 사이트(앱 구역)에서 대여소를 고르면 100×140mm 스티커가 만들어지고(인쇄·PDF 저장), 기둥에 붙여 카메라로 비추면 웹앱이 <b>그 대여소</b>를 열어 지금 서 있는 고장 의심 자전거 번호만 바로 보여 줍니다(<code>app/?s=대여소번호</code>). 설치도 번호 입력도 필요 없는 '타기 직전' 경로. 카드에서 번호를 누르면 바로 조회, '내 대여소에 넣기'로 계속 볼 수 있습니다.</li>
@@ -292,7 +305,7 @@
   <div class="wrap">
     <a class="logo" href="./#top" aria-label="RIDEY 맨 위로"><!-- brand:wordmark --><svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 415.1 75.0" aria-hidden="true"><path fill="currentColor" d="M22.1 32.6H48.7Q53.3 32.6 55.9 30.4Q58.5 28.3 58.5 24.4Q58.5 20.5 55.9 18.3Q53.3 16.2 48.7 16.2H18.9L28.9 5.8V75H6.7V0H52Q60.7 0 67.2 3.1Q73.7 6.1 77.3 11.6Q81 17 81 24.4Q81 31.6 77.3 37.1Q73.7 42.5 67.2 45.6Q60.7 48.6 52 48.6H22.1ZM32.5 39.9H57.4L83.7 75H58ZM91.5 0H113.7V75H91.5ZM164.2 0Q177.7 0 187.7 4.7Q197.8 9.3 203.4 17.7Q209.1 26.2 209.1 37.5Q209.1 48.8 203.4 57.2Q197.8 65.7 187.7 70.3Q177.7 75 164.2 75H126.1V0ZM148.2 65.4 137.8 55.2H165.9Q172.3 55.2 176.9 53Q181.6 50.9 184.1 46.9Q186.6 42.9 186.6 37.5Q186.6 32 184.1 28.1Q181.6 24.1 176.9 22Q172.3 19.8 165.9 19.8H137.8L148.2 9.6ZM283.2 29.6V45.4H227.9V29.6ZM243 37.5 238.2 67 229.4 57.1H286.7V75H216.1L221.7 37.5L216.1 0H286.2V17.9H229.4L238.2 8ZM326.1 75V38.3H348.3V75ZM290.9 0H315.5L342 33.9H332.3L358.7 0H383.3L344.3 49.7L330 49.9Z"/><circle class="dot" cx="401.7" cy="61.6" r="13.4" fill="#FF4F1F"/></svg><!-- /brand:wordmark --></a>
     <p class="motto" lang="en">Ready before you ride.</p>
-    <div class="foot-links"><a href="app/">웹앱</a><a href="releases.html">진행 기록</a><a href="https://github.com/zmflm0110/ridey">GitHub</a></div>
+    <div class="foot-links"><a href="./#try">번호로 확인</a><a href="releases.html">진행 기록</a><a href="https://github.com/zmflm0110/ridey">GitHub</a></div>
     <p class="fine">자료: 서울 열린데이터광장·공공데이터포털(공공누리 제1유형) · 지도 © OpenStreetMap · 글꼴 Pretendard·Unbounded(SIL OFL) · 2026 디지털콘텐츠개발대회 생활 부문</p>
   </div>
 </footer>

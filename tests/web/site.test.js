@@ -102,12 +102,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       check(/괜찮아요/.test(await page.textContent("#result")), "번호 확인: 목록에 없는 번호 → 타도 괜찮아요");
       await page.fill("#bike", "abc"); await page.press("#bike", "Enter"); await wait(100);
       check(/5자리/.test(await page.textContent("#result")), "번호 확인: 잘못된 입력 → 안내");
-      // 대여소 스티커: 처음엔 SPB-69683 이 서 있던 강서구 힐스테이트에코, 검색해서 바꾸면 이름·앱 주소가 같이 바뀜
+      // 대여소 스티커: 처음엔 SPB-69683 이 서 있던 강서구 힐스테이트에코, 검색해서 바꾸면 이름이 바뀜
       await jump(page, "#stk"); await wait(1200);
       check(await page.$$eval("#sticker .s-qr svg path", (p) => p.length === 1) && /힐스테이트에코/.test(await page.textContent("#sticker .s-name")), "스티커: 처음 = 힐스테이트에코 + QR");
       await page.fill("#stk-q", "망원역"); await wait(200);
       await page.click("#stk-sugg button:first-child"); await wait(400);
-      check(/망원역/.test(await page.textContent("#sticker .s-name")) && (await page.getAttribute("#stk-open", "href")) === "app/?s=00102", "스티커: 검색해 고르면 이름·앱 주소가 바뀜");
+      check(/망원역/.test(await page.textContent("#sticker .s-name")), "스티커: 검색해 고르면 이름이 바뀜");
       await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; document.dispatchEvent(new Event("hz-print")); }; });
       await page.click("#stk-print"); await wait(300);
       check(await page.evaluate(() => window.__printed === 1 && !!document.querySelector("#print-root .sticker") && document.body.classList.contains("printing")), "스티커: 인쇄를 누르면 스티커만 남기는 복사본이 생김");
@@ -139,25 +139,6 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       await page.evaluate(() => { document.documentElement.style.scrollBehavior = "auto"; scrollTo(0, 0); });
       const cls = await page.evaluate(() => window.__cls);
       check(cls < 0.03, `${name}: 화면 흔들림(CLS) ${cls.toFixed(4)} < 0.03`);
-      await ctx.close();
-    }
-
-    // ── 1-2. 웹앱: 대여소 QR 주소(?s=)로 열면 조회 탭 맨 위에 그 대여소 카드
-    {
-      const { ctx, page, errors } = await open({ viewport: { width: 390, height: 844 }, colorScheme: "light" });
-      await page.goto(BASE + "app/?s=02720&day=2026-06-15", { waitUntil: "networkidle" }); await wait(1800);
-      const on = await page.evaluate(() => document.querySelector("#lookup").classList.contains("on") || document.querySelector("#tabs button[data-tab=lookup]")?.getAttribute("aria-selected") === "true");
-      check(on, "앱 ?s=: 조회 탭이 열림");
-      const card = (await page.textContent("#st-card")).replace(/\s+/g, " ");
-      check(/힐스테이트에코/.test(card) && /피할 자전거/.test(card), `앱 ?s=: 대여소 카드 (${card.slice(0, 40)})`);
-      check((await page.$$eval("#st-card [data-bike]", (b) => b.map((x) => x.dataset.bike))).includes("SPB-69683"), "앱 ?s=: 이 대여소의 의심 자전거에 SPB-69683");
-      await page.click('#st-card [data-bike="SPB-69683"]'); await wait(400);
-      check(/SPB-69683/.test(await page.textContent("#lookup-result")), "앱 ?s=: 번호를 누르면 아래에서 바로 조회");
-      await page.click("#st-card .st-add"); await wait(300);
-      check(await page.evaluate(() => JSON.parse(localStorage.getItem("my_stations") || "[]").includes("02720")), "앱 ?s=: 내 대여소에 넣기");
-      await page.goto(BASE + "app/?s=%3Cimg%20src%3Dx%3E", { waitUntil: "networkidle" }); await wait(900);
-      check((await page.textContent("#st-card")).trim() === "" , "앱 ?s=: 이상한 값은 무시(주입 없음)");
-      check(errors.length === 0, "앱 ?s=: 화면 오류 없음" + (errors.length ? ": " + errors[0] : ""));
       await ctx.close();
     }
 

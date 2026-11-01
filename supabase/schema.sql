@@ -1,7 +1,6 @@
--- RIDEY — 쓰기 DB (Supabase Postgres). 앱·웹앱이 어디서든 구조대 확인·현장 조사를 보낸다.
--- 적용: psql 로 이 파일을 한 번 (server/supabase_setup.sh). 여러 번 돌려도 된다.
--- 원칙: 누구나(anon 키) '넣기' 만 된다. 행을 읽을 수는 없고, 자전거별 '사람 확인' 수(집계)만 읽는다.
---       위치·메모·사진은 우리만(DB 비밀번호) 본다.
+-- RIDEY — 쓰기 DB (Supabase Postgres). 표·제약·횟수 제한은 여기, 누가 넣고 읽는지는 staff.sql.
+-- 적용: psql 로 schema.sql 다음 staff.sql (server/supabase_setup.sh). 여러 번 돌려도 된다.
+-- 직원만 rescue·survey 를 넣고 읽는다. 익명 키로는 쓰지 못한다.
 
 create table if not exists public.rescue (
   id      bigint generated always as identity primary key,
@@ -29,10 +28,8 @@ alter table public.rescue enable row level security;
 alter table public.survey enable row level security;
 drop policy if exists "누구나 넣기" on public.rescue;
 drop policy if exists "누구나 넣기" on public.survey;
-create policy "누구나 넣기" on public.rescue for insert to anon, authenticated with check (true);
-create policy "누구나 넣기" on public.survey for insert to anon, authenticated with check (true);
 revoke all on public.rescue, public.survey from anon, authenticated;
-grant insert on public.rescue, public.survey to anon, authenticated;
+-- insert·select 는 staff.sql 이 활성 직원에게만 준다.
 
 -- 넣기 횟수 제한 (장난·도배로 정비 순위가 흔들리지 않게, 2026-10-01): 표마다 같은 자전거 10분에 3번, 전체 1분에 20번·1시간에 300번.
 -- 현장 조사는 폰에 모았다 늦게 보내 at 이 과거일 수 있어서, DB 에 들어온 시각(created_at)으로 센다. IP 같은 개인정보는 남기지 않는다.
@@ -60,17 +57,15 @@ create trigger limit_inserts before insert on public.rescue for each row execute
 drop trigger if exists limit_inserts on public.survey;
 create trigger limit_inserts before insert on public.survey for each row execute function live.limit_inserts();
 
--- 자전거별 사람 확인 수 (구조대 + 현장 조사) — 앱의 '사람 확인' 표시. 행 자체는 안 보인다(뷰 주인 권한으로 집계만).
+-- 자전거별 사람 확인 수. 최종 권한(직원만, security_invoker)은 staff.sql 이 덮어쓴다.
 create or replace view public.checked as
   select bike, v as verdict, count(*)::int as n
   from (select bike, verdict as v from public.rescue union all select bike, status from public.survey) x
   group by bike, v;
 grant select on public.checked to anon, authenticated;
 
--- 사진: 비공개 저장소. 누구나 올리기만(이름 16자 hex .jpg, 1MB 이하 JPEG — 폰에서 긴 변 1280px 로 줄여 보냄), 보기는 우리만.
+-- 사진 보관함. 올리기·보기는 staff.sql 의 직원 정책만 허용한다.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('survey-photos', 'survey-photos', false, 1000000, array['image/jpeg'])
 on conflict (id) do update set public = false, file_size_limit = 1000000, allowed_mime_types = array['image/jpeg'];
 drop policy if exists "조사 사진 올리기" on storage.objects;
-create policy "조사 사진 올리기" on storage.objects for insert to anon, authenticated
-  with check (bucket_id = 'survey-photos' and name ~ '^[0-9a-f]{16}\.jpg$');

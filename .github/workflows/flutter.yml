@@ -1,0 +1,92 @@
+# Flutter 앱(app/): 분석 + 단위 테스트. 플랫폼 분리 개편의 기준선 (Flutter 3.47.7 stable).
+name: flutter
+on:
+  push:
+    branches: [master]   # live-data 는 검사하지 않음
+    paths: ["app/**", ".github/workflows/flutter.yml"]
+  pull_request:
+    paths: ["app/**", ".github/workflows/flutter.yml"]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      # pubspec 이 .env 를 앱 파일로 지정하므로 파일이 꼭 있어야 한다(git 에는 없음). 지도 키는 저장소 Secret NAVER_MAP_CLIENT_ID, 없으면 빈 값 = 지도 없이 목록만
+      - run: printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" > .env
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  # 디자인 검토용 화면 사진(밝게·어둡게) — 실행 화면의 'ridey-screens' 에서 받는다. 한글은 Noto Sans CJK 로 그린다.
+  screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-cjk-extra
+      # pubspec 이 .env 를 앱 파일로 지정하므로 파일이 꼭 있어야 한다(git 에는 없음). 지도 키는 저장소 Secret NAVER_MAP_CLIENT_ID, 없으면 빈 값 = 지도 없이 목록만
+      - run: printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" > .env
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
+      - run: flutter pub get
+      - run: |
+          export RIDEY_SCREENS="$PWD/build/screens"
+          export RIDEY_FONT="$(ls /usr/share/fonts/opentype/noto/NotoSansCJK-*.ttc | paste -sd: -)"
+          export RIDEY_ICONS="$(dirname "$(dirname "$(command -v flutter)")")/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf"
+          flutter test test/screens_test.dart
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridey-screens
+          path: app/build/screens
+          retention-days: 14
+
+  # 대회 제출용 안드로이드 설치 파일 — Actions 실행 화면의 'ridey-apk' 에서 받는다(tools/make_submission.py 는 dist/RIDEY.apk 로 둔 것을 씀)
+  apk:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      # pubspec 이 .env 를 앱 파일로 지정하므로 파일이 꼭 있어야 한다(git 에는 없음). 지도 키는 저장소 Secret NAVER_MAP_CLIENT_ID, 없으면 빈 값 = 지도 없이 목록만
+      - run: printf 'NAVER_MAP_CLIENT_ID=%s\n' "$NAVER_MAP_CLIENT_ID" > .env
+        env:
+          NAVER_MAP_CLIENT_ID: ${{ secrets.NAVER_MAP_CLIENT_ID }}
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridey-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

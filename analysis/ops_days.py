@@ -9,7 +9,7 @@ import json, pathlib, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 URL = "https://iqvquwvoljzuvdgtbpnu.supabase.co/rest/v1/ops_alarm_days?select=day,scored,hit&order=day"
-KEY = "sb_publishable_YFBKlBvyPFAhBpLdS3o8_A_xIeUmTVE"   # 공개(publishable) 키 — web/cloud.js 와 같음
+KEY = "sb_publishable_YFBKlBvyPFAhBpLdS3o8_A_xIeUmTVE"   # 공개(publishable) 키 — 앱·사이트와 같음
 USUAL, TOP = 2.5, 50.0
 LIGHT = dict(line="#E2DFD7", faint="#63676F", muted="#474B53", ink="#111317", dud="#FF4F1F")   # spb69683.py 와 같은 색
 DARK = dict(line="#262A31", faint="#8A8F98", muted="#B3B7BE", ink="#F3F1EC", dud="#FF5C2E")

@@ -25,7 +25,7 @@ from engine import route as RT
 
 RAW = ROOT / "data" / "raw"
 ST = {s["id"]: {"id": s["id"], "lat": s["lat"], "lon": s["lon"], "gu": s["gu"], "name": s["name"].strip()}
-      for s in json.load(open(ROOT / "web" / "data" / "stations.json"))}
+      for s in json.load(open(ROOT / "data" / "stations.json"))}
 START_MIN, SH = 9 * 60, RT.Shift()
 REGION = {g: r for r, gs in {   # 서울 5 권역 — 정비 팀이 여러 구를 같이 맡는 경우
     "도심권": "종로구 중구 용산구", "동북권": "성동구 광진구 동대문구 중랑구 성북구 강북구 도봉구 노원구",
@@ -172,7 +172,7 @@ def main():
     print("값 표(1·3월):", {k: round(v, 2) for k, v in sorted(table.items())}, "붐빔 경계", [round(c, 1) for c in cuts], flush=True)
     json.dump({"cuts": [round(c, 1) for c in cuts], "value": {str(k): [round(table.get((k, l), 0.0), 3) for l in range(3)] for k in (2, 3, 4)},
                "note": "목록 자전거 한 대가 그날 낼 헛걸음 평균 — 연쇄 2·3·4명+ × 대여소 붐빔(하루 평균 대여 cuts 기준 3단계), 2026년 1·3월로 맞춤"},
-              open(ROOT / "web" / "data" / "route_value.json", "w"), ensure_ascii=False)
+              open(ROOT / "data" / "route_value.json", "w"), ensure_ascii=False)
     lists, duds, cnt = month(RAW / "rent_2606.csv")
     md = ["# 정비 동선 되짚기 — 2026년 6월 (자동 생성: `python analysis/route_backtest.py`)", "",
           __doc__.split("\n", 1)[1].strip(), "",

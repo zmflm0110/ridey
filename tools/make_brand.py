@@ -1,9 +1,9 @@
 """RIDEY 브랜드 — 로고·앱 아이콘·큰 숫자 글꼴을 코드로 만든다 (docs/brand.md).
 
     pip install fonttools brotli          # 한 번 (brotli 는 woff2 압축)
-    python tools/make_brand.py            # → web/icon.svg · site/img/mark.svg · docs/brand/*.svg · web/fonts/unbounded-ridey.woff2
-                                          #   + web/index.html · site/index.html 안의 <!-- brand:wordmark --> 자리를 새 로고로
-    그다음 node tools/make_icons.js && node tools/make_android_assets.js (PNG 아이콘·안드로이드 시작 화면)
+    python tools/make_brand.py            # → docs/brand/*.svg · site/img/mark.svg · site/fonts/unbounded-ridey.woff2
+                                          #   + site/index.html 안의 <!-- brand:wordmark --> 자리를 새 로고로
+    그다음 node tools/make_icons.js && node tools/make_flutter_assets.js (PNG 아이콘·Flutter 앱 아이콘과 시작 화면)
 
 로고 = 'RIDEY' + 신호 점. 글자는 Unbounded(SIL OFL 1.1, 예약 글꼴 이름 없음)의 굵기 760 을 도형으로 바꾼 것이고,
 마침표 자리의 점은 정확한 원으로 다시 놓아 신호색(#FF4F1F)을 칠한다 — "점 하나가 신호다".
@@ -73,28 +73,16 @@ def numbers_font():
     o = subset.Options(); o.flavor = "woff2"; o.layout_features = ["kern", "tnum", "lnum"]; o.name_IDs = ["*"]
     s = subset.Subsetter(o); s.populate(text="0123456789%+-–~.,:/·×xABCDEFGHIJKLMNOPQRSTUVWXYZ "); s.subset(f)
     f.flavor = "woff2"; f.recalcTimestamp = False   # 다시 만들어도 같은 파일(쓸데없는 바뀜 없게)
-    out = ROOT / "web" / "fonts" / "unbounded-ridey.woff2"; out.parent.mkdir(exist_ok=True); f.save(out)
-    lic = ROOT / "web" / "fonts" / "OFL-Unbounded.txt"
+    out = ROOT / "site" / "fonts" / "unbounded-ridey.woff2"; out.parent.mkdir(exist_ok=True); f.save(out)
+    lic = ROOT / "site" / "fonts" / "OFL-Unbounded.txt"
     if not lic.exists():
         lic.write_bytes(urllib.request.urlopen("https://raw.githubusercontent.com/google/fonts/main/ofl/unbounded/OFL.txt", timeout=60).read())
     return out
 
 
-def ios_assets(f):
-    """아이폰 앱: 로고(밝은·어두운 화면 SVG, 벡터 그대로) + 큰 숫자 글꼴(굵기 800 고정 TTF — 앱이 시작할 때 등록)."""
-    import json
-    A = ROOT / "ios" / "App" / "Assets.xcassets"
-    if not A.exists():
-        return
-    W = A / "Wordmark.imageset"; W.mkdir(exist_ok=True)
-    for name, ink in (("wordmark.svg", INK), ("wordmark-dark.svg", PAPER)):
-        svg = wordmark(f, ink=ink, label=False).replace(' class="wordmark"', "").replace(' aria-hidden="true"', "").replace(' class="dot"', "")
-        vb = svg.split('viewBox="')[1].split('"')[0].split()
-        (W / name).write_text(svg.replace("<svg ", f'<svg width="{float(vb[2]):.0f}" height="{float(vb[3]):.0f}" ', 1) + "\n")
-    (W / "Contents.json").write_text(json.dumps({"images": [
-        {"filename": "wordmark.svg", "idiom": "universal"},
-        {"appearances": [{"appearance": "luminosity", "value": "dark"}], "filename": "wordmark-dark.svg", "idiom": "universal"}],
-        "info": {"author": "xcode", "version": 1}, "properties": {"preserves-vector-representation": True}}, indent=2) + "\n")
+def app_number_font():
+    """Flutter 이용자 앱의 숫자 글꼴(RideyNumbers): 굵기 800 고정 TTF — 앱은 woff2 를 못 읽는다."""
+    import shutil
     from fontTools import subset
     g = instancer.instantiateVariableFont(TTFont(FONT), {"wght": 800})
     o = subset.Options(); o.layout_features = ["kern", "tnum", "lnum"]; o.name_IDs = ["*"]
@@ -104,9 +92,11 @@ def ios_assets(f):
         if rec.nameID in (1, 4, 16): rec.string = "Unbounded RIDEY" if rec.nameID != 4 else "Unbounded RIDEY ExtraBold"
         elif rec.nameID in (2, 17): rec.string = "ExtraBold"
         elif rec.nameID == 6: rec.string = "UnboundedRIDEY-ExtraBold"
-    D = A / "UnboundedNumbers.dataset"; D.mkdir(exist_ok=True)
+    D = ROOT / "app" / "assets" / "fonts"; D.mkdir(parents=True, exist_ok=True)
     g.recalcTimestamp = False; g.save(D / "unbounded-ridey-800.ttf")
-    (D / "Contents.json").write_text(json.dumps({"data": [{"filename": "unbounded-ridey-800.ttf", "idiom": "universal"}], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
+    lic = ROOT / "site" / "fonts" / "OFL-Unbounded.txt"
+    if lic.exists():
+        shutil.copyfile(lic, D / "OFL-Unbounded.txt")
 
 
 def put(path, html):
@@ -123,7 +113,6 @@ def put(path, html):
 
 def main():
     f = font()
-    (ROOT / "web" / "icon.svg").write_text(icon(f) + "\n")
     (ROOT / "site" / "img").mkdir(parents=True, exist_ok=True)
     (ROOT / "site" / "img" / "mark.svg").write_text(icon(f) + "\n")
     B = ROOT / "docs" / "brand"; B.mkdir(parents=True, exist_ok=True)
@@ -132,11 +121,11 @@ def main():
     (B / "wordmark-mono.svg").write_text(wordmark(f, ink=INK, dot=INK) + "\n")
     (B / "icon.svg").write_text(icon(f) + "\n")
     (B / "icon-light.svg").write_text(icon(f, bg=PAPER, fg=INK) + "\n")
-    ios_assets(f)
     w = wordmark(f, label=False)
-    n = put("web/index.html", w) + put("site/index.html", w) + put("site/releases.html", w)
+    n = put("site/index.html", w) + put("site/releases.html", w)
     try:
         out = numbers_font(); print(f"{out.relative_to(ROOT)} {out.stat().st_size / 1024:.1f}KB")
+        app_number_font()
     except ImportError:
         print("woff2 는 건너뜀 — pip install brotli")
     print(f"아이콘·로고 완료 (HTML 로고 자리 {n}곳)")
