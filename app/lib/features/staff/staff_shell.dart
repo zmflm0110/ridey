@@ -48,7 +48,7 @@ class _StaffShellState extends State<StaffShell> {
   static const _navigationItems = [
     RideyNavigationItem('구별 현황', Symbols.map_rounded),
     RideyNavigationItem('목록', Symbols.list_alt_rounded),
-    RideyNavigationItem('더보기', Symbols.more_horiz_rounded),
+    RideyNavigationItem('더보기', Symbols.apps_rounded),
   ];
 
   @override

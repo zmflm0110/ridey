@@ -190,7 +190,7 @@ class _RideyShellState extends State<RideyShell> {
   static const _navigationItems = [
     RideyNavigationItem('홈', Symbols.home_rounded, Symbols.home_filled_rounded),
     RideyNavigationItem('자전거 확인', Symbols.pedal_bike_rounded),
-    RideyNavigationItem('더보기', Symbols.more_horiz_rounded),
+    RideyNavigationItem('더보기', Symbols.apps_rounded),
   ];
 
   @override
