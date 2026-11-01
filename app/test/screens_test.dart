@@ -15,6 +15,7 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
@@ -215,6 +216,7 @@ void main() {
           readLocation: () async => (latitude: 37.5610, longitude: 126.8350),
           enableCamera: false,
           openOfficialApp: () async {},
+          nearbyAlertReminder: const SilentNearbyAlertReminder(),
         ),
       ),
     );

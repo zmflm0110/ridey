@@ -11,6 +11,7 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/notifications/notification_settings_page.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/rider/bike_check_tab.dart';
@@ -33,6 +34,7 @@ class RideyApp extends StatefulWidget {
     this.enableCamera = true,
     this.showIntro = false,
     this.openOfficialApp,
+    this.nearbyAlertReminder,
   });
 
   final LiveSnapshotRepository? liveRepository;
@@ -41,6 +43,7 @@ class RideyApp extends StatefulWidget {
   final OpsListRepository? opsListRepository;
   final Future<DeviceLocation?> Function()? readLocation;
   final Future<void> Function()? openOfficialApp;
+  final NearbyAlertReminder? nearbyAlertReminder;
   final bool enableCamera;
 
   /// 켤 때 '떨어지는 점' 시작 장면(main 에서만 켬, 테스트는 바로 화면).
@@ -123,6 +126,7 @@ class _RideyAppState extends State<RideyApp> {
                   stationStatusRepository: widget.stationStatusRepository,
                   readLocation: widget.readLocation,
                   openOfficialApp: widget.openOfficialApp,
+                  nearbyAlertReminder: widget.nearbyAlertReminder,
                   enableCamera: widget.enableCamera,
                   themeMode: _themeMode,
                   onThemeModeChanged: (mode) =>
@@ -156,6 +160,7 @@ class RideyShell extends StatefulWidget {
     required this.stationStatusRepository,
     required this.readLocation,
     required this.openOfficialApp,
+    required this.nearbyAlertReminder,
     required this.enableCamera,
     required this.themeMode,
     required this.onThemeModeChanged,
@@ -168,6 +173,7 @@ class RideyShell extends StatefulWidget {
   final StationStatusRepository? stationStatusRepository;
   final Future<DeviceLocation?> Function()? readLocation;
   final Future<void> Function()? openOfficialApp;
+  final NearbyAlertReminder? nearbyAlertReminder;
   final bool enableCamera;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
@@ -239,6 +245,7 @@ class _RideyShellState extends State<RideyShell> {
                         stationStatusRepository: widget.stationStatusRepository,
                         readLocation: widget.readLocation,
                         openOfficialApp: widget.openOfficialApp,
+                        nearbyAlertReminder: widget.nearbyAlertReminder,
                       ),
                       BikeCheckTab(
                         repository: widget.liveRepository,

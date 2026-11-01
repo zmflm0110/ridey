@@ -6,6 +6,7 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
@@ -25,6 +26,7 @@ class RiderHomePage extends StatefulWidget {
     this.savedStationsStore,
     this.readLocation,
     this.openOfficialApp,
+    this.nearbyAlertReminder,
   });
 
   final LiveSnapshotRepository? repository;
@@ -33,6 +35,7 @@ class RiderHomePage extends StatefulWidget {
   final SavedStationsStore? savedStationsStore;
   final Future<DeviceLocation?> Function()? readLocation;
   final Future<void> Function()? openOfficialApp;
+  final NearbyAlertReminder? nearbyAlertReminder;
 
   @override
   State<RiderHomePage> createState() => _RiderHomePageState();
@@ -94,6 +97,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
             readLocation: widget.readLocation ?? readDeviceLocation,
             onBikeSelected: (bike) => _openBike(bike, snapshot.requireData),
             openOfficialApp: widget.openOfficialApp ?? openOfficialBikeApp,
+            nearbyAlertReminder:
+                widget.nearbyAlertReminder ?? PlatformNearbyAlertReminder(),
           ),
           _ => const _LoadingHome(),
         };
@@ -135,6 +140,7 @@ class _LoadedHome extends StatefulWidget {
     required this.readLocation,
     required this.onBikeSelected,
     required this.openOfficialApp,
+    required this.nearbyAlertReminder,
   });
 
   final LiveSnapshot snapshot;
@@ -144,6 +150,7 @@ class _LoadedHome extends StatefulWidget {
   final Future<DeviceLocation?> Function() readLocation;
   final ValueChanged<LiveBike> onBikeSelected;
   final Future<void> Function() openOfficialApp;
+  final NearbyAlertReminder nearbyAlertReminder;
 
   @override
   State<_LoadedHome> createState() => _LoadedHomeState();
@@ -152,6 +159,7 @@ class _LoadedHome extends StatefulWidget {
 class _LoadedHomeState extends State<_LoadedHome> {
   late Future<_HomeArea> _area = _load();
   var _showStations = false;
+  String? _reminderKey;
 
   Future<_HomeArea> _load() async {
     final stations = await widget.stationRepository.fetch();
@@ -196,6 +204,14 @@ class _LoadedHomeState extends State<_LoadedHome> {
   }
 
   void _reloadArea() => setState(() => _area = _load());
+
+  void _syncReminder(_HomeArea area) {
+    final ids = [for (final item in area.bikes) item.bike.bike];
+    final key = ids.join(',');
+    if (_reminderKey == key) return;
+    _reminderKey = key;
+    widget.nearbyAlertReminder.sync(ids);
+  }
 
   /// 지도에서 대여소를 누르면 그곳의 강한 경보 자전거를 먼저 연다(없으면 첫 자전거).
   void _openStation(String stationId, List<NearbyBike> bikes) {
@@ -243,6 +259,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
           return _LoadFailure(onRetry: _reloadArea);
         }
         final area = loaded.requireData;
+        _syncReminder(area);
         final pins = <String, NearbyMapStation>{};
         for (final station in area.stations) {
           final latitude = station.latitude;

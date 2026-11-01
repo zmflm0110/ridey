@@ -5,6 +5,7 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
+import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
@@ -73,6 +74,7 @@ void main() {
         readLocation: () async => null,
         enableCamera: false,
         openOfficialApp: () async {},
+        nearbyAlertReminder: const SilentNearbyAlertReminder(),
       ),
     );
     await tester.pumpAndSettle();
