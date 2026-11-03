@@ -39,6 +39,8 @@ class _SeoulHeroState extends State<SeoulHero> with TickerProviderStateMixin {
   Set<String> _alertIds = const {};
   int? _count;
   var _started = false;
+  // 지연은 화면이 생긴 때부터 센다 — 자료 받는 시간을 더하면 시작 애니메이션이 걷힌 뒤에도 점이 멈춰 있다.
+  final _shownAt = DateTime.now();
 
   @override
   void initState() {
@@ -65,7 +67,8 @@ class _SeoulHeroState extends State<SeoulHero> with TickerProviderStateMixin {
       _burst.value = 1;
       return;
     }
-    await Future<void>.delayed(widget.startDelay);
+    final wait = widget.startDelay - DateTime.now().difference(_shownAt);
+    if (wait > Duration.zero) await Future<void>.delayed(wait);
     if (!mounted || _started) return;
     _started = true;
     await _burst.forward();
