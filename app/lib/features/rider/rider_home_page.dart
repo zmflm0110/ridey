@@ -298,9 +298,14 @@ class _LoadedHomeState extends State<_LoadedHome> {
             if (!area.usingDeviceLocation)
               Align(
                 alignment: Alignment.centerLeft,
+                // 왼쪽 여백을 없애 제목 글자와 같은 선에 맞춘다(기본 TextButton 은 12px 안쪽으로 밀림).
                 child: TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 44),
+                  ),
                   onPressed: _reloadArea,
-                  child: Text(area.hasSavedStations ? '내 위치로 보기' : '위치 허용하기'),
+                  child: Text(area.hasSavedStations ? '내 위치로 보기' : '내 위치 찾기'),
                 ),
               ),
             const SizedBox(height: 12),
@@ -451,7 +456,7 @@ class _Headline extends StatelessWidget {
             ),
           )
         else
-          Text('내 주변 고장 의심 따릉이를 보려면\n위치 권한이 필요해요', style: style),
+          Text('내 위치를 찾지 못했어요', style: style),
         if (note != null) ...[
           const SizedBox(height: 8),
           Text(

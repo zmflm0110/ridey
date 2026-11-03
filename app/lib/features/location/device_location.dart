@@ -26,3 +26,24 @@ Future<DeviceLocation?> _readDeviceLocation() async {
     return null;
   }
 }
+
+/// For background bookkeeping (lookup habits): never shows a dialog. Uses the
+/// last known position only when the permission was already granted — a habit
+/// is snapped to a ~500 m grid, so a fresh fix is not worth interrupting the
+/// lookup result with a permission or Google location-accuracy dialog.
+Future<DeviceLocation?> readDeviceLocationQuietly() async {
+  try {
+    final permission = await Geolocator.checkPermission();
+    if (permission != LocationPermission.always &&
+        permission != LocationPermission.whileInUse) {
+      return null;
+    }
+    final last = await Geolocator.getLastKnownPosition(
+      forceAndroidLocationManager: true,
+    );
+    if (last == null) return null;
+    return (latitude: last.latitude, longitude: last.longitude);
+  } catch (_) {
+    return null;
+  }
+}

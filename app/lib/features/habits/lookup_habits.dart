@@ -152,7 +152,7 @@ Future<void> rememberLookup({
   try {
     DeviceLocation? location;
     try {
-      location = await (readLocation ?? readDeviceLocation)();
+      location = await (readLocation ?? readDeviceLocationQuietly)();
     } catch (_) {
       location = null;
     }

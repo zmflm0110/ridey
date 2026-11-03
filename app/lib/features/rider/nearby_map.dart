@@ -380,7 +380,7 @@ class _MapUnavailable extends StatelessWidget {
         ? (missingKey
               ? '지도를 보려면 app/.env에 NAVER_MAP_CLIENT_ID를 넣어 주세요.'
               : '지도를 불러오지 못했어요. app/.env의 네이버 지도 키를 확인해 주세요.')
-        : '지금은 지도를 불러오지 못했어요.\n아래 목록에서 가까운 고장 의심 자전거를 볼 수 있어요.';
+        : '지금은 지도를 불러오지 못했어요.';
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
