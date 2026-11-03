@@ -262,7 +262,7 @@ Future<void> showHabitNotification(String message) async {
       android: AndroidNotificationDetails(
         'habit-alerts',
         '습관 알림',
-        channelDescription: '자주 확인하는 시간대에 주변에 경보가 켜진 자전거를 알려 줘요.',
+        channelDescription: '자주 확인하는 시간대에 주변 고장 의심 자전거를 알려 줘요.',
       ),
       iOS: DarwinNotificationDetails(),
     ),

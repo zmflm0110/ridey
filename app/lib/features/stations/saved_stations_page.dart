@@ -452,7 +452,7 @@ class _SavedStationRow extends StatelessWidget {
         children: [
           if (bikes.isEmpty)
             Text(
-              '현재 경보 없음',
+              '지금 고장 의심 없음',
               style: Theme.of(
                 context,
               ).textTheme.labelMedium?.copyWith(color: c.calmText),

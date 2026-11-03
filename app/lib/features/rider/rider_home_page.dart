@@ -322,9 +322,9 @@ class _LoadedHomeState extends State<_LoadedHome> {
                 padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
                 child: Text(
                   area.usingDeviceLocation
-                      ? '이 근처 2km 안에는 경보가 켜진 자전거가 없어요.'
+                      ? '이 근처 2km 안에는 고장 의심 자전거가 없어요.'
                       : area.hasSavedStations
-                      ? '저장한 대여소에는 지금 경보가 켜진 자전거가 없어요.'
+                      ? '저장한 대여소에는 지금 고장 의심 자전거가 없어요.'
                       : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
                   style: Theme.of(
                     context,
@@ -451,7 +451,7 @@ class _Headline extends StatelessWidget {
             ),
           )
         else
-          Text('내 주변 경보를 보려면\n위치 권한이 필요해요', style: style),
+          Text('내 주변 고장 의심 따릉이를 보려면\n위치 권한이 필요해요', style: style),
         if (note != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -491,7 +491,7 @@ class _BikeRow extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '${item.bike.bike} 경보 자세히 보기',
+      label: '${item.bike.bike} 고장 의심 자세히 보기',
       excludeSemantics: true,
       child: RideyPressable(
         onTap: onTap,

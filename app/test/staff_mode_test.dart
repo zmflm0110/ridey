@@ -102,6 +102,36 @@ void main() {
     expect(preferences.getString('user_mode'), 'rider');
   });
 
+  testWidgets('explains the location before asking for it', (tester) async {
+    var asked = 0;
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      RideyApp(
+        liveRepository: _FakeLive(),
+        stationRepository: _FakeStations(),
+        opsListRepository: _FakeOps(),
+        readLocation: () async {
+          asked++;
+          return null;
+        },
+        enableCamera: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('따릉이를 이용하는 일반 시민이에요'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('폰 밖으로 보내지 않아요'), findsOneWidget);
+    final before = asked;
+    await tester.tap(find.text('위치 허용하기'));
+    await tester.pumpAndSettle();
+
+    expect(asked, greaterThan(before));
+    expect(find.text('홈'), findsOneWidget);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('user_mode'), 'rider');
+  });
+
   testWidgets('opens the staff shell without rider tools', (tester) async {
     await _pump(
       tester,
