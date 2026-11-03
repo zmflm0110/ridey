@@ -1,7 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:ridey_app/app/seoul_hero.dart';
 import 'package:ridey_app/app/user_mode.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -13,9 +18,19 @@ class OnboardingPage extends StatefulWidget {
     super.key,
     required this.onChosen,
     this.requestLocation,
+    this.stations,
+    this.snapshot,
+    this.heroDelay = Duration.zero,
   });
 
   final ValueChanged<UserMode> onChosen;
+
+  /// Seoul stations and the live snapshot for the hero map (site-style burst).
+  final Future<List<BikeStation>>? stations;
+  final Future<LiveSnapshot?>? snapshot;
+
+  /// Waits for the start animation to clear before the dot bursts.
+  final Duration heroDelay;
 
   /// Asks the system for the location (shows its dialog the first time).
   final Future<DeviceLocation?> Function()? requestLocation;
@@ -47,6 +62,56 @@ class _OnboardingPageState extends State<OnboardingPage> {
         const SizedBox(height: 36),
         ...children,
       ],
+    );
+  }
+
+  /// 첫 화면: 위는 잉크 바탕의 서울 점 지도(사이트 첫 화면처럼), 아래는 질문과 단추.
+  Widget _purpose(BuildContext context, ThemeData theme, List<Widget> buttons) {
+    return LayoutBuilder(
+      key: const ValueKey('purpose'),
+      builder: (context, constraints) {
+        final heroHeight = math.min(420.0, constraints.maxHeight * .48);
+        return ListView(
+          padding: const EdgeInsets.only(bottom: rideyTabClearance),
+          children: [
+            SizedBox(
+              height: heroHeight,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  SeoulHero(
+                    stations: widget.stations ?? Future.value(const []),
+                    snapshot: widget.snapshot ?? Future.value(null),
+                    startDelay: widget.heroDelay,
+                  ),
+                  const Positioned(
+                    left: 20,
+                    top: 18,
+                    child: RideyWordmark(size: 24, color: RideyColors.heroText),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 한국어는 글자 단위로 줄이 바뀌어 '이용 / 하실' 처럼 낱말이 쪼개진다 — 뜻 단위로 직접 끊는다.
+                  Text(
+                    'RIDEY 앱을 어떤 목적으로\n이용하실 건가요?',
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontSize: 26,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ...buttons,
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -87,13 +152,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         : () => widget.onChosen(UserMode.rider),
                   ),
                 ])
-              : _page('purpose', [
-                  // 한국어는 글자 단위로 줄이 바뀌어 '이용 / 하실' 처럼 낱말이 쪼개진다 — 뜻 단위로 직접 끊는다.
-                  Text(
-                    'RIDEY 앱을\n어떤 목적으로\n이용하실 건가요?',
-                    style: theme.textTheme.displayLarge,
-                  ),
-                  const SizedBox(height: 28),
+              : _purpose(context, theme, [
                   RideyButton(
                     label: '따릉이를 이용하는 일반 시민이에요',
                     onPressed: () => setState(() => _askLocation = true),

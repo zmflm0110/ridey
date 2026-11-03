@@ -18,6 +18,7 @@ import 'package:ridey_app/features/rider/bike_check_tab.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/staff/staff_shell.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
+import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_intro.dart';
@@ -58,6 +59,8 @@ class _RideyAppState extends State<RideyApp> {
   UserMode? _mode;
   var _ready = false;
   late var _intro = widget.showIntro;
+  Future<List<BikeStation>>? _heroStations;
+  Future<LiveSnapshot?>? _heroSnapshot;
   final _pendingCheck = ValueNotifier<RideyCheckRequest?>(null);
 
   @override
@@ -128,6 +131,17 @@ class _RideyAppState extends State<RideyApp> {
                 null => OnboardingPage(
                   onChosen: _chooseMode,
                   requestLocation: widget.readLocation,
+                  stations: _heroStations ??=
+                      (widget.stationRepository ?? BundledStationRepository())
+                          .fetch(),
+                  snapshot: _heroSnapshot ??=
+                      (widget.liveRepository ??
+                              SupabaseLiveSnapshotRepository())
+                          .fetch()
+                          .then<LiveSnapshot?>((s) => s, onError: (_) => null),
+                  heroDelay: widget.showIntro
+                      ? const Duration(milliseconds: 1500)
+                      : Duration.zero,
                 ),
                 UserMode.rider => RideyShell(
                   liveRepository: widget.liveRepository,
