@@ -209,8 +209,9 @@ void main() {
 
     expect(find.textContaining('1대'), findsWidgets);
     expect(find.text('SPB-69683'), findsNothing);
-    expect(find.textContaining('고장 의심 1 / 선택 가능 약 3'), findsOneWidget);
-    expect(find.text('따릉이 앱에서 대여하기'), findsOneWidget);
+    expect(find.textContaining('고장 의심 1대 · 탈 만한 자전거 약 3대'), findsOneWidget);
+    expect(find.text('대여하기 ›'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('따릉이 앱에서 대여하기')), findsOneWidget);
   });
 
   testWidgets('opens saved stations from the rider tab', (tester) async {

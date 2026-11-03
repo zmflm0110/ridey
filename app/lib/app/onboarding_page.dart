@@ -19,8 +19,9 @@ class OnboardingPage extends StatelessWidget {
           children: [
             const RideyWordmark(size: 28),
             const SizedBox(height: 36),
+            // 한국어는 글자 단위로 줄이 바뀌어 '이용 / 하실' 처럼 낱말이 쪼개진다 — 뜻 단위로 직접 끊는다.
             Text(
-              'RIDEY 앱을 어떤 목적으로 이용하실 건가요?',
+              'RIDEY 앱을\n어떤 목적으로\n이용하실 건가요?',
               style: theme.textTheme.displayLarge,
             ),
             const SizedBox(height: 28),

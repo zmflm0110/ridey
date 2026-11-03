@@ -85,7 +85,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
           ConnectionState.done when snapshot.hasError => _LoadFailure(
             onRetry: _refresh,
           ),
-          ConnectionState.done =>           _LoadedHome(
+          ConnectionState.done => _LoadedHome(
             snapshot: snapshot.requireData,
             stationRepository:
                 widget.stationRepository ?? BundledStationRepository(),
@@ -403,9 +403,7 @@ class _HomeListTab extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: selected
-                  ? Theme.of(context).colorScheme.surface
-                  : c.muted,
+              color: selected ? Theme.of(context).colorScheme.surface : c.muted,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -582,52 +580,65 @@ class _StationRow extends StatelessWidget {
     final parked = station.parkedBikes;
     final counts = parked == null
         ? '고장 의심 ${station.alertCount}대'
-        : '고장 의심 ${station.alertCount} / 선택 가능 약 $choosable';
+        : '고장 의심 ${station.alertCount}대 · 탈 만한 자전거 약 $choosable대';
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(bottom: BorderSide(color: context.ridey.line))
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    station.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+    // 줄마다 같은 단추를 되풀이하지 않고 줄 전체를 누르면 공식 앱이 열린다(오른쪽 '대여하기 ›' 가 그 표시).
+    return RideyPressable(
+      onTap: () => onOpenOfficialApp(),
+      scale: .98,
+      semanticLabel: '${station.name} 따릉이 앱에서 대여하기',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(bottom: BorderSide(color: context.ridey.line))
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      station.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ),
-                if (station.meters != null)
-                  Text(
-                    formatDistance(station.meters!),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: context.ridey.muted,
+                  if (station.meters != null)
+                    Text(
+                      formatDistance(station.meters!),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: context.ridey.muted,
+                      ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              parked == null ? '$counts · 실시간 대수 없음' : counts,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: context.ridey.muted,
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            RideyButton.secondary(
-              label: '따릉이 앱에서 대여하기',
-              compact: true,
-              onPressed: () => onOpenOfficialApp(),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      parked == null ? '$counts · 실시간 대수 없음' : counts,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: context.ridey.muted,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '대여하기 ›',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

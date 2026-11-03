@@ -177,10 +177,19 @@ class BikeCheckMessagePage extends StatelessWidget {
             ),
             const SizedBox(height: 14),
           ],
-          RideyButton(
-            label: '다른 자전거 확인하기',
-            onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
-          ),
+          // 대여하기가 있으면 그것이 주 동작이고, 다른 자전거 확인은 한 단 낮춘다(검은 단추 둘이면 무엇을 누를지 흐려짐).
+          if (offerOfficialApp)
+            RideyButton.secondary(
+              label: '다른 자전거 확인하기',
+              onPressed:
+                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
+            )
+          else
+            RideyButton(
+              label: '다른 자전거 확인하기',
+              onPressed:
+                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
+            ),
         ],
       ),
     );
