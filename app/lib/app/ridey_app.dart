@@ -18,6 +18,7 @@ import 'package:ridey_app/features/rider/bike_check_tab.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/staff/staff_shell.dart';
 import 'package:ridey_app/features/stations/saved_stations_page.dart';
+import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_intro.dart';
@@ -58,6 +59,8 @@ class _RideyAppState extends State<RideyApp> {
   UserMode? _mode;
   var _ready = false;
   late var _intro = widget.showIntro;
+  Future<List<BikeStation>>? _heroStations;
+  Future<LiveSnapshot?>? _heroSnapshot;
   final _pendingCheck = ValueNotifier<RideyCheckRequest?>(null);
 
   @override
@@ -73,6 +76,8 @@ class _RideyAppState extends State<RideyApp> {
     setState(() {
       _mode = mode;
       _ready = true;
+      // 첫 실행은 점이 떨어지는 장면이 첫 화면(서울 지도) 안에서 한 번만 나온다 — 시작 애니메이션을 겹치지 않는다.
+      if (mode == null) _intro = false;
     });
   }
 
@@ -110,9 +115,15 @@ class _RideyAppState extends State<RideyApp> {
         builder: (context, child) => Stack(
           children: [
             ?child,
-            if (_intro)
+            if (_intro && _ready)
               Positioned.fill(
-                child: RideyIntro(onDone: () => setState(() => _intro = false)),
+                // Navigator 밖(builder)이라 위에 Material 이 없다 — 없으면 글자에 노란 이중 밑줄(디버그 표시)이 그대로 나온다.
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: RideyIntro(
+                    onDone: () => setState(() => _intro = false),
+                  ),
+                ),
               ),
           ],
         ),
@@ -122,6 +133,14 @@ class _RideyAppState extends State<RideyApp> {
                 null => OnboardingPage(
                   onChosen: _chooseMode,
                   requestLocation: widget.readLocation,
+                  stations: _heroStations ??=
+                      (widget.stationRepository ?? BundledStationRepository())
+                          .fetch(),
+                  snapshot: _heroSnapshot ??=
+                      (widget.liveRepository ??
+                              SupabaseLiveSnapshotRepository())
+                          .fetch()
+                          .then<LiveSnapshot?>((s) => s, onError: (_) => null),
                 ),
                 UserMode.rider => RideyShell(
                   liveRepository: widget.liveRepository,
@@ -320,7 +339,8 @@ class _StartupPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: RideyWordmark(size: 30)));
+    // 모드를 읽는 아주 짧은 사이 — 다음에 올 화면(시작 애니메이션 또는 첫 실행 지도)과 같은 잉크 바탕.
+    return const ColoredBox(color: RideyColors.hero);
   }
 }
 

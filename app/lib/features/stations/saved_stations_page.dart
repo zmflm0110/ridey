@@ -252,7 +252,36 @@ class _SavedStationsPageState extends State<SavedStationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: widget.showAppBar ? AppBar() : null,
+      // 다른 세부 화면(자전거 확인·판단 근거)과 같은 머리: '‹ 제목'.
+      appBar: widget.showAppBar
+          ? AppBar(
+              automaticallyImplyLeading: false,
+              titleSpacing: 8,
+              title: Row(
+                children: [
+                  IconButton(
+                    tooltip: '뒤로',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    icon: const Icon(Icons.chevron_left_rounded, size: 30),
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    '내 대여소',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : null,
       body: FutureBuilder<void>(
         future: _loading,
         builder: (context, loading) {
@@ -319,11 +348,6 @@ class _Content extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text('내 대여소', style: context.rideyPageTitle),
-        ),
-        const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
