@@ -65,7 +65,7 @@ class StaffListPage extends StatelessWidget {
           const SizedBox(height: 16),
           if (bikes.isEmpty)
             Text(
-              '이 조건에 맞는 경보 자전거가 없어요.',
+              '이 조건에 맞는 고장 의심 자전거가 없어요.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: context.ridey.muted,
               ),

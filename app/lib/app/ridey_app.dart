@@ -119,7 +119,10 @@ class _RideyAppState extends State<RideyApp> {
         home: !_ready
             ? const _StartupPage()
             : switch (_mode) {
-                null => OnboardingPage(onChosen: _chooseMode),
+                null => OnboardingPage(
+                  onChosen: _chooseMode,
+                  requestLocation: widget.readLocation,
+                ),
                 UserMode.rider => RideyShell(
                   liveRepository: widget.liveRepository,
                   stationRepository: widget.stationRepository,
@@ -361,7 +364,7 @@ class _MorePage extends StatelessWidget {
             RideyRow(
               leading: const RideyIco(icon: Icons.pedal_bike_outlined),
               title: '자주 쓰는 대여소',
-              subtitle: '저장해 둔 곳의 경보 자전거',
+              subtitle: '저장해 둔 곳의 고장 의심 자전거',
               trailing: Icon(
                 Icons.chevron_right_rounded,
                 color: context.ridey.muted,

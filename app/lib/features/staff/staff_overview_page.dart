@@ -42,7 +42,7 @@ class StaffOverviewPage extends StatelessWidget {
           Text('구별 현황', style: theme.textTheme.displayLarge),
           const SizedBox(height: 8),
           Text(
-            '지금 경보 $total대 · 그중 강한 경보 $high대',
+            '지금 고장 의심 $total대 · 그중 강한 경보 $high대',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: context.ridey.muted,
             ),
@@ -81,7 +81,7 @@ class StaffOverviewPage extends StatelessWidget {
           const SizedBox(height: 18),
           if (rows.isEmpty)
             Text(
-              '지금 목록에 경보 자전거가 없어요.',
+              '지금 목록에 고장 의심 자전거가 없어요.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: context.ridey.muted,
               ),

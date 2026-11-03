@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:ridey_app/config/ridey_config.dart';
@@ -374,13 +375,17 @@ class _MapUnavailable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final missingKey = RideyConfig.naverMapClientId.isEmpty;
+    // 설정 안내(app/.env)는 개발자에게만. 설치한 앱을 쓰는 사람에게는 무엇을 대신 볼 수 있는지만 말한다.
+    final message = !kReleaseMode
+        ? (missingKey
+              ? '지도를 보려면 app/.env에 NAVER_MAP_CLIENT_ID를 넣어 주세요.'
+              : '지도를 불러오지 못했어요. app/.env의 네이버 지도 키를 확인해 주세요.')
+        : '지금은 지도를 불러오지 못했어요.\n아래 목록에서 가까운 고장 의심 자전거를 볼 수 있어요.';
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
         child: Text(
-          missingKey
-              ? '지도를 보려면 app/.env에 NAVER_MAP_CLIENT_ID를 넣어 주세요.'
-              : '지도를 불러오지 못했어요. app/.env의 네이버 지도 키를 확인해 주세요.',
+          message,
           textAlign: TextAlign.center,
           style: Theme.of(
             context,

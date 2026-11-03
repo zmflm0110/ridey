@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
@@ -88,7 +89,7 @@ void main() {
   testWidgets('asks for a purpose on the first launch', (tester) async {
     await _pump(tester);
 
-    expect(find.textContaining('어떤 목적으로 이용하실 건가요'), findsOneWidget);
+    expect(find.textContaining('이용하실 건가요'), findsOneWidget);
     expect(find.text('따릉이를 이용하는 일반 시민이에요'), findsOneWidget);
     expect(find.text('따릉이를 수거하고 점검하는 관리 직원이에요'), findsOneWidget);
 
@@ -97,6 +98,36 @@ void main() {
 
     expect(find.text('홈'), findsOneWidget);
     expect(find.text('자전거 확인'), findsOneWidget);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('user_mode'), 'rider');
+  });
+
+  testWidgets('explains the location before asking for it', (tester) async {
+    var asked = 0;
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      RideyApp(
+        liveRepository: _FakeLive(),
+        stationRepository: _FakeStations(),
+        opsListRepository: _FakeOps(),
+        readLocation: () async {
+          asked++;
+          return null;
+        },
+        enableCamera: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('따릉이를 이용하는 일반 시민이에요'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('폰 밖으로 보내지 않아요'), findsOneWidget);
+    final before = asked;
+    await tester.tap(find.text('위치 허용하기'));
+    await tester.pumpAndSettle();
+
+    expect(asked, greaterThan(before));
+    expect(find.text('홈'), findsOneWidget);
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('user_mode'), 'rider');
   });
@@ -116,6 +147,12 @@ void main() {
     expect(find.text('더보기'), findsOneWidget);
     expect(find.text('홈'), findsNothing);
     expect(find.text('자전거 확인'), findsNothing);
+    // 지도 아래 구 목록은 작은 테스트 화면에서는 스크롤해야 보인다.
+    await tester.scrollUntilVisible(
+      find.text('강남구'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('강남구'), findsOneWidget);
     expect(find.textContaining('1대'), findsWidgets);
 

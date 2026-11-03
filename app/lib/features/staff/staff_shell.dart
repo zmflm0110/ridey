@@ -107,11 +107,15 @@ class _StaffShellState extends State<StaffShell> {
                 bottom: false,
                 child: Column(
                   children: [
+                    // 시민 모드 머리(로고 + 알림 단추 48px)와 같은 높이·여백이라야 모드를 바꿔도 로고가 제자리에 있다.
                     const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: RideyWordmark(size: 26),
+                      padding: EdgeInsets.fromLTRB(20, 8, 8, 4),
+                      child: SizedBox(
+                        height: 48,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: RideyWordmark(size: 26),
+                        ),
                       ),
                     ),
                     Expanded(

@@ -18,7 +18,10 @@ class SupabaseStationStatusRepository implements StationStatusRepository {
   Future<List<StationOccupancy>> fetch() async {
     try {
       final response = await _client
-          .get(RideyConfig.liveStationStatusUri, headers: RideyConfig.apiHeaders)
+          .get(
+            RideyConfig.liveStationStatusUri,
+            headers: RideyConfig.apiHeaders,
+          )
           .timeout(const Duration(seconds: 12));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return const [];
@@ -35,9 +38,7 @@ List<StationOccupancy> parseStationOccupancy(String raw) {
   if (decoded is! List) return const [];
   return decoded
       .whereType<Map>()
-      .map(
-        (row) => StationOccupancy.fromJson(Map<String, dynamic>.from(row)),
-      )
+      .map((row) => StationOccupancy.fromJson(Map<String, dynamic>.from(row)))
       .where((row) => row.id.isNotEmpty)
       .toList(growable: false);
 }
