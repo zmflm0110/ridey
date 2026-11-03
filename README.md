@@ -108,14 +108,14 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/shots/app/onboarding.png" alt="첫 실행 안내" width="200"><br>첫 실행<br><sub>시민인지 직원인지 한 번만 묻는다</sub></td>
+    <td align="center"><img src="docs/shots/app/onboarding.png" alt="첫 실행 안내" width="200"><br>첫 실행<br><sub>점 하나가 서울로 퍼지고 지금 고장 의심 대여소가 켜진다</sub></td>
     <td align="center"><img src="docs/shots/app/check.png" alt="자전거 확인" width="200"><br>자전거 확인(시민)<br><sub>연쇄, 마지막 헛대여, 확률</sub></td>
     <td align="center"><img src="docs/shots/app/staff_overview.png" alt="구별 현황" width="200"><br>구별 현황(직원)<br><sub>담당 구의 경보 대수</sub></td>
     <td align="center"><img src="docs/shots/app/staff_list.png" alt="대여소별 목록" width="200"><br>목록(직원)<br><sub>대여소별 경보 자전거, 연쇄 인원</sub></td>
   </tr>
 </table>
 
-위 사진은 표본 자료로 그린 것이고, 홈의 네이버 지도는 지도 키가 있어야 나와서 넣지 않았다. 사진은 올릴 때마다 GitHub Actions의 `flutter` 실행에서 `ridey-screens`로 새로 만들어진다.
+첫 실행 사진은 안드로이드 에뮬레이터에서 실제 자료로 찍었고(점 하나가 떨어져 서울 대여소 2,789곳으로 퍼진 뒤 지금 고장 의심이 있는 대여소가 켜지고 그 수가 올라간다), 나머지는 표본 자료로 그린 것이다. 홈의 네이버 지도는 지도 키가 있어야 나와서 넣지 않았다. 사진은 올릴 때마다 GitHub Actions의 `flutter` 실행에서 `ridey-screens`로 새로 만들어진다.
 
 ## 디자인
 
