@@ -290,62 +290,125 @@ class _LoadedHomeState extends State<_LoadedHome> {
           );
         }
 
-        return ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: _pagePadding,
+        // 지도 앱의 기본 꼴: 지도가 화면을 채우고, 목록은 아래 시트(낮게·중간·높게)에 담는다. 시트 높이와 상관없이 지도는 만질 수 있다.
+        return Stack(
           children: [
-            _Headline(area: area, snapshot: widget.snapshot),
-            if (!area.usingDeviceLocation)
-              Align(
-                alignment: Alignment.centerLeft,
-                // 왼쪽 여백을 없애 제목 글자와 같은 선에 맞춘다(기본 TextButton 은 12px 안쪽으로 밀림).
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 44),
-                  ),
-                  onPressed: _reloadArea,
-                  child: Text(area.hasSavedStations ? '내 위치로 보기' : '내 위치 찾기'),
-                ),
+            Positioned.fill(
+              child: NearbyMap(
+                fullBleed: true,
+                stations: pins.values.toList(growable: false),
+                location: area.location,
+                onStationTap: (id) => _openStation(id, area.bikes),
               ),
-            const SizedBox(height: 12),
-            NearbyMap(
-              stations: pins.values.toList(growable: false),
-              location: area.location,
-              onStationTap: (id) => _openStation(id, area.bikes),
             ),
-            const SizedBox(height: 12),
-            _HomeListTabs(
-              showStations: _showStations,
-              onChanged: (showStations) =>
-                  setState(() => _showStations = showStations),
+            DraggableScrollableSheet(
+              initialChildSize: .52,
+              minChildSize: .22,
+              maxChildSize: .94,
+              snap: true,
+              snapSizes: const [.22, .52, .94],
+              builder: (context, scroll) => _HomeSheet(
+                scroll: scroll,
+                children: _sheetChildren(context, area),
+              ),
             ),
-            if (_showStations)
-              ..._stationList(area)
-            else if (area.bikes.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
-                child: Text(
-                  area.usingDeviceLocation
-                      ? '이 근처 2km 안에는 고장 의심 자전거가 없어요.'
-                      : area.hasSavedStations
-                      ? '저장한 대여소에는 지금 고장 의심 자전거가 없어요.'
-                      : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
-                ),
-              )
-            else
-              for (var i = 0; i < area.bikes.length; i++)
-                _BikeRow(
-                  item: area.bikes[i],
-                  showDivider: i < area.bikes.length - 1,
-                  onTap: () => widget.onBikeSelected(area.bikes[i].bike),
-                ),
           ],
         );
       },
+    );
+  }
+
+  List<Widget> _sheetChildren(BuildContext context, _HomeArea area) {
+    return [
+      _Headline(area: area, snapshot: widget.snapshot),
+      if (!area.usingDeviceLocation)
+        Align(
+          alignment: Alignment.centerLeft,
+          // 왼쪽 여백을 없애 제목 글자와 같은 선에 맞춘다(기본 TextButton 은 12px 안쪽으로 밀림).
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 44),
+            ),
+            onPressed: _reloadArea,
+            child: Text(area.hasSavedStations ? '내 위치로 보기' : '내 위치 찾기'),
+          ),
+        ),
+      const SizedBox(height: 12),
+      _HomeListTabs(
+        showStations: _showStations,
+        onChanged: (showStations) =>
+            setState(() => _showStations = showStations),
+      ),
+      if (_showStations)
+        ..._stationList(area)
+      else if (area.bikes.isEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+          child: Text(
+            area.usingDeviceLocation
+                ? '이 근처 2km 안에는 고장 의심 자전거가 없어요.'
+                : area.hasSavedStations
+                ? '저장한 대여소에는 지금 고장 의심 자전거가 없어요.'
+                : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
+          ),
+        )
+      else
+        for (var i = 0; i < area.bikes.length; i++)
+          _BikeRow(
+            item: area.bikes[i],
+            showDivider: i < area.bikes.length - 1,
+            onTap: () => widget.onBikeSelected(area.bikes[i].bike),
+          ),
+    ];
+  }
+}
+
+/// 지도 위 시트: 위 모서리만 둥글고, 손잡이를 끌어 높이를 바꾼다. 내용은 한 번에 다 짓는다
+/// (목록이 짧아 지연 생성이 필요 없고, 시트가 낮을 때도 접근성 도구가 모든 줄을 읽게).
+class _HomeSheet extends StatelessWidget {
+  const _HomeSheet({required this.scroll, required this.children});
+
+  final ScrollController scroll;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ridey;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: c.line)),
+      ),
+      child: SingleChildScrollView(
+        controller: scroll,
+        physics: const ClampingScrollPhysics(),
+        padding: _pagePadding.copyWith(top: 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              label: '목록 높이 바꾸기',
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 14),
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: c.line,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ),
+            ...children,
+          ],
+        ),
+      ),
     );
   }
 }

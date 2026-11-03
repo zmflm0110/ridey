@@ -247,8 +247,6 @@ void main() {
     testWidgets('home stations$tag', (tester) async {
       await open(tester, dark: dark);
       await tester.ensureVisible(find.text('주변 대여소 현황'));
-      await tester.drag(find.byType(ListView).first, const Offset(0, -140));
-      await settle(tester);
       await tester.tap(find.text('주변 대여소 현황'));
       await settle(tester);
       await shot(tester, '02b_home_stations$tag');

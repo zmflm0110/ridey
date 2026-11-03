@@ -38,7 +38,11 @@ class NearbyMap extends StatefulWidget {
     required this.stations,
     required this.onStationTap,
     this.location,
+    this.fullBleed = false,
   });
+
+  /// 홈처럼 화면을 채울 때: 둥근 카드·테두리·고정 높이 없이 부모 크기를 그대로 쓴다.
+  final bool fullBleed;
 
   final List<NearbyMapStation> stations;
   final DeviceLocation? location;
@@ -196,16 +200,19 @@ class _NearbyMapState extends State<NearbyMap> {
 
   @override
   Widget build(BuildContext context) {
+    final radius = widget.fullBleed ? 0.0 : 20.0;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(radius),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: context.ridey.fill,
-          border: Border.all(color: context.ridey.line),
-          borderRadius: BorderRadius.circular(20),
+          border: widget.fullBleed
+              ? null
+              : Border.all(color: context.ridey.line),
+          borderRadius: BorderRadius.circular(radius),
         ),
         child: SizedBox(
-          height: 312,
+          height: widget.fullBleed ? double.infinity : 312,
           child: RideyConfig.naverMapReady
               ? Stack(
                   children: [
@@ -234,7 +241,7 @@ class _NearbyMapState extends State<NearbyMap> {
                     ),
                   ],
                 )
-              : const _MapUnavailable(),
+              : _MapUnavailable(top: widget.fullBleed),
         ),
       ),
     );
@@ -370,7 +377,10 @@ class _ZoomButton extends StatelessWidget {
 }
 
 class _MapUnavailable extends StatelessWidget {
-  const _MapUnavailable();
+  const _MapUnavailable({this.top = false});
+
+  /// 화면을 채운 지도에서는 아래 시트가 가운데를 덮으므로 위쪽에 둔다.
+  final bool top;
 
   @override
   Widget build(BuildContext context) {
@@ -381,7 +391,8 @@ class _MapUnavailable extends StatelessWidget {
               ? '지도를 보려면 app/.env에 NAVER_MAP_CLIENT_ID를 넣어 주세요.'
               : '지도를 불러오지 못했어요. app/.env의 네이버 지도 키를 확인해 주세요.')
         : '지금은 지도를 불러오지 못했어요.';
-    return Center(
+    return Align(
+      alignment: top ? const Alignment(0, -.55) : Alignment.center,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
         child: Text(
