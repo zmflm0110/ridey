@@ -112,7 +112,13 @@ class _RideyAppState extends State<RideyApp> {
             ?child,
             if (_intro)
               Positioned.fill(
-                child: RideyIntro(onDone: () => setState(() => _intro = false)),
+                // Navigator 밖(builder)이라 위에 Material 이 없다 — 없으면 글자에 노란 이중 밑줄(디버그 표시)이 그대로 나온다.
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: RideyIntro(
+                    onDone: () => setState(() => _intro = false),
+                  ),
+                ),
               ),
           ],
         ),
