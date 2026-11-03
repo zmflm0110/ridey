@@ -14,6 +14,7 @@ import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
+import 'package:ridey_app/widgets/ridey_map_sheet.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -290,29 +291,14 @@ class _LoadedHomeState extends State<_LoadedHome> {
           );
         }
 
-        // 지도 앱의 기본 꼴: 지도가 화면을 채우고, 목록은 아래 시트(낮게·중간·높게)에 담는다. 시트 높이와 상관없이 지도는 만질 수 있다.
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: NearbyMap(
-                fullBleed: true,
-                stations: pins.values.toList(growable: false),
-                location: area.location,
-                onStationTap: (id) => _openStation(id, area.bikes),
-              ),
-            ),
-            DraggableScrollableSheet(
-              initialChildSize: .52,
-              minChildSize: .22,
-              maxChildSize: .94,
-              snap: true,
-              snapSizes: const [.22, .52, .94],
-              builder: (context, scroll) => _HomeSheet(
-                scroll: scroll,
-                children: _sheetChildren(context, area),
-              ),
-            ),
-          ],
+        return RideyMapSheet(
+          map: NearbyMap(
+            fullBleed: true,
+            stations: pins.values.toList(growable: false),
+            location: area.location,
+            onStationTap: (id) => _openStation(id, area.bikes),
+          ),
+          children: _sheetChildren(context, area),
         );
       },
     );
@@ -364,52 +350,6 @@ class _LoadedHomeState extends State<_LoadedHome> {
             onTap: () => widget.onBikeSelected(area.bikes[i].bike),
           ),
     ];
-  }
-}
-
-/// 지도 위 시트: 위 모서리만 둥글고, 손잡이를 끌어 높이를 바꾼다. 내용은 한 번에 다 짓는다
-/// (목록이 짧아 지연 생성이 필요 없고, 시트가 낮을 때도 접근성 도구가 모든 줄을 읽게).
-class _HomeSheet extends StatelessWidget {
-  const _HomeSheet({required this.scroll, required this.children});
-
-  final ScrollController scroll;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.ridey;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: c.line)),
-      ),
-      child: SingleChildScrollView(
-        controller: scroll,
-        physics: const ClampingScrollPhysics(),
-        padding: _pagePadding.copyWith(top: 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              label: '목록 높이 바꾸기',
-              child: Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 10, bottom: 14),
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: c.line,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
-            ),
-            ...children,
-          ],
-        ),
-      ),
-    );
   }
 }
 
