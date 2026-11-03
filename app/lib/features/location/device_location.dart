@@ -21,6 +21,16 @@ Future<DeviceLocation?> _readDeviceLocation() async {
         permission == LocationPermission.deniedForever) {
       return null;
     }
+    // 폰이 이미 아는 위치가 10분 안의 것이면 그대로 쓴다 — 새로 잡을 때까지 홈이 기다리지 않게(2km 범위라 충분).
+    final known = await Geolocator.getLastKnownPosition(
+      forceAndroidLocationManager:
+          defaultTargetPlatform == TargetPlatform.android,
+    );
+    if (known != null &&
+        DateTime.now().difference(known.timestamp) <
+            const Duration(minutes: 10)) {
+      return (latitude: known.latitude, longitude: known.longitude);
+    }
     // 안드로이드: 구글 '위치 정확도' 를 켜 달라는 창을 띄우지 않도록 기본 위치 서비스를 쓴다.
     final position = await Geolocator.getCurrentPosition(
       locationSettings: defaultTargetPlatform == TargetPlatform.android
