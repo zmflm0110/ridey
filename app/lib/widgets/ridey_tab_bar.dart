@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
@@ -33,14 +31,15 @@ class RideyTabBar extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(22, 0, 22, 8 + bottom),
       child: ClipRRect(
         borderRadius: radius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        // 흐림(BackdropFilter)은 지도(플랫폼 뷰) 위에서 프레임마다 화면을 다시 읽어 안드로이드에서 끊긴다 —
+        // 거의 불투명한 면으로 대신한다(보기엔 같고, 움직임이 부드럽다).
+        child: RepaintBoundary(
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: radius,
               color: Theme.of(
                 context,
-              ).colorScheme.surface.withValues(alpha: .9),
+              ).colorScheme.surface.withValues(alpha: .97),
               border: Border.all(color: c.line),
             ),
             child: SizedBox(

@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
@@ -204,18 +206,27 @@ class _SeoulPainter extends CustomPainter {
     final b = ((t - dropEnd) / (1 - dropEnd)).clamp(0.0, 1.0);
     final dot = Paint()..color = RideyColors.heroText.withValues(alpha: .28);
     final alerts = <(Offset, double)>[];
+    // 2,789개 점을 원 하나씩 그리면 프레임마다 그리기 호출이 수천 번이라 끊긴다 — 좌표를 모아 한 번에 그린다.
+    final points = Float32List(stations.length * 2);
+    var n = 0;
     for (final s in stations) {
       final target = at(s);
       final d = ((target - origin).distance / reach).clamp(0.0, 1.0);
       final local = ((b - d * .4) / .5).clamp(0.0, 1.0);
-      if (local <= 0) continue;
-      final p = Offset.lerp(
-        origin,
-        target,
-        RideyMotion.spring.transform(local),
-      )!;
-      canvas.drawCircle(p, 1.3, dot);
       if (alertIds.contains(s.id)) alerts.add((target, d));
+      if (local <= 0) continue;
+      final k = RideyMotion.spring.transform(local);
+      points[n++] = origin.dx + (target.dx - origin.dx) * k;
+      points[n++] = origin.dy + (target.dy - origin.dy) * k;
+    }
+    if (n > 0) {
+      canvas.drawRawPoints(
+        ui.PointMode.points,
+        Float32List.sublistView(points, 0, n),
+        dot
+          ..strokeWidth = 2.6
+          ..strokeCap = StrokeCap.round,
+      );
     }
 
     // 3) 지금 고장 의심이 있는 대여소 — 가까운 곳부터 켜지고 고리가 퍼진다.
