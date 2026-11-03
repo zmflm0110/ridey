@@ -5,31 +5,46 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 
-/// First-launch hero, the app's version of the site's "점 하나 → 서울":
-/// one signal dot bursts into Seoul's bike stations, which spring into place;
-/// stations with a suspect bike right now light up nearest-first and ping, and
-/// the number of suspect bikes counts up. Real data only — without a snapshot
-/// nothing lights up and the tagline shows instead of a number.
+/// Full-screen first-launch story, told once (the site's "점 하나 → 서울"):
+/// one signal dot drops and bounces, bursts into Seoul's bike stations which
+/// spring into place, then stations with a suspect bike right now light up and
+/// ping while [overlay] shows the count. Only real data lights anything up.
+/// The map sits in the upper part of the screen so the [overlay] panel below
+/// never covers it. Reduce motion shows the end state at once.
 class SeoulHero extends StatefulWidget {
   const SeoulHero({
     super.key,
     required this.stations,
     required this.snapshot,
-    this.startDelay = Duration.zero,
+    required this.overlay,
   });
 
   final Future<List<BikeStation>> stations;
   final Future<LiveSnapshot?> snapshot;
-  final Duration startDelay;
+
+  /// Drawn over the map. [story] runs 0..1 (drop, then burst); [lit] runs
+  /// 0..1 once the live data is in; [count] is null without live data.
+  final Widget Function(
+    BuildContext context,
+    double story,
+    double lit,
+    int? count,
+  )
+  overlay;
 
   @override
   State<SeoulHero> createState() => _SeoulHeroState();
 }
 
 class _SeoulHeroState extends State<SeoulHero> with TickerProviderStateMixin {
-  late final AnimationController _burst = AnimationController(
+  // 0.00–0.24 점이 떨어져 튀며 앉음 · 0.24–1.00 서울로 퍼짐
+  late final AnimationController _story = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2600),
+    duration: const Duration(milliseconds: 3200),
+  );
+  late final AnimationController _lit = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
   );
   late final AnimationController _ping = AnimationController(
     vsync: this,
@@ -38,151 +53,88 @@ class _SeoulHeroState extends State<SeoulHero> with TickerProviderStateMixin {
   List<BikeStation> _stations = const [];
   Set<String> _alertIds = const {};
   int? _count;
-  var _started = false;
-  // 지연은 화면이 생긴 때부터 센다 — 자료 받는 시간을 더하면 시작 애니메이션이 걷힌 뒤에도 점이 멈춰 있다.
-  final _shownAt = DateTime.now();
+  var _snapshotIn = false;
+  var _begun = false;
 
   @override
-  void initState() {
-    super.initState();
-    _load();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_begun) return;
+    _begun = true;
+    final reduced = RideyMotion.reduced(context);
+    if (reduced) {
+      _story.value = 1;
+    } else {
+      _story.forward();
+      _story.addListener(_maybeLight);
+    }
+    widget.stations
+        .then((s) {
+          if (mounted) setState(() => _stations = s);
+        })
+        .catchError((_) {});
+    widget.snapshot
+        .then((snap) {
+          if (!mounted || snap == null) return;
+          setState(() {
+            _alertIds = {for (final b in snap.bikes) b.station};
+            _count = snap.bikes.length;
+            _snapshotIn = true;
+          });
+          if (reduced) {
+            _lit.value = 1;
+          } else {
+            _maybeLight();
+          }
+        })
+        .catchError((_) {});
   }
 
-  Future<void> _load() async {
-    final results = await Future.wait<Object?>([
-      widget.stations.catchError((_) => <BikeStation>[]),
-      widget.snapshot.catchError((_) => null),
-    ]);
-    if (!mounted) return;
-    final stations = results[0] as List<BikeStation>;
-    final snapshot = results[1] as LiveSnapshot?;
-    setState(() {
-      _stations = stations;
-      _alertIds = {
-        for (final b in snapshot?.bikes ?? const <LiveBike>[]) b.station,
-      };
-      _count = snapshot?.bikes.length;
+  /// 경보 대여소는 지도가 다 퍼진 뒤에, 실제 자료가 왔을 때만 켠다.
+  void _maybeLight() {
+    if (!_snapshotIn || _lit.isAnimating || _lit.value > 0) return;
+    if (_story.value < .7) return;
+    _story.removeListener(_maybeLight);
+    _lit.forward().then((_) async {
+      // 고리는 세 번만 퍼진다 — 계속 돌면 산만하고 배터리를 쓴다.
+      for (var i = 0; i < 3 && mounted; i++) {
+        await _ping.forward(from: 0);
+      }
     });
-    if (RideyMotion.reduced(context)) {
-      _burst.value = 1;
-      return;
-    }
-    final wait = widget.startDelay - DateTime.now().difference(_shownAt);
-    if (wait > Duration.zero) await Future<void>.delayed(wait);
-    if (!mounted || _started) return;
-    _started = true;
-    await _burst.forward();
-    // 고리는 세 번만 퍼진다 — 계속 돌면 화면이 산만하고 배터리를 쓴다.
-    for (var i = 0; i < 3 && mounted; i++) {
-      await _ping.forward(from: 0);
-    }
   }
 
   @override
   void dispose() {
-    _burst.dispose();
+    _story.dispose();
+    _lit.dispose();
     _ping.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-      child: ColoredBox(
-        color: RideyColors.hero,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            RepaintBoundary(
-              child: CustomPaint(
-                painter: _SeoulPainter(
-                  stations: _stations,
-                  alertIds: _alertIds,
-                  burst: _burst,
-                  ping: _ping,
-                ),
+    return ColoredBox(
+      color: RideyColors.hero,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          RepaintBoundary(
+            child: CustomPaint(
+              painter: _SeoulPainter(
+                stations: _stations,
+                alertIds: _alertIds,
+                story: _story,
+                lit: _lit,
+                ping: _ping,
               ),
             ),
-            // 숫자와 글이 점 위에서 읽히도록 아래쪽을 잉크로 흐리게 덮는다(사이트 첫 화면과 같은 처리).
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 150,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x00111317), Color(0xE6111317)],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: 22,
-              child: AnimatedBuilder(
-                animation: _burst,
-                builder: (context, _) {
-                  final t = Curves.easeOut.transform(
-                    ((_burst.value - .45) / .45).clamp(0.0, 1.0),
-                  );
-                  final count = _count;
-                  return Opacity(
-                    opacity: t,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (count != null && count > 0) ...[
-                          Text(
-                            '${(count * t).round()}',
-                            style: context
-                                .rideyNumbers(theme.textTheme.displayLarge)
-                                ?.copyWith(
-                                  color: RideyColors.heroSignal,
-                                  fontSize: 56,
-                                  height: 1,
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '지금 서울의 고장 의심 따릉이',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: RideyColors.heroText,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '서울시 공개 대여 기록으로 5분마다',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: RideyColors.heroMuted,
-                            ),
-                          ),
-                        ] else
-                          Text(
-                            '타기 전에,\n고장 난 따릉이를 먼저',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: RideyColors.heroText,
-                              fontWeight: FontWeight.w800,
-                              height: 1.3,
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+          AnimatedBuilder(
+            animation: Listenable.merge([_story, _lit]),
+            builder: (context, _) =>
+                widget.overlay(context, _story.value, _lit.value, _count),
+          ),
+        ],
       ),
     );
   }
@@ -192,18 +144,43 @@ class _SeoulPainter extends CustomPainter {
   _SeoulPainter({
     required this.stations,
     required this.alertIds,
-    required this.burst,
+    required this.story,
+    required this.lit,
     required this.ping,
-  }) : super(repaint: Listenable.merge([burst, ping]));
+  }) : super(repaint: Listenable.merge([story, lit, ping]));
 
   final List<BikeStation> stations;
   final Set<String> alertIds;
-  final Animation<double> burst;
+  final Animation<double> story;
+  final Animation<double> lit;
   final Animation<double> ping;
+
+  /// 지도는 화면 위쪽(상태 표시줄 아래 ~ 높이의 58%)에만 — 아래 패널이 가리지 않게.
+  static Rect mapBox(Size size) =>
+      Rect.fromLTRB(18, 96, size.width - 18, size.height * .58);
 
   @override
   void paint(Canvas canvas, Size size) {
+    final box = mapBox(size);
+    final origin = box.center;
+    final t = story.value;
+    final signal = Paint()..color = RideyColors.heroSignal;
+
+    // 1) 떨어지는 점 — 위에서 떨어져 두 번 작게 튀고 앉는다(로고·사이트의 '떨어져 앉는 점').
+    const dropEnd = .24;
+    if (t < dropEnd + .06) {
+      final d = (t / dropEnd).clamp(0.0, 1.0);
+      final y = origin.dy - _height(d) * 260;
+      final fade = t <= dropEnd ? 1.0 : 1 - (t - dropEnd) / .06;
+      canvas.drawCircle(
+        Offset(origin.dx, y),
+        7 * fade + .01,
+        Paint()..color = RideyColors.heroSignal.withValues(alpha: fade),
+      );
+    }
     if (stations.isEmpty) return;
+
+    // 2) 서울로 퍼짐 — 가까운 대여소부터 스프링으로 제자리에 앉는다.
     var minLat = double.infinity, maxLat = -double.infinity;
     var minLon = double.infinity, maxLon = -double.infinity;
     for (final s in stations) {
@@ -212,18 +189,10 @@ class _SeoulPainter extends CustomPainter {
       minLon = math.min(minLon, s.longitude);
       maxLon = math.max(maxLon, s.longitude);
     }
-    // 위도에 따라 경도 1도의 길이가 줄어드는 것을 맞춘 뒤 상자에 넣는다(지도가 옆으로 늘어나지 않게).
+    // 위도에 따라 경도 1도의 길이가 줄어드는 것을 맞춘다. 대여소가 하나뿐이면 범위가 0 이라 최소 범위를 둔다.
     final kx = math.cos((minLat + maxLat) / 2 * math.pi / 180);
-    // 대여소가 하나뿐이면 폭·높이가 0 이라 배율이 NaN 이 된다 — 최소 범위를 둔다.
-    final w = math.max((maxLon - minLon) * kx, .01),
-        h = math.max(maxLat - minLat, .01);
-    const pad = 18.0;
-    final box = Rect.fromLTWH(
-      pad,
-      pad + 26,
-      size.width - pad * 2,
-      size.height - pad * 2 - 26,
-    );
+    final w = math.max((maxLon - minLon) * kx, .01);
+    final h = math.max(maxLat - minLat, .01);
     final scale = math.min(box.width / w, box.height / h);
     final ox = box.left + (box.width - w * scale) / 2;
     final oy = box.top + (box.height - h * scale) / 2;
@@ -231,36 +200,27 @@ class _SeoulPainter extends CustomPainter {
       ox + (s.longitude - minLon) * kx * scale,
       oy + (maxLat - s.latitude) * scale,
     );
-    final origin = Offset(size.width / 2, size.height * .42);
-    final maxDist =
-        math.sqrt(size.width * size.width + size.height * size.height) / 2;
-
-    final t = burst.value;
-    final dotPaint = Paint()
-      ..color = RideyColors.heroText.withValues(alpha: .26);
+    final reach = box.longestSide / 2;
+    final b = ((t - dropEnd) / (1 - dropEnd)).clamp(0.0, 1.0);
+    final dot = Paint()..color = RideyColors.heroText.withValues(alpha: .28);
     final alerts = <(Offset, double)>[];
     for (final s in stations) {
       final target = at(s);
-      final d = (target - origin).distance / maxDist; // 0..~1
-      // 가까운 대여소부터 퍼져 나가 스프링으로 앉는다.
-      final local = ((t - d * .35) / .45).clamp(0.0, 1.0);
+      final d = ((target - origin).distance / reach).clamp(0.0, 1.0);
+      final local = ((b - d * .4) / .5).clamp(0.0, 1.0);
       if (local <= 0) continue;
       final p = Offset.lerp(
         origin,
         target,
         RideyMotion.spring.transform(local),
       )!;
-      canvas.drawCircle(p, 1.3, dotPaint);
+      canvas.drawCircle(p, 1.3, dot);
       if (alertIds.contains(s.id)) alerts.add((target, d));
     }
-    // 첫 순간: 가운데 신호 점 하나(시작 애니메이션의 점)가 커졌다가 터진다.
-    if (t < .2) {
-      final r = 7 * (1 - t / .2) + 2;
-      canvas.drawCircle(origin, r, Paint()..color = RideyColors.heroSignal);
-    }
-    final signal = Paint()..color = RideyColors.heroSignal;
+
+    // 3) 지금 고장 의심이 있는 대여소 — 가까운 곳부터 켜지고 고리가 퍼진다.
     for (final (p, d) in alerts) {
-      final on = ((t - .55 - d * .3) / .12).clamp(0.0, 1.0);
+      final on = ((lit.value - d * .6) / .4).clamp(0.0, 1.0);
       if (on <= 0) continue;
       canvas.drawCircle(p, 3.2 * RideyMotion.spring.transform(on), signal);
       final q = ping.value;
@@ -269,12 +229,30 @@ class _SeoulPainter extends CustomPainter {
           p,
           3.2 + q * 14,
           Paint()
-            ..color = RideyColors.heroSignal.withValues(alpha: (1 - q) * .55)
+            ..color = RideyColors.heroSignal.withValues(alpha: (1 - q) * .5)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.4,
         );
       }
     }
+  }
+
+  /// 0 = 앉음, 1 = 처음 높이. 떨어진 뒤 0.22, 0.06 높이로 두 번 튐.
+  static double _height(double t) {
+    if (t <= 0) return 1;
+    if (t < .45) {
+      final p = t / .45;
+      return 1 - p * p;
+    }
+    if (t < .75) {
+      final p = (t - .45) / .3;
+      return .22 * (1 - math.pow(2 * p - 1, 2));
+    }
+    if (t < .92) {
+      final p = (t - .75) / .17;
+      return .06 * (1 - math.pow(2 * p - 1, 2));
+    }
+    return 0;
   }
 
   @override

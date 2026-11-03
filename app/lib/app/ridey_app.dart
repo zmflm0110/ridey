@@ -76,6 +76,8 @@ class _RideyAppState extends State<RideyApp> {
     setState(() {
       _mode = mode;
       _ready = true;
+      // 첫 실행은 점이 떨어지는 장면이 첫 화면(서울 지도) 안에서 한 번만 나온다 — 시작 애니메이션을 겹치지 않는다.
+      if (mode == null) _intro = false;
     });
   }
 
@@ -113,7 +115,7 @@ class _RideyAppState extends State<RideyApp> {
         builder: (context, child) => Stack(
           children: [
             ?child,
-            if (_intro)
+            if (_intro && _ready)
               Positioned.fill(
                 // Navigator 밖(builder)이라 위에 Material 이 없다 — 없으면 글자에 노란 이중 밑줄(디버그 표시)이 그대로 나온다.
                 child: Material(
@@ -139,9 +141,6 @@ class _RideyAppState extends State<RideyApp> {
                               SupabaseLiveSnapshotRepository())
                           .fetch()
                           .then<LiveSnapshot?>((s) => s, onError: (_) => null),
-                  heroDelay: widget.showIntro
-                      ? const Duration(milliseconds: 1500)
-                      : Duration.zero,
                 ),
                 UserMode.rider => RideyShell(
                   liveRepository: widget.liveRepository,
@@ -340,7 +339,8 @@ class _StartupPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: RideyWordmark(size: 30)));
+    // 모드를 읽는 아주 짧은 사이 — 다음에 올 화면(시작 애니메이션 또는 첫 실행 지도)과 같은 잉크 바탕.
+    return const ColoredBox(color: RideyColors.hero);
   }
 }
 

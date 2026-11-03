@@ -7,7 +7,8 @@ void main() {
   testWidgets('start animation text has no missing-Material underline', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    // 두 번째 실행부터만 시작 애니메이션이 나온다(첫 실행은 서울 지도 화면이 그 장면을 맡음).
+    SharedPreferences.setMockInitialValues({'user_mode': 'rider'});
     await tester.pumpWidget(
       RideyApp(
         showIntro: true,
