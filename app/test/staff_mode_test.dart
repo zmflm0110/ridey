@@ -145,7 +145,8 @@ void main() {
 
     expect(find.text('구별 현황'), findsWidgets);
     expect(find.byType(NearbyMap), findsOneWidget);
-    expect(find.text('목록'), findsOneWidget);
+    // 아래 탭은 '구별 현황'·'더보기' 둘(구별 목록은 구를 누르면 열린다).
+    expect(find.text('목록'), findsNothing);
     expect(find.text('더보기'), findsOneWidget);
     expect(find.text('홈'), findsNothing);
     expect(find.text('자전거 확인'), findsNothing);

@@ -63,3 +63,28 @@ Future<DeviceLocation?> readDeviceLocationQuietly() async {
     return null;
   }
 }
+
+/// 길안내 중 위치가 바뀔 때마다(5m 넘게 움직이면) 알려 준다. 권한이 없으면 아무것도 오지 않는다.
+Stream<DeviceLocation> watchDeviceLocation() async* {
+  try {
+    final permission = await Geolocator.checkPermission();
+    if (permission != LocationPermission.always &&
+        permission != LocationPermission.whileInUse) {
+      return;
+    }
+    yield* Geolocator.getPositionStream(
+      locationSettings: defaultTargetPlatform == TargetPlatform.android
+          ? AndroidSettings(
+              forceLocationManager: true,
+              distanceFilter: 5,
+              intervalDuration: const Duration(seconds: 1),
+            )
+          : const LocationSettings(
+              accuracy: LocationAccuracy.bestForNavigation,
+              distanceFilter: 5,
+            ),
+    ).map((p) => (latitude: p.latitude, longitude: p.longitude));
+  } catch (_) {
+    return;
+  }
+}

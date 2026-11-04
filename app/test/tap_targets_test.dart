@@ -143,6 +143,22 @@ void main() {
     return out;
   }
 
+  /// 목록 안의 것을 화면 가운데로 끌어온다(떠 있는 탭 막대·머리에 가리지 않게).
+  Future<void> center(WidgetTester tester, Finder finder) async {
+    await tester.scrollUntilVisible(
+      finder,
+      150,
+      scrollable: find
+          .descendant(
+            of: find.byType(DraggableScrollableSheet),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await Scrollable.ensureVisible(tester.element(finder.last), alignment: .5);
+    await tester.pumpAndSettle();
+  }
+
   Future<void> tapText(WidgetTester tester, String text) async {
     await tester.tap(find.text(text).last);
     await tester.pumpAndSettle();
@@ -182,9 +198,9 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'spb-69683');
     await tapText(tester, '조회하기');
     found.addAll(problems(tester, 'detail'));
-    // 맨 아래(공식 앱 고장 신고 안내)까지 내려야 '판단 근거' 가 떠 있는 탭 막대 위로 올라온다.
+    // 맨 아래(고장 신고 단추)까지 내려야 '판단 근거' 가 떠 있는 탭 막대 위로 올라온다.
     await tester.scrollUntilVisible(
-      find.text('따릉이 앱 열기'),
+      find.text('고장 신고하기'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
@@ -239,12 +255,35 @@ void main() {
     });
     final found = <String>[];
     found.addAll(problems(tester, 'staff overview'));
-    await tapText(tester, '목록');
-    found.addAll(problems(tester, 'staff list'));
+    // 추천 경로 → 길안내(앱 안). 테스트엔 도로 길이 없어 직선으로 안내한다.
+    expect(find.text('오늘 추천 경로'), findsOneWidget);
+    // 시트를 끝까지 올리고, 그 안에서 단추가 탭 막대 위로 올 때까지 내린다.
+    await tester.drag(find.text('오늘 추천 경로'), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await center(tester, find.text('길안내 시작'));
+    // 시트를 끝까지 올리면 지도 단추는 시트 밑에 깔린다(일부러) — 시트 안만 본다.
+    found.addAll(
+      problems(
+        tester,
+        'staff route',
+        within: find.byType(DraggableScrollableSheet),
+      ),
+    );
+    await tapText(tester, '길안내 시작');
+    found.addAll(problems(tester, 'staff navigation'));
+    expect(find.textContaining('고장 의심 2대 수거'), findsWidgets);
+    await tester.tap(find.byTooltip('길안내 끝내기'));
+    await tester.pumpAndSettle();
+    // 구별 현황의 구를 누르면 그 구의 대여소별 목록이 열린다.
+    await tester.drag(find.text('오늘 추천 경로'), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await center(tester, find.text('강서구'));
+    await tapText(tester, '강서구');
+    found.addAll(problems(tester, 'staff district list'));
     await tapText(tester, 'SPB-69683');
     found.addAll(problems(tester, 'staff detail'));
     expect(find.text('목록으로 돌아가기'), findsOneWidget);
-    expect(find.text('고장 — 가져감'), findsNothing);
+    await back(tester);
     await back(tester);
     await tapText(tester, '더보기');
     found.addAll(problems(tester, 'staff more'));

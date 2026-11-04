@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -120,21 +121,11 @@ class BikeDetailPage extends StatelessWidget {
                 },
               ),
             ),
-            // 시민이 타 보고 고장을 확인했을 때의 다음 행동: 공식 신고(공단이 실제로 받는 곳).
-            // 우리 앱은 신고를 대신 보내지 않는다 — 공식 앱을 연다.
+            // 시민이 타 보고 고장을 확인했을 때의 다음 행동: 신고. RIDEY 에 남겨 직원 화면에 바로 보이게 하고,
+            // 이어서 서울시 공식 신고 화면(공단이 받는 곳)을 연다.
             if (!forStaff) ...[
-              const SizedBox(height: 18),
-              Text(
-                '타 보니 정말 고장이었다면, 따릉이 앱의 고장 신고로 알려 주세요. 공단이 실제로 받는 곳이에요.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
-              ),
-              Center(
-                child: _UnderlinedAction(
-                  label: '따릉이 앱 열기',
-                  onPressed: openOfficialBikeApp,
-                ),
-              ),
+              const SizedBox(height: 22),
+              ReportBikeButton(bike: bike.bike, station: bike.station),
             ],
           ],
         ),
@@ -206,6 +197,10 @@ class BikeCheckMessagePage extends StatelessWidget {
                   color: context.ridey.muted,
                 ),
               ),
+              const SizedBox(height: 14),
+            ],
+            if (bikeId != null) ...[
+              ReportBikeButton(bike: bikeId!),
               const SizedBox(height: 14),
             ],
             // 대여하기가 있으면 그것이 주 동작이고, 다른 자전거 확인은 한 단 낮춘다(검은 단추 둘이면 무엇을 누를지 흐려짐).
@@ -616,6 +611,69 @@ class _DataNote extends StatelessWidget {
           context,
         ).textTheme.bodyMedium?.copyWith(color: context.ridey.calmText),
       ),
+    );
+  }
+}
+
+/// 고장 신고: 신고를 잊거나 귀찮아 넘기는 일이 많아서 자전거 화면에 바로 둔다.
+/// 누르면 RIDEY 에 한 줄(번호·대여소) 남겨 관리 직원 화면에 곧바로 보이고, 이어서 서울시 공식 신고 화면이 열린다.
+class ReportBikeButton extends StatefulWidget {
+  const ReportBikeButton({
+    super.key,
+    required this.bike,
+    this.station,
+    this.repository,
+  });
+
+  final String bike;
+  final String? station;
+  final CitizenReportRepository? repository;
+
+  @override
+  State<ReportBikeButton> createState() => _ReportBikeButtonState();
+}
+
+class _ReportBikeButtonState extends State<ReportBikeButton> {
+  var _busy = false;
+  var _sent = false;
+
+  Future<void> _report() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final recorded = await reportBike(
+      bike: widget.bike,
+      station: widget.station,
+      repository: widget.repository,
+    );
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _sent = recorded;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.ridey;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RideyButton.secondary(
+          label: _sent ? '다시 신고 화면 열기' : '고장 신고하기',
+          icon: Icons.report_outlined,
+          busy: _busy,
+          onPressed: _report,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _sent
+              ? 'RIDEY 에 남겼어요 — 관리 직원 화면에 바로 보여요. 열린 서울시 신고 화면에서 신고를 마쳐 주세요.'
+              : '타 보니 고장이었다면 알려 주세요. 관리 직원에게 바로 보이고, 서울시 공식 신고 화면도 열려요.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+        ),
+      ],
     );
   }
 }

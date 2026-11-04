@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ridey_app/features/staff/road_route.dart';
+import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/app/legacy_preferences.dart';
 import 'package:ridey_app/app/mode_switch.dart';
@@ -34,6 +36,10 @@ class RideyApp extends StatefulWidget {
     this.readLocation,
     this.enableCamera = true,
     this.showIntro = false,
+    this.askRoleOnLaunch = false,
+    this.reportRepository,
+    this.roadRouter,
+    this.watchLocation,
     this.openOfficialApp,
     this.nearbyAlertReminder,
   });
@@ -50,6 +56,14 @@ class RideyApp extends StatefulWidget {
   /// 켤 때 '떨어지는 점' 시작 장면(main 에서만 켬, 테스트는 바로 화면).
   final bool showIntro;
 
+  /// 직원 모드: 시민 신고 읽기, 도로 길(OSRM), 길안내 중 위치. 테스트는 비워 둔다(네트워크 없이).
+  final CitizenReportRepository? reportRepository;
+  final RoadRouter? roadRouter;
+  final Stream<DeviceLocation> Function()? watchLocation;
+
+  /// 켤 때마다 시민·직원을 묻는다(main 에서 켬). 끄면 지난번 고른 모드로 바로 연다(테스트).
+  final bool askRoleOnLaunch;
+
   @override
   State<RideyApp> createState() => _RideyAppState();
 }
@@ -57,6 +71,7 @@ class RideyApp extends StatefulWidget {
 class _RideyAppState extends State<RideyApp> {
   ThemeMode _themeMode = ThemeMode.system;
   UserMode? _mode;
+  UserMode? _lastMode;
   var _ready = false;
   late var _intro = widget.showIntro;
   Future<List<BikeStation>>? _heroStations;
@@ -71,10 +86,13 @@ class _RideyAppState extends State<RideyApp> {
 
   Future<void> _boot() async {
     await clearLegacyPreferences();
-    final mode = await readUserMode();
+    final saved = await readUserMode();
     if (!mounted) return;
+    // 같은 폰을 시민·직원이 번갈아 쓸 수 있어서 켤 때마다 묻는다. 지난번 고른 것은 질문 화면에 표시만.
+    final mode = widget.askRoleOnLaunch ? null : saved;
     setState(() {
       _mode = mode;
+      _lastMode = saved;
       _ready = true;
       // 첫 실행은 점이 떨어지는 장면이 첫 화면(서울 지도) 안에서 한 번만 나온다 — 시작 애니메이션을 겹치지 않는다.
       if (mode == null) _intro = false;
@@ -132,6 +150,7 @@ class _RideyAppState extends State<RideyApp> {
             : switch (_mode) {
                 null => OnboardingPage(
                   onChosen: _chooseMode,
+                  lastMode: _lastMode,
                   requestLocation: widget.readLocation,
                   stations: _heroStations ??=
                       (widget.stationRepository ?? BundledStationRepository())
@@ -168,6 +187,14 @@ class _RideyAppState extends State<RideyApp> {
                       setState(() => _themeMode = mode),
                   onSwitchToRider: () => _chooseMode(UserMode.rider),
                   readLocation: widget.readLocation,
+                  stationStatusRepository:
+                      widget.stationStatusRepository ??
+                      (widget.roadRouter == null
+                          ? null
+                          : SupabaseStationStatusRepository()),
+                  reportRepository: widget.reportRepository,
+                  roadRouter: widget.roadRouter,
+                  watchLocation: widget.watchLocation,
                 ),
               },
       ),

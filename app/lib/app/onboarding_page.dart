@@ -16,12 +16,16 @@ class OnboardingPage extends StatefulWidget {
   const OnboardingPage({
     super.key,
     required this.onChosen,
+    this.lastMode,
     this.requestLocation,
     this.stations,
     this.snapshot,
   });
 
   final ValueChanged<UserMode> onChosen;
+
+  /// 지난번에 고른 모드(켤 때마다 묻기 때문). 있으면 위치 안내는 이미 본 것이라 건너뛴다.
+  final UserMode? lastMode;
 
   /// Asks the system for the location (shows its dialog the first time).
   final Future<DeviceLocation?> Function()? requestLocation;
@@ -133,7 +137,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
         const SizedBox(height: 18),
         RideyButton(
           label: '따릉이를 이용하는 일반 시민이에요',
-          onPressed: () => setState(() => _askLocation = true),
+          onPressed: () => widget.lastMode == null
+              ? setState(() => _askLocation = true)
+              : widget.onChosen(UserMode.rider),
         ),
         const SizedBox(height: 10),
         RideyButton.secondary(
@@ -141,13 +147,29 @@ class _OnboardingPageState extends State<OnboardingPage> {
           onPressed: () => widget.onChosen(UserMode.staff),
         ),
         const SizedBox(height: 6),
-        Center(
-          child: TextButton(
-            onPressed: () => widget.onChosen(UserMode.rider),
-            style: TextButton.styleFrom(foregroundColor: RideyColors.heroMuted),
-            child: const Text('나중에 할게요'),
+        if (widget.lastMode == null)
+          Center(
+            child: TextButton(
+              onPressed: () => widget.onChosen(UserMode.rider),
+              style: TextButton.styleFrom(
+                foregroundColor: RideyColors.heroMuted,
+              ),
+              child: const Text('나중에 할게요'),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              widget.lastMode == UserMode.staff
+                  ? '지난번엔 관리 직원으로 썼어요'
+                  : '지난번엔 일반 시민으로 썼어요',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: RideyColors.heroMuted,
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -167,7 +189,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ),
         const SizedBox(height: 10),
         Text(
-          '위치는 2km 안의 고장 의심 자전거를 찾는 데만 써요. '
+          '위치는 지도를 내 근처에서 시작하고 가까운 순으로 줄 세우는 데만 써요. '
           '이 폰 밖으로 보내지 않아요.',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: RideyColors.heroMuted,

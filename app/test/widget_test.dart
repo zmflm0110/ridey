@@ -65,7 +65,10 @@ void main() {
     });
   });
 
-  Future<void> pumpRidey(WidgetTester tester) async {
+  Future<void> pumpRidey(
+    WidgetTester tester, {
+    ({double latitude, double longitude})? location,
+  }) async {
     tester.view.physicalSize = const Size(800, 1400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -75,7 +78,7 @@ void main() {
         liveRepository: _FakeLiveSnapshotRepository(),
         stationRepository: _FakeStationRepository(),
         stationStatusRepository: _FakeStationStatusRepository(),
-        readLocation: () async => null,
+        readLocation: () async => location,
         enableCamera: false,
         openOfficialApp: () async {},
         nearbyAlertReminder: const SilentNearbyAlertReminder(),
@@ -92,7 +95,8 @@ void main() {
     expect(find.text('더보기'), findsOneWidget);
     expect(find.text('이용하기'), findsNothing);
     expect(find.text('번호 확인'), findsNothing);
-    expect(find.textContaining('저장한 대여소에'), findsOneWidget);
+    // 2km 제한 없이 서울 전체(위치가 없으면 강한 경보부터).
+    expect(find.textContaining('지금 서울에'), findsOneWidget);
     expect(find.textContaining('1대'), findsOneWidget);
     expect(find.text('SPB-69683'), findsOneWidget);
     expect(find.textContaining('힐스테이트에코'), findsOneWidget);
@@ -203,7 +207,7 @@ void main() {
   });
 
   testWidgets('lists nearby stations instead of bike numbers', (tester) async {
-    await pumpRidey(tester);
+    await pumpRidey(tester, location: (latitude: 37.5600, longitude: 126.8370));
     await tester.tap(find.text('주변 대여소 현황'));
     await tester.pumpAndSettle();
 

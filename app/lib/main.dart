@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/config/ridey_config.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/reports/citizen_reports.dart';
+import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/notifications/habit_notifier.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -10,7 +12,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 세로 전용 앱(아이폰 Info.plist 와 같게). 가로에서는 첫 화면 로고와 숫자가 겹쳤다(에뮬레이터 확인).
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  await RideyConfig.loadLocalEnv();
   try {
     await Workmanager().initialize(habitNotificationDispatcher);
   } catch (_) {}
@@ -19,7 +20,12 @@ Future<void> main() async {
   runApp(
     RideyApp(
       showIntro: true,
+      askRoleOnLaunch: true,
       readLocation: demo == null ? null : () async => demo,
+      // 직원 모드: 대여소 거치 대수·시민 신고·도로 길(OSRM)로 추천 경로와 길안내.
+      reportRepository: SupabaseCitizenReportRepository(),
+      roadRouter: RoadRouter(),
+      watchLocation: demo == null ? null : () => Stream.value(demo),
     ),
   );
 }

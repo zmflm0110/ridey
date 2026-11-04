@@ -96,7 +96,10 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
   Future<void> _lookup(LookupKind kind, {String? raw}) async {
     if (_busy) return;
     FocusScope.of(context).unfocus();
-    final bikeId = normalizeBikeId(raw ?? _controller.text);
+    final typed = _controller.text.trim();
+    final bikeId = normalizeBikeId(
+      raw ?? (RegExp(r'^\d+$').hasMatch(typed) ? 'SPB-$typed' : typed),
+    );
     if (bikeId == null) {
       _showMessage(title: '판단 어려움', message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.');
       return;
@@ -147,7 +150,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       MaterialPageRoute<String>(builder: (_) => const BikeQrScannerPage()),
     );
     if (!mounted || bikeId == null) return;
-    _controller.text = bikeId;
+    _controller.text = bikeId.replaceFirst('SPB-', '');
     _lookup(LookupKind.qr, raw: bikeId);
   }
 
@@ -160,7 +163,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       MaterialPageRoute<String>(builder: (_) => const BikeOcrScannerPage()),
     );
     if (!mounted || bikeId == null) return;
-    _controller.text = bikeId;
+    _controller.text = bikeId.replaceFirst('SPB-', '');
     _lookup(LookupKind.ocr, raw: bikeId);
   }
 
@@ -184,6 +187,8 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
           label: '자전거 번호',
           child: TextField(
             controller: _controller,
+            // 번호 앞 'SPB-' 는 늘 같다 — 미리 적어 두고 숫자만 받는다.
+            keyboardType: TextInputType.number,
             textCapitalization: TextCapitalization.characters,
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _lookup(LookupKind.number),
@@ -191,7 +196,11 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
                 .rideyNumbers(theme.textTheme.titleLarge)
                 ?.copyWith(fontSize: 20),
             decoration: InputDecoration(
-              hintText: 'SPB-00000',
+              prefixText: 'SPB-',
+              prefixStyle: context
+                  .rideyNumbers(theme.textTheme.titleLarge)
+                  ?.copyWith(fontSize: 20),
+              hintText: '00000',
               hintStyle: context
                   .rideyNumbers(theme.textTheme.titleLarge)
                   ?.copyWith(

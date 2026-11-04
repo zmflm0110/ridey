@@ -1,5 +1,3 @@
-import 'package:flutter/services.dart';
-
 /// Public Supabase settings. Override with --dart-define at build time.
 abstract final class RideyConfig {
   static const supabaseUrl = String.fromEnvironment(
@@ -34,38 +32,4 @@ abstract final class RideyConfig {
 
   static Uri opsListDayUri(String day) =>
       rest('ops_lists?select=body&day=eq.$day');
-
-  /// `--dart-define=NAVER_MAP_CLIENT_ID=...` wins over [loadLocalEnv].
-  static const naverMapClientIdFromDefine = String.fromEnvironment(
-    'NAVER_MAP_CLIENT_ID',
-  );
-
-  static String naverMapClientId = naverMapClientIdFromDefine;
-
-  static Future<void> loadLocalEnv() async {
-    if (naverMapClientId.isNotEmpty) return;
-    try {
-      final raw = await rootBundle.loadString('.env');
-      naverMapClientId = naverMapClientIdFromEnv(raw);
-    } catch (_) {}
-  }
-}
-
-/// Reads `NAVER_MAP_CLIENT_ID` from a `.env` file. Empty when the key is absent.
-String naverMapClientIdFromEnv(String raw) {
-  for (final line in raw.split('\n')) {
-    final trimmed = line.trim();
-    if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
-    final index = trimmed.indexOf('=');
-    if (index <= 0) continue;
-    if (trimmed.substring(0, index).trim() != 'NAVER_MAP_CLIENT_ID') continue;
-    var value = trimmed.substring(index + 1).trim();
-    if (value.length >= 2 &&
-        ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'")))) {
-      value = value.substring(1, value.length - 1);
-    }
-    return value;
-  }
-  return '';
 }

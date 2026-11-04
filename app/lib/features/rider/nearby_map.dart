@@ -28,35 +28,56 @@ class NearbyMapStation {
   final int? parkedBikes;
 }
 
-/// The area map: OpenStreetMap's standard tiles (no key, Korean labels) seen
+/// The map: OpenStreetMap's standard tiles (no key, Korean labels) seen
 /// through a colour filter — near-grey by day, inverted and dark at night — so
-/// the brand's signal markers stand out: a filled orange disc with the number
-/// of suspect bikes for a strong alert (it pings a few times), a soft disc for
-/// a 2-person chain, a small grey dot for a station without alerts, and a
-/// calm-blue dot for the phone. Works the same on iPhone and Android.
+/// the brand's signal markers stand out. It can hold every station in Seoul:
+/// suspect stations are widgets (a filled orange disc with the count for a
+/// strong alert, a soft disc otherwise), plain stations are cheap circles until
+/// you zoom in on the station tab, where they become count discs. Numbers stay
+/// upright when the map is rotated. Works the same on iPhone and Android.
 class NearbyMap extends StatefulWidget {
   const NearbyMap({
     super.key,
     required this.stations,
     required this.onStationTap,
     this.location,
+    this.focus,
     this.fullBleed = false,
     this.showCounts = false,
-    this.radiusMeters,
     this.focusMeters = 500,
-    this.route = const [],
+    this.routePoints = const [],
+    this.fitPoints,
+    this.viewKey,
+    this.favoriteIds = const {},
+    this.stopNumbers = const {},
+    this.controlsTop = 12,
   });
 
-  /// 들를 순서(대여소 id). 있으면 내 위치에서 시작해 그 순서로 잇는 파란 점선을 그리고, 처음 화면에 다 보이게 맞춘다.
-  final List<String> route;
+  /// 확대·내 위치 단추와 출처 표시의 위 여백(지도 위에 검색 칸이 떠 있으면 그 아래로).
+  final double controlsTop;
 
-  /// 처음 켰을 때(와 '내 위치' 단추) 보여 줄 범위. 범위 원([radiusMeters])보다 좁게 — 가까운 곳부터 크게 본다.
+  /// 처음 볼 곳(검색한 장소 등). 없으면 [location].
+  final DeviceLocation? focus;
+
+  /// 처음 켰을 때(와 '내 위치' 단추) [focus] 둘레로 보여 줄 범위(m).
   final double focusMeters;
 
-  /// 내 위치 둘레의 범위(예: 2km). 있으면 처음에 그 원이 다 보이게 맞추고 얇은 원으로 그려 준다.
-  final double? radiusMeters;
+  /// 경로 선(도로를 따라간 길 또는 들를 곳을 이은 직선). 비어 있으면 안 그린다.
+  final List<LatLng> routePoints;
 
-  /// '주변 대여소 현황' 일 때: 고장 의심이 없는 대여소도 탈 만한 자전거 수를 흰 원에 보여 준다.
+  /// 있으면 처음 모습을 이 점들이 다 보이게 맞춘다(직원의 들를 곳·담당 구).
+  final List<LatLng>? fitPoints;
+
+  /// 바뀌면 처음 모습을 다시 맞춘다(장소 검색·담당 구 바꾸기).
+  final Object? viewKey;
+
+  /// 즐겨찾는 대여소 — 별 고리로 따로 보인다.
+  final Set<String> favoriteIds;
+
+  /// 들를 순서 번호(대여소 id → 1부터). 핀 옆 파란 원.
+  final Map<String, int> stopNumbers;
+
+  /// '주변 대여소 현황' 일 때: 가까이 확대하면 대여소마다 탈 만한 자전거 수를 흰 원에 보여 준다.
   final bool showCounts;
 
   /// 홈처럼 화면을 채울 때: 둥근 카드·테두리·고정 높이 없이 부모 크기를 그대로 쓴다.
@@ -73,7 +94,7 @@ class NearbyMap extends StatefulWidget {
   static bool forceTiles = false;
 
   /// 테스트에서는 지도 그림(타일)을 받지 않는다 — 네트워크가 막혀 있고 화면 확인에 필요 없다.
-  static bool get _tilesEnabled {
+  static bool get tilesEnabled {
     if (forceTiles) return true;
     try {
       return !Platform.environment.containsKey('FLUTTER_TEST');
@@ -86,6 +107,27 @@ class NearbyMap extends StatefulWidget {
   State<NearbyMap> createState() => _NearbyMapState();
 }
 
+/// 앱 지도 바탕(OpenStreetMap + 브랜드 색 필터). 직원 길안내 화면도 같이 쓴다.
+Widget rideyTileLayer(BuildContext context) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return TileLayer(
+    // OpenStreetMap 기본 지도(키 없음, 한글 지명). CARTO 는 앱에서 키를 요구해서 쓰지 않는다.
+    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    userAgentPackageName: 'kr.bikedoctor.ridey',
+    maxNativeZoom: 19,
+    // 원래 색은 알록달록해 신호 주황이 묻힌다 — 밝을 땐 거의 회색으로, 어두울 땐 뒤집어 어둡게.
+    tileBuilder: (context, tile, _) => ColorFiltered(
+      colorFilter: ColorFilter.matrix(dark ? _darkTiles : _lightTiles),
+      child: tile,
+    ),
+    // flutter_map 의 디스크 캐시는 시작할 때 저장 폴더를 찾다 실패하면 타일이 하나도 안 그려진다
+    // (테스트에서 재현). 지도 그림은 앱이 켜져 있는 동안 메모리에 남으니 디스크 캐시는 끈다.
+    tileProvider: NetworkTileProvider(
+      cachingProvider: const DisabledMapCachingProvider(),
+    ),
+  );
+}
+
 class _NearbyMapState extends State<NearbyMap>
     with SingleTickerProviderStateMixin {
   final _map = MapController();
@@ -96,9 +138,15 @@ class _NearbyMapState extends State<NearbyMap>
   var _ready = false;
   double _rotation = 0;
   var _pinged = false;
+  MapCamera? _camera;
 
   /// 지금 카드가 열려 있는 대여소 — 지도에서 어느 것을 보고 있는지 테두리로 보여 준다.
   String? _selected;
+
+  static const _seoul = LatLng(37.5665, 126.9780);
+
+  /// 이만큼 확대하면 '대여소 현황' 의 흰 원(탈 만한 자전거 수)을 그린다 — 멀리서 2천여 개를 다 그리면 무겁고 읽을 수도 없다.
+  static const _countZoom = 14.5;
 
   Future<void> _tap(String id) async {
     setState(() => _selected = id);
@@ -109,65 +157,80 @@ class _NearbyMapState extends State<NearbyMap>
     }
   }
 
-  static const _seoul = LatLng(37.5665, 126.9780);
+  /// 작은 점(위젯이 아닌 원)으로 그린 대여소는 지도 누름으로 찾는다 — 손가락 둘레 24px 안에서 가장 가까운 곳.
+  void _tapMap(TapPosition position, LatLng _) {
+    final at = position.relative;
+    final camera = _camera;
+    if (at == null || camera == null) return;
+    NearbyMapStation? best;
+    var bestD = 24.0;
+    for (final s in widget.stations) {
+      final p = camera.latLngToScreenOffset(LatLng(s.latitude, s.longitude));
+      final d = (p - at).distance;
+      if (d < bestD) {
+        bestD = d;
+        best = s;
+      }
+    }
+    if (best != null) _tap(best.id);
+  }
+
+  DeviceLocation? get _focusPoint => widget.focus ?? widget.location;
 
   LatLng get _center {
-    final location = widget.location;
-    if (location != null) return LatLng(location.latitude, location.longitude);
-    final station = widget.stations.firstOrNull;
+    final f = _focusPoint;
+    if (f != null) return LatLng(f.latitude, f.longitude);
+    final station = widget.stations.where((s) => s.alertCount > 0).firstOrNull;
     if (station != null) return LatLng(station.latitude, station.longitude);
     return _seoul;
   }
 
-  double get _zoom =>
-      widget.location != null || widget.stations.isNotEmpty ? 14 : 12;
+  double get _zoom => _focusPoint != null ? 15 : 11;
 
   double _height = 0;
 
-  /// 화면을 채운 지도는 아래 절반을 시트가 덮는다 — 내 위치가 보이는 위쪽 가운데에 오도록 올린다.
-  Offset get _focusOffset =>
-      widget.fullBleed ? Offset(0, -_height * .26) : Offset.zero;
-
   EdgeInsets get _fitPadding => EdgeInsets.fromLTRB(
     20,
-    64,
+    widget.controlsTop + 52,
     20,
     widget.fullBleed ? _height * .52 + 16 : 20,
   );
 
-  /// 처음 맞출 범위: 내 위치 둘레 [NearbyMap.focusMeters](기본 500m), 위치가 없으면 경보 대여소 전부.
+  CameraFit _around(DeviceLocation here, double meters) {
+    final dLat = meters / 111320;
+    final dLon = meters / (111320 * math.cos(here.latitude * math.pi / 180));
+    return CameraFit.bounds(
+      bounds: LatLngBounds(
+        LatLng(here.latitude - dLat, here.longitude - dLon),
+        LatLng(here.latitude + dLat, here.longitude + dLon),
+      ),
+      padding: _fitPadding,
+    );
+  }
+
+  /// 처음 맞출 범위: 정해 준 점들([NearbyMap.fitPoints]) → 볼 곳 둘레 500m → 서울의 고장 의심 전부.
   CameraFit? _initialFit() {
-    final here = widget.location;
-    // 들를 순서가 있으면 내 위치와 들를 곳이 다 보이게.
-    final stops = [
-      for (final id in widget.route)
-        for (final s in widget.stations)
-          if (s.id == id) LatLng(s.latitude, s.longitude),
-    ];
-    if (here != null && stops.isNotEmpty) {
+    final points = widget.fitPoints;
+    if (points != null && points.length >= 2) {
       return CameraFit.coordinates(
-        coordinates: [LatLng(here.latitude, here.longitude), ...stops],
+        coordinates: points,
         padding: _fitPadding + const EdgeInsets.all(24),
         maxZoom: 16,
       );
     }
-    if (here != null && widget.radiusMeters != null) {
-      final radius = math.min(widget.focusMeters, widget.radiusMeters!);
-      final dLat = radius / 111320;
-      final dLon = radius / (111320 * math.cos(here.latitude * math.pi / 180));
-      return CameraFit.bounds(
-        bounds: LatLngBounds(
-          LatLng(here.latitude - dLat, here.longitude - dLon),
-          LatLng(here.latitude + dLat, here.longitude + dLon),
-        ),
-        padding: _fitPadding,
-      );
+    if (points != null && points.length == 1) {
+      return _around((
+        latitude: points.first.latitude,
+        longitude: points.first.longitude,
+      ), widget.focusMeters);
     }
+    final f = _focusPoint;
+    if (f != null) return _around(f, widget.focusMeters);
     final alerts = [
       for (final s in widget.stations)
         if (s.alertCount > 0) LatLng(s.latitude, s.longitude),
     ];
-    if (here == null && alerts.length > 1) {
+    if (alerts.length > 1) {
       return CameraFit.coordinates(
         coordinates: alerts,
         padding: _fitPadding,
@@ -182,9 +245,18 @@ class _NearbyMapState extends State<NearbyMap>
     final fit = _initialFit();
     if (fit != null) {
       _map.fitCamera(fit);
-      return;
+    } else {
+      _map.move(_center, _zoom);
     }
-    _map.move(_center, _zoom, offset: _focusOffset);
+    _camera = _map.camera;
+  }
+
+  /// '내 위치' 단추: 검색한 곳이 있어도 내 자리로.
+  void _focusMe() {
+    final here = widget.location;
+    if (!_ready || here == null) return;
+    _map.fitCamera(_around(here, widget.focusMeters));
+    setState(() => _camera = _map.camera);
   }
 
   @override
@@ -205,9 +277,14 @@ class _NearbyMapState extends State<NearbyMap>
   @override
   void didUpdateWidget(NearbyMap old) {
     super.didUpdateWidget(old);
-    // 위치를 늦게 찾으면 그 자리로 옮긴다(첫 화면은 대여소 근처로 열려 있음).
-    if (_ready && old.location == null && widget.location != null) {
-      _focus();
+    final viewChanged = old.viewKey != widget.viewKey;
+    // 위치를 늦게 찾으면 그 자리로 옮긴다(따로 볼 곳을 고르지 않았을 때).
+    final locationArrived =
+        old.location == null && widget.location != null && widget.focus == null;
+    if (_ready && (viewChanged || locationArrived)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(_focus);
+      });
     }
   }
 
@@ -222,27 +299,57 @@ class _NearbyMapState extends State<NearbyMap>
     _map.move(camera.center, (camera.zoom + delta).clamp(10, 18).toDouble());
   }
 
+  void _onEvent(MapEvent event) {
+    final r = event.camera.rotation;
+    final settled =
+        event is MapEventMoveEnd ||
+        event is MapEventFlingAnimationEnd ||
+        event is MapEventDoubleTapZoomEnd ||
+        event is MapEventRotateEnd ||
+        event is MapEventScrollWheelZoom ||
+        event.source == MapEventSource.mapController ||
+        event.source == MapEventSource.fitCamera;
+    final rotated = (r - _rotation).abs() > .5;
+    _camera = event.camera;
+    if (settled || rotated) {
+      setState(() => _rotation = r);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final c = context.ridey;
+    final surface = Theme.of(context).colorScheme.surface;
     final radius = widget.fullBleed ? 0.0 : 20.0;
-    // 경보가 없는 대여소를 먼저, 강한 경보를 맨 위에 그린다.
-    int rank(NearbyMapStation s) =>
-        s.alertCount <= 0 ? 0 : (s.isHighAlert ? 2 : 1);
-    final ordered = [...widget.stations]
-      ..sort((a, b) => rank(a).compareTo(rank(b)));
-    // 누른 대여소는 맨 위에(다른 핀에 가리지 않게).
-    if (_selected != null) {
-      final i = ordered.indexWhere((s) => s.id == _selected);
-      if (i >= 0) ordered.add(ordered.removeAt(i));
+    final camera = _camera;
+    final zoom = camera?.zoom ?? _zoom;
+    final view = camera?.visibleBounds;
+    // 확대해서 보이는 곳만 흰 원(수)으로 — 나머지 대여소는 가벼운 점.
+    final countsHere = widget.showCounts && zoom >= _countZoom && view != null;
+    bool inView(NearbyMapStation s) =>
+        view == null || view.contains(LatLng(s.latitude, s.longitude));
+
+    final widgets = <NearbyMapStation>[];
+    final dots = <NearbyMapStation>[];
+    for (final s in widget.stations) {
+      final asWidget =
+          s.alertCount > 0 ||
+          widget.favoriteIds.contains(s.id) ||
+          widget.stopNumbers.containsKey(s.id) ||
+          s.id == _selected ||
+          (countsHere && inView(s));
+      (asWidget ? widgets : dots).add(s);
     }
-    final byId = {for (final s in widget.stations) s.id: s};
-    final routeIds = [
-      for (final id in widget.route)
-        if (byId.containsKey(id)) id,
-    ];
+    // 경보가 없는 대여소를 먼저, 강한 경보를 위에, 누른 대여소를 맨 위에 그린다.
+    int rank(NearbyMapStation s) => s.id == _selected
+        ? 3
+        : s.alertCount <= 0
+        ? 0
+        : (s.isHighAlert ? 2 : 1);
+    widgets.sort((a, b) => rank(a).compareTo(rank(b)));
     final here = widget.location;
+    final dotRadius = zoom < 12 ? 2.5 : (zoom < 14 ? 4.0 : 5.5);
 
     Widget buildMap() => FlutterMap(
       mapController: _map,
@@ -251,7 +358,7 @@ class _NearbyMapState extends State<NearbyMap>
         initialZoom: _zoom,
         // 처음 모습은 지도를 만들 때 정한다(다 만든 뒤 옮기면 첫 타일을 못 받는 경우가 있었다).
         initialCameraFit: _initialFit(),
-        minZoom: 10,
+        minZoom: 9,
         maxZoom: 18,
         backgroundColor: dark ? const Color(0xFF1B1D21) : c.fill,
         interactionOptions: const InteractionOptions(
@@ -263,77 +370,51 @@ class _NearbyMapState extends State<NearbyMap>
               // 두 손가락으로 돌릴 수 있다(진짜 지도 앱처럼). 돌아가면 나침반 단추가 북쪽으로 되돌린다.
               InteractiveFlag.rotate,
         ),
-        onMapEvent: (event) {
-          final r = event.camera.rotation;
-          if ((r - _rotation).abs() > .5) setState(() => _rotation = r);
-        },
+        onMapEvent: _onEvent,
+        onTap: _tapMap,
         onMapReady: () {
           _ready = true;
+          _camera = _map.camera;
           if (_initialFit() == null) _focus();
+          if (mounted) setState(() {});
         },
       ),
       children: [
-        if (NearbyMap._tilesEnabled)
-          TileLayer(
-            // OpenStreetMap 기본 지도(키 없음, 한글 지명). CARTO 는 앱에서 키를 요구해서 쓰지 않는다.
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'kr.bikedoctor.ridey',
-            maxNativeZoom: 19,
-            // 원래 색은 알록달록해 신호 주황이 묻힌다 — 밝을 땐 거의 회색으로, 어두울 땐 뒤집어 어둡게.
-            tileBuilder: (context, tile, _) => ColorFiltered(
-              colorFilter: ColorFilter.matrix(dark ? _darkTiles : _lightTiles),
-              child: tile,
-            ),
-            // flutter_map 의 디스크 캐시는 시작할 때 저장 폴더를 찾다 실패하면 타일이 하나도 안 그려진다
-            // (테스트에서 재현). 지도 그림은 앱이 켜져 있는 동안 메모리에 남으니 디스크 캐시는 끈다.
-            tileProvider: NetworkTileProvider(
-              cachingProvider: const DisabledMapCachingProvider(),
-            ),
-          ),
-        if (widget.location != null && widget.radiusMeters != null)
-          CircleLayer(
-            circles: [
-              CircleMarker(
-                point: LatLng(
-                  widget.location!.latitude,
-                  widget.location!.longitude,
-                ),
-                radius: widget.radiusMeters!,
-                useRadiusInMeter: true,
-                color: c.calm.withValues(alpha: dark ? .07 : .05),
-                borderColor: c.calm.withValues(alpha: .45),
+        if (NearbyMap.tilesEnabled) rideyTileLayer(context),
+        if (widget.routePoints.length >= 2)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.routePoints,
+                color: c.calm,
+                strokeWidth: 4,
+                borderColor: surface,
                 borderStrokeWidth: 1.5,
               ),
             ],
           ),
-        if (here != null && routeIds.isNotEmpty)
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: [
-                  LatLng(here.latitude, here.longitude),
-                  for (final id in routeIds)
-                    LatLng(byId[id]!.latitude, byId[id]!.longitude),
-                ],
-                color: c.calm,
-                strokeWidth: 3,
-                pattern: StrokePattern.dashed(segments: const [8, 6]),
+        // 경보 없는 대여소: 흰 점 + 회색 테(가벼운 원 — 서울 전체 2천여 곳을 그려도 버벅이지 않게).
+        CircleLayer(
+          circles: [
+            for (final s in dots)
+              CircleMarker(
+                point: LatLng(s.latitude, s.longitude),
+                radius: dotRadius,
+                color: surface,
+                borderColor: c.muted,
+                borderStrokeWidth: zoom < 12 ? 1 : 2,
               ),
-            ],
-          ),
+          ],
+        ),
         MarkerLayer(
+          // 지도를 돌려도 숫자는 똑바로 선다(지도 앱의 글자처럼).
+          rotate: true,
           markers: [
-            for (final s in ordered)
+            for (final s in widgets)
               Marker(
                 point: LatLng(s.latitude, s.longitude),
-                width:
-                    s.alertCount > 0 || widget.showCounts || _selected == s.id
-                    ? 64
-                    : 28,
-                height:
-                    s.alertCount > 0 || widget.showCounts || _selected == s.id
-                    ? 64
-                    : 28,
+                width: 64,
+                height: 64,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _tap(s.id),
@@ -347,22 +428,34 @@ class _NearbyMapState extends State<NearbyMap>
                     child: _StationPin(
                       station: s,
                       ping: _ping,
-                      showCount: widget.showCounts,
+                      showCount: widget.showCounts && countsHere,
                       selected: _selected == s.id,
+                      favorite: widget.favoriteIds.contains(s.id),
+                      stop: widget.stopNumbers[s.id],
                     ),
                   ),
                 ),
               ),
-            if (widget.location != null)
+            if (here != null)
               Marker(
-                point: LatLng(
-                  widget.location!.latitude,
-                  widget.location!.longitude,
-                ),
+                point: LatLng(here.latitude, here.longitude),
                 width: 44,
                 height: 44,
                 // 내 위치 점은 누르는 것이 아니다 — 바로 옆 대여소를 누를 때 가로막지 않게.
                 child: const IgnorePointer(child: _UserDot()),
+              ),
+            if (widget.focus != null &&
+                (here == null ||
+                    widget.focus!.latitude != here.latitude ||
+                    widget.focus!.longitude != here.longitude))
+              Marker(
+                point: LatLng(widget.focus!.latitude, widget.focus!.longitude),
+                width: 36,
+                height: 36,
+                alignment: Alignment.topCenter,
+                child: IgnorePointer(
+                  child: Icon(Icons.place_rounded, size: 36, color: c.calm),
+                ),
               ),
           ],
         ),
@@ -387,17 +480,17 @@ class _NearbyMapState extends State<NearbyMap>
                   Positioned.fill(child: buildMap()),
                   Positioned(
                     left: 12,
-                    top: 12,
+                    top: widget.controlsTop,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _ZoomControls(onZoom: _zoomBy),
-                        if (widget.location != null) ...[
+                        if (here != null) ...[
                           const SizedBox(height: 8),
                           _RoundButton(
                             tooltip: '내 위치',
                             icon: Icons.my_location_rounded,
-                            onPressed: _focus,
+                            onPressed: _focusMe,
                           ),
                         ],
                         if (_rotation.abs() % 360 > .5) ...[
@@ -416,12 +509,10 @@ class _NearbyMapState extends State<NearbyMap>
                   // 지도 자료 출처(라이선스 조건) — 작게, 위쪽에(아래는 시트가 덮는다).
                   Positioned(
                     right: 8,
-                    top: 8,
+                    top: widget.controlsTop - 4,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surface.withValues(alpha: .8),
+                        color: surface.withValues(alpha: .8),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Padding(
@@ -470,6 +561,8 @@ class _StationPin extends StatelessWidget {
     required this.ping,
     this.showCount = false,
     this.selected = false,
+    this.favorite = false,
+    this.stop,
   });
 
   final NearbyMapStation station;
@@ -479,27 +572,56 @@ class _StationPin extends StatelessWidget {
   /// 카드가 열린 대여소: 잉크 테두리 고리.
   final bool selected;
 
+  /// 즐겨찾는 대여소: 파란 고리.
+  final bool favorite;
+
+  /// 들를 순서 번호(1부터): 오른쪽 위 파란 원.
+  final int? stop;
+
   @override
   Widget build(BuildContext context) {
     final pin = _pin(context);
-    if (!selected) return pin;
+    if (!selected && !favorite && stop == null) return pin;
     final ink = Theme.of(context).colorScheme.onSurface;
     final surface = Theme.of(context).colorScheme.surface;
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        if (selected)
+        if (selected || favorite)
           Container(
             width: 42,
             height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: surface.withValues(alpha: .7),
-              border: Border.all(color: ink, width: 3),
+              border: Border.all(
+                color: selected ? ink : context.ridey.calm,
+                width: 3,
+              ),
             ),
           ),
         pin,
+        if (stop != null)
+          Align(
+            alignment: const Alignment(.62, -.62),
+            child: Container(
+              width: 18,
+              height: 18,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: context.ridey.calm,
+                shape: BoxShape.circle,
+                border: Border.all(color: surface, width: 1.5),
+              ),
+              child: Text(
+                '$stop',
+                style: context
+                    .rideyNumbers(const TextStyle())
+                    ?.copyWith(fontSize: 10, height: 1, color: Colors.white),
+              ),
+            ),
+          ),
       ],
     );
   }

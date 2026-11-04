@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
+import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/rider/nearby_map.dart';
+import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
+import 'package:ridey_app/features/staff/pickup_plan.dart';
+import 'package:ridey_app/features/staff/road_route.dart';
+import 'package:ridey_app/features/staff/staff_bike.dart';
 import 'package:ridey_app/features/staff/staff_clock.dart';
+import 'package:ridey_app/features/staff/staff_navigation_page.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/staff/staff_source_line.dart';
-import 'package:ridey_app/features/ops/ops_list.dart';
-import 'package:ridey_app/features/rider/nearby_stations.dart';
-import 'package:ridey_app/features/staff/staff_bike.dart';
 import 'package:ridey_app/widgets/ridey_map_sheet.dart';
-import 'package:ridey_app/widgets/station_card.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
+import 'package:ridey_app/widgets/station_card.dart';
 
-class StaffOverviewPage extends StatelessWidget {
+/// 직원 첫 화면: 지도(서울 전체 고장 의심 + 추천 경로) 위에 시트.
+/// 시트: 오늘 추천 경로(재배치 + 고장 의심 수거를 한 번에, 또는 고장 의심만) → 길안내 시작,
+/// 어제 아침 목록 성적, 구별 현황(누르면 그 구의 대여소별 목록).
+class StaffOverviewPage extends StatefulWidget {
   const StaffOverviewPage({
     super.key,
     required this.session,
@@ -22,6 +29,13 @@ class StaffOverviewPage extends StatelessWidget {
 
   final StaffSession session;
   final ValueChanged<String> onOpenDistrict;
+
+  @override
+  State<StaffOverviewPage> createState() => _StaffOverviewPageState();
+}
+
+class _StaffOverviewPageState extends State<StaffOverviewPage> {
+  StaffSession get session => widget.session;
 
   @override
   Widget build(BuildContext context) {
@@ -33,24 +47,56 @@ class StaffOverviewPage extends StatelessWidget {
       return _StaffFailure(onRetry: session.reload);
     }
 
-    final rows = districtRows(session.bikes, session.stations);
+    final rows = districtRows(session.bikesWithReports, session.stations);
     final total = session.bikes.length;
     final high = session.bikes.where((bike) => bike.isHighAlert).length;
+    final plan = session.plan;
+    final road = session.roadForPlan;
+    final here = session.location;
+    // 경로가 생기면 도로 길을 한 번 받아 둔다(지도에 실제 길로 그리고 길안내에 씀).
+    if (here != null && !plan.isEmpty && road == null && !session.routing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => session.loadRoad());
+    }
+    final stopNumbers = {
+      for (var i = 0; i < plan.stops.length; i++)
+        plan.stops[i].station.id: i + 1,
+    };
+    final fit = here != null && !plan.isEmpty
+        ? [
+            LatLng(here.latitude, here.longitude),
+            for (final s in plan.stops)
+              LatLng(s.station.latitude, s.station.longitude),
+          ]
+        : _districtPoints();
 
-    // 시민 홈과 같은 꼴: 지도가 화면을 채우고 요약·전환·구 목록은 아래 시트에.
     return RideyMapSheet(
       onRefresh: session.reload,
       map: NearbyMap(
         fullBleed: true,
-        stations: _alertStations(session),
-        location: session.location,
-        radiusMeters: session.location == null ? null : 2000,
-        route: [for (final stop in session.visitOrder()) stop.station.id],
+        stations: _mapStations(plan),
+        location: here,
+        stopNumbers: stopNumbers,
+        routePoints:
+            road?.points ??
+            (fit.length >= 2 && here != null && !plan.isEmpty ? fit : const []),
+        fitPoints: fit.isEmpty ? null : fit,
+        // 담당 구·경로 방식·출처를 바꾸면 지도를 다시 맞춘다(구를 바꿔도 지도가 그대로이던 문제).
+        viewKey: [
+          (session.assigned ?? const []).join(','),
+          session.suspectsOnly,
+          session.source,
+          plan.stops.map((s) => s.station.id).join(','),
+        ].join('|'),
         onStationTap: (id) => _openStation(context, id),
       ),
       children: [
-        // 재배치 길에서 바로 쓰는 것: 지금 서 있는 곳 가까이에서 먼저 가져갈 자전거.
-        _NearMe(session: session, onOpen: (id) => _openStation(context, id)),
+        _RouteCard(
+          session: session,
+          plan: plan,
+          road: road,
+          onStart: () => _startNavigation(context),
+          onOpen: (id) => _openStation(context, id),
+        ),
         if (session.scores.isNotEmpty) ...[
           const SizedBox(height: 18),
           _ListScore(scores: session.scores),
@@ -59,7 +105,8 @@ class StaffOverviewPage extends StatelessWidget {
         Text('구별 현황', style: theme.textTheme.displayLarge),
         const SizedBox(height: 8),
         Text(
-          '지금 고장 의심 $total대 · 그중 강한 경보 $high대',
+          '지금 고장 의심 $total대 · 그중 강한 경보 $high대'
+          '${session.reports.isEmpty ? '' : ' · 시민 신고 ${session.reports.length}대'}',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: context.ridey.muted,
           ),
@@ -106,7 +153,7 @@ class StaffOverviewPage extends StatelessWidget {
                     '${row.bikes}대',
                     style: context.rideyNumbers(theme.textTheme.titleMedium),
                   ),
-                  onTap: () => onOpenDistrict(row.district),
+                  onTap: () => widget.onOpenDistrict(row.district),
                 ),
             ],
           ),
@@ -114,101 +161,222 @@ class StaffOverviewPage extends StatelessWidget {
     );
   }
 
+  /// 담당 구가 있으면 그 구의 고장 의심 대여소가 다 보이게.
+  List<LatLng> _districtPoints() {
+    final chosen = session.assigned ?? const <String>[];
+    if (chosen.isEmpty) return const [];
+    return [
+      for (final bike in session.bikesWithReports)
+        if (session.stations[bike.station] case final s?
+            when chosen.contains(s.district))
+          LatLng(s.latitude, s.longitude),
+    ];
+  }
+
+  /// 지도: 서울 전체 고장 의심 대여소 + 경로에 든 재배치 대여소.
+  List<NearbyMapStation> _mapStations(PickupPlan plan) {
+    final pins = <String, NearbyMapStation>{};
+    for (final bike in session.bikesWithReports) {
+      final s = session.stations[bike.station];
+      if (s == null) continue;
+      final current = pins[s.id];
+      pins[s.id] = NearbyMapStation(
+        id: s.id,
+        latitude: s.latitude,
+        longitude: s.longitude,
+        isHighAlert: bike.isHighAlert || (current?.isHighAlert ?? false),
+        alertCount: (current?.alertCount ?? 0) + 1,
+        parkedBikes: session.occupancy[s.id]?.bikes,
+      );
+    }
+    for (final stop in plan.stops) {
+      pins.putIfAbsent(
+        stop.station.id,
+        () => NearbyMapStation(
+          id: stop.station.id,
+          latitude: stop.station.latitude,
+          longitude: stop.station.longitude,
+          parkedBikes: stop.station.bikes,
+        ),
+      );
+    }
+    return pins.values.toList(growable: false);
+  }
+
+  Future<void> _startNavigation(BuildContext context) async {
+    final here = session.location;
+    if (here == null || session.plan.isEmpty) return;
+    await session.loadRoad();
+    if (!context.mounted) return;
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StaffNavigationPage(
+          plan: session.plan,
+          road: session.roadForPlan,
+          start: here,
+          positions: session.positions?.call(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openStation(BuildContext context, String id) {
     final station = session.stations[id];
+    final occ = session.occupancy[id];
     return showStationCard(
       context,
       name: station?.name ?? '대여소 $id',
-      district: station?.district,
+      district: [
+        ?station?.district,
+        if (occ != null) '거치 ${occ.bikes}대 / 거치대 ${occ.racks}',
+      ].join(' · '),
       meters: session.metersTo(id),
       latitude: station?.latitude,
       longitude: station?.longitude,
       bikes: [
-        for (final bike in session.bikes)
+        for (final bike in session.bikesWithReports)
           if (bike.station == id) bike,
       ],
+      note: (bike) {
+        final n = session.reportsFor(bike.bike);
+        return n > 0 ? '시민 신고 $n건' : null;
+      },
       onBike: (bike) => openStaffBike(context, session, bike),
     );
   }
 }
 
-/// '지금 내 주변 2km' — 가까운 고장 의심 대여소 다섯 곳. 위치가 없으면 켜는 단추만.
-class _NearMe extends StatelessWidget {
-  const _NearMe({required this.session, required this.onOpen});
+/// 오늘 추천 경로: 재배치(넘친 곳에서 싣고 빈 곳에 내려놓기)와 고장 의심 수거를 한 번에 도는 순서.
+class _RouteCard extends StatelessWidget {
+  const _RouteCard({
+    required this.session,
+    required this.plan,
+    required this.road,
+    required this.onStart,
+    required this.onOpen,
+  });
 
   final StaffSession session;
+  final PickupPlan plan;
+  final RoadRoute? road;
+  final VoidCallback onStart;
   final ValueChanged<String> onOpen;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.ridey;
+    final modes = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        RideySelectBadge(
+          label: '재배치 + 고장 의심',
+          selected: !session.suspectsOnly,
+          onSelected: (_) => session.setSuspectsOnly(false),
+        ),
+        RideySelectBadge(
+          label: '고장 의심만',
+          selected: session.suspectsOnly,
+          onSelected: (_) => session.setSuspectsOnly(true),
+        ),
+      ],
+    );
     if (session.location == null) {
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Text(
-              '위치를 켜면 지금 서 있는 곳 가까이의 고장 의심부터 보여 줘요.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
-            ),
+          Text('오늘 추천 경로', style: theme.textTheme.displayLarge),
+          const SizedBox(height: 8),
+          Text(
+            '위치를 켜면 지금 있는 곳에서 출발해, 넘친 대여소에서 싣고 빈 대여소에 내려놓으면서 '
+            '고장 의심 자전거도 함께 거두는 순서를 짜 드려요.',
+            style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
           ),
-          TextButton(onPressed: session.locate, child: const Text('내 위치 찾기')),
+          const SizedBox(height: 12),
+          RideyButton.secondary(
+            label: '내 위치 찾기',
+            icon: Icons.my_location_rounded,
+            onPressed: session.locate,
+          ),
         ],
       );
     }
-    final near = session.nearby();
-    final count = near.fold<int>(0, (n, e) => n + e.bikes.length);
-    final stops = session.visitOrder();
-    final walk = stops.fold<double>(0, (m, e) => m + e.leg);
+    final summary = [
+      '${plan.stops.length}곳',
+      if (road != null)
+        '도로 ${navDistance(road!.distance)} · 차로 약 ${(road!.duration / 60).ceil()}분'
+      else
+        '직선 ${distanceText(plan.totalMeters)}',
+    ].join(' · ');
+    final work = [
+      if (plan.suspects > 0) '고장 의심 ${plan.suspects}대 수거',
+      if (plan.pickedUp > 0) '넘친 자전거 ${plan.pickedUp}대 싣기',
+      if (plan.droppedOff > 0) '빈 곳에 ${plan.droppedOff}대 내려놓기',
+    ].join(' · ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text.rich(
-          TextSpan(
-            style: theme.textTheme.headlineLarge?.copyWith(fontSize: 24),
-            children: [
-              const TextSpan(text: '지금 내 주변 2km에\n고장 의심 '),
-              TextSpan(
-                text: '$count대',
-                style: TextStyle(color: c.signal),
-              ),
-            ],
-          ),
-        ),
+        Text('오늘 추천 경로', style: theme.textTheme.displayLarge),
+        const SizedBox(height: 10),
+        modes,
         const SizedBox(height: 12),
-        if (stops.isEmpty)
+        if (plan.isEmpty)
           Text(
-            '가까운 대여소에는 지금 고장 의심 자전거가 없어요.',
+            session.suspectsOnly
+                ? '담당 구역에 지금 고장 의심 자전거가 없어요.'
+                : '담당 구역에 지금 거둘 고장 의심도, 넘치거나 빈 대여소도 없어요.',
             style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
           )
         else ...[
-          // 재배치 차로 한 바퀴 도는 순서: 매번 가장 가까운 다음 곳(강한 경보는 먼저).
           Text(
-            '들를 순서 · ${stops.length}곳 · 이어서 ${distanceText(walk)}',
+            summary,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 8),
+          if (work.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              work,
+              style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+            ),
+          ],
+          const SizedBox(height: 10),
           RideyListCard(
             children: [
-              for (var i = 0; i < stops.length; i++)
+              for (var i = 0; i < plan.stops.length; i++)
                 RideyRow(
-                  leading: _StopNumber(number: i + 1),
-                  title: stops[i].station.name.trim(),
-                  subtitle: [
-                    '고장 의심 ${stops[i].bikes.length}대',
-                    if (stops[i].bikes.any((b) => b.isHighAlert)) '강한 경보 있음',
-                  ].join(' · '),
+                  leading: _StopNumber(
+                    number: i + 1,
+                    suspects: plan.stops[i].suspects.isNotEmpty,
+                  ),
+                  title: plan.stops[i].station.name,
+                  subtitle: plan.stops[i].task,
                   trailing: Text(
                     i == 0
-                        ? distanceText(stops[i].leg)
-                        : '+${distanceText(stops[i].leg)}',
+                        ? distanceText(plan.stops[i].leg)
+                        : '+${distanceText(plan.stops[i].leg)}',
                     style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
                   ),
-                  onTap: () => onOpen(stops[i].station.id),
+                  onTap: () => onOpen(plan.stops[i].station.id),
                 ),
             ],
+          ),
+          const SizedBox(height: 12),
+          RideyButton(
+            label: '길안내 시작',
+            icon: Icons.navigation_rounded,
+            busy: session.routing,
+            onPressed: onStart,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            session.suspectsOnly
+                ? '고장 의심 대여소만, 가장 짧게 도는 순서예요(가까운 순서를 잡고 구간을 바꿔 보며 줄임).'
+                : '차 한 대(${plan.capacity}대 실음) 기준. 넘친 곳(거치대의 1.2배 넘음)에서 싣고 빈 곳(25% 아래)에 내려놓으면서, '
+                      '고장 의심은 정비센터로 가져가도록 거둬요.',
+            style: theme.textTheme.bodySmall?.copyWith(color: c.muted),
           ),
         ],
       ],
@@ -217,25 +385,31 @@ class _NearMe extends StatelessWidget {
 }
 
 class _StopNumber extends StatelessWidget {
-  const _StopNumber({required this.number});
+  const _StopNumber({required this.number, required this.suspects});
 
   final int number;
+  final bool suspects;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.ridey;
     return Container(
       width: 26,
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: context.ridey.calm,
+        color: suspects ? c.signal : c.calm,
         shape: BoxShape.circle,
       ),
       child: Text(
         '$number',
         style: context
             .rideyNumbers(const TextStyle())
-            ?.copyWith(fontSize: 13, height: 1, color: Colors.white),
+            ?.copyWith(
+              fontSize: 13,
+              height: 1,
+              color: suspects ? RideyColors.ink : Colors.white,
+            ),
       ),
     );
   }
@@ -306,23 +480,6 @@ String _md(String day) {
   final parts = day.split('-');
   if (parts.length != 3) return day;
   return '${int.tryParse(parts[1]) ?? parts[1]}/${int.tryParse(parts[2]) ?? parts[2]}';
-}
-
-List<NearbyMapStation> _alertStations(StaffSession session) {
-  final pins = <String, NearbyMapStation>{};
-  for (final bike in session.bikes) {
-    final catalog = session.stations[bike.station];
-    if (catalog == null) continue;
-    final current = pins[catalog.id];
-    pins[catalog.id] = NearbyMapStation(
-      id: catalog.id,
-      latitude: catalog.latitude,
-      longitude: catalog.longitude,
-      isHighAlert: bike.isHighAlert || (current?.isHighAlert ?? false),
-      alertCount: (current?.alertCount ?? 0) + 1,
-    );
-  }
-  return pins.values.toList(growable: false);
 }
 
 class _StaffFailure extends StatelessWidget {

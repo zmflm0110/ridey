@@ -10,9 +10,12 @@ import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
 class StaffListPage extends StatelessWidget {
-  const StaffListPage({super.key, required this.session});
+  const StaffListPage({super.key, required this.session, this.title});
 
   final StaffSession session;
+
+  /// 구별 현황에서 한 구를 눌러 열었을 때 그 구 이름(뒤로 단추와 함께).
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -41,14 +44,38 @@ class StaffListPage extends StatelessWidget {
         return b.value.length.compareTo(a.value.length);
       });
 
-    return RefreshIndicator.adaptive(
+    final list = RefreshIndicator.adaptive(
       color: context.ridey.signal,
       onRefresh: session.reload,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, rideyTabClearance),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          title == null ? rideyTabClearance : 32,
+        ),
         children: [
-          Text('목록', style: theme.textTheme.displayLarge),
+          if (title == null)
+            Text('목록', style: theme.textTheme.displayLarge)
+          else
+            Row(
+              children: [
+                IconButton(
+                  tooltip: '뒤로',
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                  icon: const Icon(Icons.chevron_left_rounded, size: 30),
+                ),
+                const SizedBox(width: 2),
+                Text(title!, style: theme.textTheme.displayLarge),
+              ],
+            ),
           const SizedBox(height: 14),
           // 실시간/아침 목록은 구별 현황에서 고른다. 여기서는 지금 무엇을 보는지만.
           StaffSourceLine(session: session),
@@ -127,11 +154,16 @@ class StaffListPage extends StatelessWidget {
                       title: bike.bike,
                       // 마지막 헛대여가 최근일수록 아직 그 자리에 있을 가능성이 크다.
                       subtitle: [
-                        bike.isHighAlert ? '강한 경보' : '경보',
+                        if (bike.chain == 0)
+                          '시민 신고'
+                        else
+                          bike.isHighAlert ? '강한 경보' : '경보',
+                        if (session.reportsFor(bike.bike) > 0)
+                          '시민 신고 ${session.reportsFor(bike.bike)}건',
                         if (bike.lastDud.isNotEmpty) '마지막 헛대여 ${bike.lastDud}',
                       ].join(' · '),
                       trailing: Text(
-                        '연쇄 ${bike.chain}명',
+                        bike.chain > 0 ? '연쇄 ${bike.chain}명' : '신고',
                         style: context
                             .rideyNumbers(theme.textTheme.titleMedium)
                             ?.copyWith(
@@ -148,5 +180,7 @@ class StaffListPage extends StatelessWidget {
         ],
       ),
     );
+    if (title == null) return list;
+    return Scaffold(body: SafeArea(bottom: false, child: list));
   }
 }

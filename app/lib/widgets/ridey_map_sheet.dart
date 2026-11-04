@@ -11,7 +11,11 @@ class RideyMapSheet extends StatelessWidget {
     required this.map,
     required this.children,
     this.onRefresh,
+    this.top,
   });
+
+  /// 지도 위 맨 위에 떠 있는 것(시민 홈의 장소 검색 칸).
+  final Widget? top;
 
   final Widget map;
   final List<Widget> children;
@@ -24,6 +28,7 @@ class RideyMapSheet extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(child: map),
+        if (top != null) Positioned(left: 12, right: 12, top: 10, child: top!),
         DraggableScrollableSheet(
           initialChildSize: .52,
           minChildSize: .22,
