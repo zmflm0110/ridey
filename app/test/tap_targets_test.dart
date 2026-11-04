@@ -96,9 +96,9 @@ void main() {
   }
 
   /// 지금 화면에 보이는 모든 눌리는 것을 검사한다.
-  List<String> problems(WidgetTester tester, String screen) {
+  List<String> problems(WidgetTester tester, String screen, {Finder? within}) {
     final out = <String>[];
-    final tappables = find.byWidgetPredicate(
+    final all = find.byWidgetPredicate(
       (w) =>
           (w is IconButton && w.onPressed != null) ||
           (w is ButtonStyleButton && w.onPressed != null) ||
@@ -106,6 +106,10 @@ void main() {
           (w is RideyPressable && w.onTap != null) ||
           (w is ChoiceChip && w.onSelected != null),
     );
+    // 떠 있는 카드(모달)가 열려 있으면 뒤쪽은 일부러 막혀 있다 — 카드 안만 본다.
+    final tappables = within == null
+        ? all
+        : find.descendant(of: within, matching: all);
     for (final element in tappables.evaluate()) {
       final box = element.renderObject;
       if (box is! RenderBox || !box.hasSize || !box.attached) continue;
@@ -157,6 +161,15 @@ void main() {
     found.addAll(problems(tester, 'home'));
     await tapText(tester, '주변 대여소 현황');
     found.addAll(problems(tester, 'home stations'));
+    // 지도에서 대여소를 누르면 뜨는 카드(길 찾기·대여하기 단추 포함)
+    await tester.tap(find.bySemanticsLabel(RegExp('고장 의심 .*대가 있는 대여소')).first);
+    await tester.pumpAndSettle();
+    expect(find.text('길 찾기'), findsOneWidget);
+    found.addAll(
+      problems(tester, 'station card', within: find.byType(BottomSheet)),
+    );
+    await tester.tapAt(const Offset(_w / 2, 120));
+    await tester.pumpAndSettle();
 
     await tapText(tester, '자전거 확인');
     found.addAll(problems(tester, 'check'));

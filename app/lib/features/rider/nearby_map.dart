@@ -83,6 +83,7 @@ class _NearbyMapState extends State<NearbyMap>
     duration: const Duration(milliseconds: 2200),
   );
   var _ready = false;
+  double _rotation = 0;
   var _pinged = false;
 
   static const _seoul = LatLng(37.5665, 126.9780);
@@ -211,8 +212,14 @@ class _NearbyMapState extends State<NearbyMap>
               InteractiveFlag.drag |
               InteractiveFlag.pinchZoom |
               InteractiveFlag.doubleTapZoom |
-              InteractiveFlag.flingAnimation,
+              InteractiveFlag.flingAnimation |
+              // 두 손가락으로 돌릴 수 있다(진짜 지도 앱처럼). 돌아가면 나침반 단추가 북쪽으로 되돌린다.
+              InteractiveFlag.rotate,
         ),
+        onMapEvent: (event) {
+          final r = event.camera.rotation;
+          if ((r - _rotation).abs() > .5) setState(() => _rotation = r);
+        },
         onMapReady: () {
           _ready = true;
           if (_initialFit() == null) _focus();
@@ -285,7 +292,8 @@ class _NearbyMapState extends State<NearbyMap>
                 ),
                 width: 44,
                 height: 44,
-                child: const _UserDot(),
+                // 내 위치 점은 누르는 것이 아니다 — 바로 옆 대여소를 누를 때 가로막지 않게.
+                child: const IgnorePointer(child: _UserDot()),
               ),
           ],
         ),
@@ -311,7 +319,30 @@ class _NearbyMapState extends State<NearbyMap>
                   Positioned(
                     left: 12,
                     top: 12,
-                    child: _ZoomControls(onZoom: _zoomBy),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ZoomControls(onZoom: _zoomBy),
+                        if (widget.location != null) ...[
+                          const SizedBox(height: 8),
+                          _RoundButton(
+                            tooltip: '내 위치',
+                            icon: Icons.my_location_rounded,
+                            onPressed: _focus,
+                          ),
+                        ],
+                        if (_rotation.abs() % 360 > .5) ...[
+                          const SizedBox(height: 8),
+                          _RoundButton(
+                            tooltip: '북쪽 위로',
+                            // 나침반 바늘이 지도의 북쪽을 가리킨다.
+                            icon: Icons.navigation_rounded,
+                            angle: _rotation * math.pi / 180,
+                            onPressed: () => _map.rotate(0),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                   // 지도 자료 출처(라이선스 조건) — 작게, 위쪽에(아래는 시트가 덮는다).
                   Positioned(
@@ -507,6 +538,50 @@ class _UserDot extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 지도 위 둥근 단추(내 위치·나침반): 확대 단추와 같은 면 색 + 1px 선.
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.angle = 0,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final double angle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ridey;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: c.line),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        tooltip: tooltip,
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        icon: Transform.rotate(
+          angle: angle,
+          child: Icon(
+            icon,
+            size: 20,
+            color: angle == 0
+                ? Theme.of(context).colorScheme.onSurface
+                : c.signal,
+          ),
+        ),
+      ),
     );
   }
 }

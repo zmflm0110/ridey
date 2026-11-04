@@ -114,6 +114,8 @@ class StaffOverviewPage extends StatelessWidget {
       name: station?.name ?? '대여소 $id',
       district: station?.district,
       meters: session.metersTo(id),
+      latitude: station?.latitude,
+      longitude: station?.longitude,
       bikes: [
         for (final bike in session.bikes)
           if (bike.station == id) bike,

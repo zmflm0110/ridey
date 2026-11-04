@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/rider/directions.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
 /// 지도에서 대여소를 누르면 아래에서 올라오는 카드(지도 앱의 '핀 정보' 꼴):
@@ -16,6 +17,8 @@ Future<void> showStationCard(
   required List<LiveBike> bikes,
   required void Function(LiveBike bike) onBike,
   Future<void> Function()? onRent,
+  double? latitude,
+  double? longitude,
 }) {
   final sorted = [...bikes]
     ..sort((a, b) {
@@ -126,16 +129,39 @@ Future<void> showStationCard(
                     ],
                   ),
                 ],
-                if (onRent != null) ...[
-                  const SizedBox(height: 16),
-                  RideyButton.secondary(
-                    label: '따릉이 앱에서 대여하기',
-                    onPressed: () {
-                      Navigator.of(sheet).pop();
-                      onRent();
-                    },
-                  ),
-                ],
+                const SizedBox(height: 16),
+                // 길찾기(지도 앱의 도보 길안내)와 대여하기를 나란히 — 둘 다 이 대여소로 가는 다음 행동.
+                Row(
+                  children: [
+                    if (latitude != null && longitude != null)
+                      Expanded(
+                        child: RideyButton(
+                          label: '길 찾기',
+                          icon: Icons.directions_walk_rounded,
+                          onPressed: () {
+                            Navigator.of(sheet).pop();
+                            openWalkingDirections(
+                              latitude: latitude,
+                              longitude: longitude,
+                              name: name,
+                            );
+                          },
+                        ),
+                      ),
+                    if (latitude != null && longitude != null && onRent != null)
+                      const SizedBox(width: 8),
+                    if (onRent != null)
+                      Expanded(
+                        child: RideyButton.secondary(
+                          label: '대여하기',
+                          onPressed: () {
+                            Navigator.of(sheet).pop();
+                            onRent();
+                          },
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

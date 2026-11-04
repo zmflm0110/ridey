@@ -232,6 +232,8 @@ class _LoadedHomeState extends State<_LoadedHome> {
       bikes: [for (final item in here) item.bike],
       onBike: widget.onBikeSelected,
       onRent: widget.openOfficialApp,
+      latitude: row?.latitude ?? here.firstOrNull?.latitude,
+      longitude: row?.longitude ?? here.firstOrNull?.longitude,
     );
   }
 
