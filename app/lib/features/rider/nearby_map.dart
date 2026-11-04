@@ -39,7 +39,11 @@ class NearbyMap extends StatefulWidget {
     required this.onStationTap,
     this.location,
     this.fullBleed = false,
+    this.showCounts = false,
   });
+
+  /// '주변 대여소 현황' 일 때: 고장 의심이 없는 대여소도 탈 만한 자전거 수를 흰 원에 보여 준다.
+  final bool showCounts;
 
   /// 홈처럼 화면을 채울 때: 둥근 카드·테두리·고정 높이 없이 부모 크기를 그대로 쓴다.
   final bool fullBleed;
@@ -209,8 +213,8 @@ class _NearbyMapState extends State<NearbyMap>
             for (final s in ordered)
               Marker(
                 point: LatLng(s.latitude, s.longitude),
-                width: s.alertCount > 0 ? 64 : 14,
-                height: s.alertCount > 0 ? 64 : 14,
+                width: s.alertCount > 0 || widget.showCounts ? 64 : 14,
+                height: s.alertCount > 0 || widget.showCounts ? 64 : 14,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => widget.onStationTap(s.id),
@@ -218,8 +222,14 @@ class _NearbyMapState extends State<NearbyMap>
                     button: true,
                     label: s.alertCount > 0
                         ? '고장 의심 ${s.alertCount}대가 있는 대여소'
+                        : s.parkedBikes != null
+                        ? '자전거 ${s.parkedBikes}대가 있는 대여소'
                         : '대여소',
-                    child: _StationPin(station: s, ping: _ping),
+                    child: _StationPin(
+                      station: s,
+                      ping: _ping,
+                      showCount: widget.showCounts,
+                    ),
                   ),
                 ),
               ),
@@ -311,15 +321,49 @@ const _darkTiles = <double>[
 /// 대여소 표시. 강한 경보 = 꽉 찬 신호 원 + 숫자 + 퍼지는 고리, 경보 = 옅은 원 + 숫자,
 /// 경보 없음 = 작은 회색 점(대여소 자리만 알려 준다).
 class _StationPin extends StatelessWidget {
-  const _StationPin({required this.station, required this.ping});
+  const _StationPin({
+    required this.station,
+    required this.ping,
+    this.showCount = false,
+  });
 
   final NearbyMapStation station;
   final Animation<double> ping;
+  final bool showCount;
 
   @override
   Widget build(BuildContext context) {
     final c = context.ridey;
     final surface = Theme.of(context).colorScheme.surface;
+    if (station.alertCount <= 0 && showCount) {
+      // 탈 만한 자전거 수: 면 색 원 + 1px 선 + 잉크 숫자(0대면 흐리게). 실시간 대수가 없으면 '·'.
+      final parked = station.parkedBikes;
+      final empty = parked == 0;
+      return Center(
+        child: Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: surface,
+            shape: BoxShape.circle,
+            border: Border.all(color: empty ? c.line : c.muted, width: 1.5),
+          ),
+          child: Text(
+            parked == null ? '·' : '$parked',
+            style: context
+                .rideyNumbers(const TextStyle())
+                ?.copyWith(
+                  fontSize: 11,
+                  height: 1,
+                  color: empty
+                      ? c.muted
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+          ),
+        ),
+      );
+    }
     if (station.alertCount <= 0) {
       return Center(
         child: Container(

@@ -306,10 +306,19 @@ class _LoadedHomeState extends State<_LoadedHome> {
           );
         }
 
+        // 목록 탭과 지도를 맞춘다: '고장 의심' 이면 고장 의심 대여소만, '대여소 현황' 이면 주변 대여소 전부를
+        // 탈 만한 자전거 수와 함께.
+        final shown = _showStations
+            ? pins.values.toList(growable: false)
+            : [
+                for (final pin in pins.values)
+                  if (pin.alertCount > 0) pin,
+              ];
         return RideyMapSheet(
           map: NearbyMap(
             fullBleed: true,
-            stations: pins.values.toList(growable: false),
+            showCounts: _showStations,
+            stations: shown,
             location: area.location,
             onStationTap: (id) => _openStation(id, area),
           ),
@@ -602,8 +611,8 @@ class _StationRow extends StatelessWidget {
     final choosable = station.choosableCount;
     final parked = station.parkedBikes;
     final counts = parked == null
-        ? '고장 의심 ${station.alertCount}대'
-        : '고장 의심 ${station.alertCount}대 · 탈 만한 자전거 약 $choosable대';
+        ? (station.alertCount > 0 ? '고장 의심 ${station.alertCount}대' : '고장 의심 없음')
+        : '${station.alertCount > 0 ? '고장 의심 ${station.alertCount}대' : '고장 의심 없음'} · 탈 만한 자전거 약 $choosable대';
 
     // 줄마다 같은 단추를 되풀이하지 않고 줄 전체를 누르면 공식 앱이 열린다(오른쪽 '대여하기 ›' 가 그 표시).
     return RideyPressable(
