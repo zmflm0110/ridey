@@ -3,6 +3,7 @@ import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/app/legacy_preferences.dart';
 import 'package:ridey_app/app/mode_switch.dart';
+import 'package:ridey_app/app/launch_mark.dart';
 import 'package:ridey_app/app/onboarding_page.dart';
 import 'package:ridey_app/app/ridey_actions.dart';
 import 'package:ridey_app/app/user_mode.dart';
@@ -363,8 +364,11 @@ class _StartupPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 모드를 읽는 아주 짧은 사이 — 다음에 올 화면(시작 애니메이션 또는 첫 실행 지도)과 같은 잉크 바탕.
-    return const ColoredBox(color: RideyColors.hero);
+    // 모드를 읽는 아주 짧은 사이 — 폰 시작 화면의 'R.' 을 같은 자리에 그대로 둔다(다음 장면이 여기서 이어받는다).
+    return const ColoredBox(
+      color: RideyColors.hero,
+      child: CustomPaint(painter: LaunchMarkPainter(), size: Size.infinite),
+    );
   }
 }
 

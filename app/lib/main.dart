@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:ridey_app/app/launch_mark.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/config/ridey_config.dart';
 import 'package:ridey_app/features/location/device_location.dart';
@@ -16,12 +17,14 @@ Future<void> main() async {
   } catch (_) {}
   // 시연용: --dart-define=RIDEY_DEMO_LOCATION=위도,경도 로 빌드하면 '내 위치' 가 그 자리로 고정된다(평소 빌드는 그대로).
   final demo = demoLocation(RideyConfig.demoLocation);
+  // 첫 화면이 폰 시작 화면의 'R.' 을 이어받으려면 첫 프레임 전에 R 그림이 있어야 한다.
+  await LaunchMark.load();
   runApp(
     RideyApp(
       showIntro: true,
       askRoleOnLaunch: true,
       readLocation: demo == null ? null : () async => demo,
-      // 직원 모드: 대여소 거치 대수·시민 신고·도로 길(OSRM)로 추천 경로와 길안내.
+      // 직원 모드: 대여소 거치 대수·도로 길(OSRM)로 추천 경로와 길안내.
       roadRouter: RoadRouter(),
       watchLocation: demo == null ? null : () => Stream.value(demo),
     ),

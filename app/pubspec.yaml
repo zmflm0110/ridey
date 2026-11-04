@@ -69,6 +69,7 @@ flutter:
 
   assets:
     - assets/data/stations.json
+    - assets/brand/launch_r.png
 
   # 숫자·자전거 번호용 Unbounded(숫자·대문자·기호만 자른 판, SIL OFL — assets/fonts/OFL-Unbounded.txt)
   fonts:
