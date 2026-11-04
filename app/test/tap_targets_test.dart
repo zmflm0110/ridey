@@ -63,6 +63,11 @@ class _Stations implements StationRepository {
 
 class _Ops implements OpsListRepository {
   @override
+  Future<List<OpsScore>> scores() async => const [
+    OpsScore(day: '2026-11-03', listed: 79, rode: 58, firstDud: 28),
+    OpsScore(day: '2026-11-02', listed: 32, rode: 26, firstDud: 10),
+  ];
+  @override
   Future<List<String>> days() async => const [];
   @override
   Future<OpsList> fetch(String day) async => OpsList(day: day, bikes: const []);
@@ -165,6 +170,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel(RegExp('고장 의심 .*대가 있는 대여소')).first);
     await tester.pumpAndSettle();
     expect(find.text('길 찾기'), findsOneWidget);
+    expect(find.textContaining('걸어서 약'), findsOneWidget);
     found.addAll(
       problems(tester, 'station card', within: find.byType(BottomSheet)),
     );
@@ -229,7 +235,17 @@ void main() {
     found.addAll(problems(tester, 'staff list'));
     await tapText(tester, 'SPB-69683');
     found.addAll(problems(tester, 'staff detail'));
+    // 현장 확인: 남기면 '되돌리기' 가 나오고, 목록에 '확인함' 으로 남는다.
+    await tester.scrollUntilVisible(
+      find.text('고장 — 가져감'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tapText(tester, '고장 — 가져감');
+    found.addAll(problems(tester, 'staff detail checked'));
+    expect(find.text('되돌리기'), findsOneWidget);
     await back(tester);
+    expect(find.textContaining('확인함: 가져감'), findsOneWidget);
     await tapText(tester, '더보기');
     found.addAll(problems(tester, 'staff more'));
     expect(found, isEmpty, reason: found.join('\n'));

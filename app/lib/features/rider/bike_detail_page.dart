@@ -15,12 +15,16 @@ class BikeDetailPage extends StatelessWidget {
     required this.updatedAt,
     this.feed,
     this.onCheckAnother,
+    this.staffPanel,
   });
 
   final LiveBike bike;
   final DateTime updatedAt;
   final FeedHealth? feed;
   final VoidCallback? onCheckAnother;
+
+  /// 직원 모드: 시민용 '다른 자전거 확인하기' 대신 현장 확인 단추(가져감·멀쩡함).
+  final Widget? staffPanel;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +63,9 @@ class BikeDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.',
+              staffPanel == null
+                  ? '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.'
+                  : '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 브레이크·타이어·체인·안장을 확인하고 결과를 남겨 주세요.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurface,
                 height: 1.5,
@@ -91,11 +97,12 @@ class BikeDetailPage extends StatelessWidget {
               ratio: feed?.ratio,
             ),
             const SizedBox(height: 20),
-            RideyButton(
-              label: '다른 자전거 확인하기',
-              onPressed:
-                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
-            ),
+            staffPanel ??
+                RideyButton(
+                  label: '다른 자전거 확인하기',
+                  onPressed:
+                      onCheckAnother ?? () => Navigator.of(context).maybePop(),
+                ),
             const SizedBox(height: 14),
             Center(
               child: _UnderlinedAction(

@@ -215,16 +215,16 @@ class _LoadedHomeState extends State<_LoadedHome> {
     widget.nearbyAlertReminder.sync(ids);
   }
 
-  /// 지도에서 대여소를 누르면 그곳의 강한 경보 자전거를 먼저 연다(없으면 첫 자전거).
   /// 지도에서 대여소를 누르면 그곳 정보 카드(이름·거리·탈 만한 자전거·고장 의심 목록)를 띄운다.
-  void _openStation(String stationId, _HomeArea area) {
+  /// 카드가 닫힐 때 끝나는 Future — 그동안 지도는 그 대여소를 강조해 둔다.
+  Future<void> _openStation(String stationId, _HomeArea area) {
     final row = area.stations.where((s) => s.id == stationId).firstOrNull;
     final here = [
       for (final item in area.bikes)
         if (item.bike.station == stationId) item,
     ];
     final name = row?.name ?? here.firstOrNull?.stationName ?? '대여소 $stationId';
-    showStationCard(
+    return showStationCard(
       context,
       name: name,
       meters: row?.meters ?? here.firstOrNull?.meters,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
@@ -43,7 +44,11 @@ class NearbyMap extends StatefulWidget {
     this.showCounts = false,
     this.radiusMeters,
     this.focusMeters = 500,
+    this.route = const [],
   });
+
+  /// 들를 순서(대여소 id). 있으면 내 위치에서 시작해 그 순서로 잇는 파란 점선을 그리고, 처음 화면에 다 보이게 맞춘다.
+  final List<String> route;
 
   /// 처음 켰을 때(와 '내 위치' 단추) 보여 줄 범위. 범위 원([radiusMeters])보다 좁게 — 가까운 곳부터 크게 본다.
   final double focusMeters;
@@ -59,7 +64,9 @@ class NearbyMap extends StatefulWidget {
 
   final List<NearbyMapStation> stations;
   final DeviceLocation? location;
-  final ValueChanged<String> onStationTap;
+
+  /// 대여소를 눌렀을 때. 돌려준 Future(보통 열린 카드)가 끝날 때까지 그 대여소를 강조해 둔다.
+  final FutureOr<void> Function(String id) onStationTap;
 
   /// 화면 미리보기 테스트에서만 켠다(실제 타일을 받아 그려 본다).
   @visibleForTesting
@@ -90,6 +97,18 @@ class _NearbyMapState extends State<NearbyMap>
   double _rotation = 0;
   var _pinged = false;
 
+  /// 지금 카드가 열려 있는 대여소 — 지도에서 어느 것을 보고 있는지 테두리로 보여 준다.
+  String? _selected;
+
+  Future<void> _tap(String id) async {
+    setState(() => _selected = id);
+    try {
+      await widget.onStationTap(id);
+    } finally {
+      if (mounted && _selected == id) setState(() => _selected = null);
+    }
+  }
+
   static const _seoul = LatLng(37.5665, 126.9780);
 
   LatLng get _center {
@@ -119,6 +138,19 @@ class _NearbyMapState extends State<NearbyMap>
   /// 처음 맞출 범위: 내 위치 둘레 [NearbyMap.focusMeters](기본 500m), 위치가 없으면 경보 대여소 전부.
   CameraFit? _initialFit() {
     final here = widget.location;
+    // 들를 순서가 있으면 내 위치와 들를 곳이 다 보이게.
+    final stops = [
+      for (final id in widget.route)
+        for (final s in widget.stations)
+          if (s.id == id) LatLng(s.latitude, s.longitude),
+    ];
+    if (here != null && stops.isNotEmpty) {
+      return CameraFit.coordinates(
+        coordinates: [LatLng(here.latitude, here.longitude), ...stops],
+        padding: _fitPadding + const EdgeInsets.all(24),
+        maxZoom: 16,
+      );
+    }
     if (here != null && widget.radiusMeters != null) {
       final radius = math.min(widget.focusMeters, widget.radiusMeters!);
       final dLat = radius / 111320;
@@ -200,6 +232,17 @@ class _NearbyMapState extends State<NearbyMap>
         s.alertCount <= 0 ? 0 : (s.isHighAlert ? 2 : 1);
     final ordered = [...widget.stations]
       ..sort((a, b) => rank(a).compareTo(rank(b)));
+    // 누른 대여소는 맨 위에(다른 핀에 가리지 않게).
+    if (_selected != null) {
+      final i = ordered.indexWhere((s) => s.id == _selected);
+      if (i >= 0) ordered.add(ordered.removeAt(i));
+    }
+    final byId = {for (final s in widget.stations) s.id: s};
+    final routeIds = [
+      for (final id in widget.route)
+        if (byId.containsKey(id)) id,
+    ];
+    final here = widget.location;
 
     Widget buildMap() => FlutterMap(
       mapController: _map,
@@ -263,16 +306,37 @@ class _NearbyMapState extends State<NearbyMap>
               ),
             ],
           ),
+        if (here != null && routeIds.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: [
+                  LatLng(here.latitude, here.longitude),
+                  for (final id in routeIds)
+                    LatLng(byId[id]!.latitude, byId[id]!.longitude),
+                ],
+                color: c.calm,
+                strokeWidth: 3,
+                pattern: StrokePattern.dashed(segments: const [8, 6]),
+              ),
+            ],
+          ),
         MarkerLayer(
           markers: [
             for (final s in ordered)
               Marker(
                 point: LatLng(s.latitude, s.longitude),
-                width: s.alertCount > 0 || widget.showCounts ? 64 : 28,
-                height: s.alertCount > 0 || widget.showCounts ? 64 : 28,
+                width:
+                    s.alertCount > 0 || widget.showCounts || _selected == s.id
+                    ? 64
+                    : 28,
+                height:
+                    s.alertCount > 0 || widget.showCounts || _selected == s.id
+                    ? 64
+                    : 28,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => widget.onStationTap(s.id),
+                  onTap: () => _tap(s.id),
                   child: Semantics(
                     button: true,
                     label: s.alertCount > 0
@@ -284,6 +348,7 @@ class _NearbyMapState extends State<NearbyMap>
                       station: s,
                       ping: _ping,
                       showCount: widget.showCounts,
+                      selected: _selected == s.id,
                     ),
                   ),
                 ),
@@ -404,14 +469,42 @@ class _StationPin extends StatelessWidget {
     required this.station,
     required this.ping,
     this.showCount = false,
+    this.selected = false,
   });
 
   final NearbyMapStation station;
   final Animation<double> ping;
   final bool showCount;
 
+  /// 카드가 열린 대여소: 잉크 테두리 고리.
+  final bool selected;
+
   @override
   Widget build(BuildContext context) {
+    final pin = _pin(context);
+    if (!selected) return pin;
+    final ink = Theme.of(context).colorScheme.onSurface;
+    final surface = Theme.of(context).colorScheme.surface;
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        if (selected)
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: surface.withValues(alpha: .7),
+              border: Border.all(color: ink, width: 3),
+            ),
+          ),
+        pin,
+      ],
+    );
+  }
+
+  Widget _pin(BuildContext context) {
     final c = context.ridey;
     final surface = Theme.of(context).colorScheme.surface;
     if (station.alertCount <= 0 && showCount) {

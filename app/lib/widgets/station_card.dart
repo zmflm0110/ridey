@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/rider/directions.dart';
+import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
 /// 지도에서 대여소를 누르면 아래에서 올라오는 카드(지도 앱의 '핀 정보' 꼴):
@@ -19,6 +20,7 @@ Future<void> showStationCard(
   Future<void> Function()? onRent,
   double? latitude,
   double? longitude,
+  String? Function(LiveBike bike)? note,
 }) {
   final sorted = [...bikes]
     ..sort((a, b) {
@@ -38,7 +40,8 @@ Future<void> showStationCard(
       final c = sheet.ridey;
       final facts = [
         if (district != null && district.trim().isNotEmpty) district.trim(),
-        if (meters != null) _distance(meters),
+        if (meters != null)
+          '${distanceText(meters)} · 걸어서 약 ${walkMinutes(meters)}분',
         if (choosable != null) '탈 만한 자전거 약 $choosable대',
       ].join(' · ');
       return SafeArea(
@@ -109,7 +112,10 @@ Future<void> showStationCard(
                             ),
                           ),
                           title: bike.bike,
-                          subtitle: bike.isHighAlert ? '강한 경보' : '경보',
+                          subtitle: [
+                            bike.isHighAlert ? '강한 경보' : '경보',
+                            ?note?.call(bike),
+                          ].join(' · '),
                           trailing: Text(
                             '연쇄 ${bike.chain}명',
                             style: sheet
@@ -170,7 +176,3 @@ Future<void> showStationCard(
     },
   );
 }
-
-String _distance(double meters) => meters < 1000
-    ? '${meters.round()}m'
-    : '${(meters / 1000).toStringAsFixed(1)}km';

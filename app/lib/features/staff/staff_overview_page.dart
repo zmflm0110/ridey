@@ -5,7 +5,9 @@ import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/staff/staff_source_line.dart';
-import 'package:ridey_app/features/rider/bike_detail_page.dart';
+import 'package:ridey_app/features/ops/ops_list.dart';
+import 'package:ridey_app/features/rider/nearby_stations.dart';
+import 'package:ridey_app/features/staff/staff_check_panel.dart';
 import 'package:ridey_app/widgets/ridey_map_sheet.dart';
 import 'package:ridey_app/widgets/station_card.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -43,11 +45,16 @@ class StaffOverviewPage extends StatelessWidget {
         stations: _alertStations(session),
         location: session.location,
         radiusMeters: session.location == null ? null : 2000,
+        route: [for (final stop in session.visitOrder()) stop.station.id],
         onStationTap: (id) => _openStation(context, id),
       ),
       children: [
         // 재배치 길에서 바로 쓰는 것: 지금 서 있는 곳 가까이에서 먼저 가져갈 자전거.
         _NearMe(session: session, onOpen: (id) => _openStation(context, id)),
+        if (session.scores.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _ListScore(scores: session.scores),
+        ],
         const SizedBox(height: 22),
         Text('구별 현황', style: theme.textTheme.displayLarge),
         const SizedBox(height: 8),
@@ -107,9 +114,9 @@ class StaffOverviewPage extends StatelessWidget {
     );
   }
 
-  void _openStation(BuildContext context, String id) {
+  Future<void> _openStation(BuildContext context, String id) {
     final station = session.stations[id];
-    showStationCard(
+    return showStationCard(
       context,
       name: station?.name ?? '대여소 $id',
       district: station?.district,
@@ -120,15 +127,11 @@ class StaffOverviewPage extends StatelessWidget {
         for (final bike in session.bikes)
           if (bike.station == id) bike,
       ],
-      onBike: (bike) => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => BikeDetailPage(
-            bike: bike,
-            updatedAt: session.updatedAt ?? DateTime.now(),
-            feed: session.feed,
-          ),
-        ),
-      ),
+      note: (bike) => switch (session.checkOf(bike.bike)) {
+        final done? => '확인함: ${staffCheckText(done)}',
+        null => null,
+      },
+      onBike: (bike) => openStaffBike(context, session, bike),
     );
   }
 }
@@ -159,6 +162,9 @@ class _NearMe extends StatelessWidget {
     }
     final near = session.nearby();
     final count = near.fold<int>(0, (n, e) => n + e.bikes.length);
+    final stops = session.visitOrder();
+    final walk = stops.fold<double>(0, (m, e) => m + e.leg);
+    final checked = session.checks.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -174,40 +180,150 @@ class _NearMe extends StatelessWidget {
             ],
           ),
         ),
+        if (checked > 0) ...[
+          const SizedBox(height: 4),
+          Text(
+            '오늘 현장 확인 $checked대는 뺐어요.',
+            style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+          ),
+        ],
         const SizedBox(height: 12),
-        if (near.isEmpty)
+        if (stops.isEmpty)
           Text(
             '가까운 대여소에는 지금 고장 의심 자전거가 없어요.',
             style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
           )
-        else
+        else ...[
+          // 재배치 차로 한 바퀴 도는 순서: 매번 가장 가까운 다음 곳(강한 경보는 먼저).
+          Text(
+            '들를 순서 · ${stops.length}곳 · 이어서 ${distanceText(walk)}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
           RideyListCard(
             children: [
-              for (final item in near.take(5))
+              for (var i = 0; i < stops.length; i++)
                 RideyRow(
-                  title: item.station.name.trim(),
+                  leading: _StopNumber(number: i + 1),
+                  title: stops[i].station.name.trim(),
                   subtitle: [
-                    '고장 의심 ${item.bikes.length}대',
-                    if (item.bikes.any((b) => b.isHighAlert)) '강한 경보 있음',
+                    '고장 의심 ${stops[i].bikes.length}대',
+                    if (stops[i].bikes.any((b) => b.isHighAlert)) '강한 경보 있음',
                   ].join(' · '),
                   trailing: Text(
-                    item.meters < 1000
-                        ? '${item.meters.round()}m'
-                        : '${(item.meters / 1000).toStringAsFixed(1)}km',
+                    i == 0
+                        ? distanceText(stops[i].leg)
+                        : '+${distanceText(stops[i].leg)}',
                     style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
                   ),
-                  onTap: () => onOpen(item.station.id),
+                  onTap: () => onOpen(stops[i].station.id),
                 ),
             ],
           ),
+        ],
       ],
     );
   }
 }
 
+class _StopNumber extends StatelessWidget {
+  const _StopNumber({required this.number});
+
+  final int number;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: context.ridey.calm,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        '$number',
+        style: context
+            .rideyNumbers(const TextStyle())
+            ?.copyWith(fontSize: 13, height: 1, color: Colors.white),
+      ),
+    );
+  }
+}
+
+/// 이 목록이 맞았나 — DB 가 매일 06:10 에 어제 아침 목록을 스스로 채점한 결과(ops_scores).
+/// 직원이 '왜 이 목록대로 가야 하나' 를 숫자로 본다. 비교 기준: 아무 자전거나 다음 사람이 바로 반납할 확률 약 2.5%.
+class _ListScore extends StatelessWidget {
+  const _ListScore({required this.scores});
+
+  final List<OpsScore> scores;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.ridey;
+    final last = scores.firstWhere(
+      (s) => s.hitRate != null,
+      orElse: () => scores.first,
+    );
+    final rate = last.hitRate;
+    final week = pooledHitRate(scores);
+    String pct(double v) => '${(v * 100).round()}%';
+    return RideyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${_md(last.day)} 아침 목록 성적',
+            style: theme.textTheme.labelLarge?.copyWith(color: c.muted),
+          ),
+          const SizedBox(height: 6),
+          if (rate == null)
+            Text('목록 자전거를 아직 아무도 타지 않았어요.', style: theme.textTheme.bodyLarge)
+          else
+            Text.rich(
+              TextSpan(
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+                children: [
+                  TextSpan(text: '다음 사람이 탄 ${last.rode}대 중 '),
+                  TextSpan(
+                    text: '${last.firstDud}대(${pct(rate)})',
+                    style: TextStyle(
+                      color: c.signalText,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const TextSpan(text: '가 또 바로 반납됐어요.'),
+                ],
+              ),
+            ),
+          const SizedBox(height: 4),
+          Text(
+            [
+              '아무 자전거면 약 2.5%',
+              if (week != null && scores.length > 1)
+                '최근 ${scores.length}일 합치면 ${pct(week)}',
+            ].join(' · '),
+            style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _md(String day) {
+  final parts = day.split('-');
+  if (parts.length != 3) return day;
+  return '${int.tryParse(parts[1]) ?? parts[1]}/${int.tryParse(parts[2]) ?? parts[2]}';
+}
+
 List<NearbyMapStation> _alertStations(StaffSession session) {
   final pins = <String, NearbyMapStation>{};
-  for (final bike in session.bikes) {
+  // 현장 확인한 자전거는 지도 수에서 뺀다(목록 탭에는 '확인함' 으로 남아 되돌릴 수 있다).
+  for (final bike in session.uncheckedBikes) {
     final catalog = session.stations[bike.station];
     if (catalog == null) continue;
     final current = pins[catalog.id];

@@ -25,6 +25,10 @@ abstract final class RideyConfig {
   static Uri get opsListDaysUri =>
       rest('ops_lists?select=day&order=day.desc&limit=14');
 
+  static Uri get opsScoresUri => rest(
+    'ops_scores?select=day,listed,rode,first_dud&order=day.desc&limit=7',
+  );
+
   static Uri opsListDayUri(String day) =>
       rest('ops_lists?select=body&day=eq.$day');
 

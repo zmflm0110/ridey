@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
-import 'package:ridey_app/features/rider/bike_detail_page.dart';
+import 'package:ridey_app/features/rider/nearby_stations.dart';
+import 'package:ridey_app/features/staff/staff_check_panel.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/staff/staff_source_line.dart';
@@ -111,9 +112,7 @@ class StaffListPage extends StatelessWidget {
                     ),
                     if (session.metersTo(group.key) case final m?)
                       Text(
-                        m < 1000
-                            ? '${m.round()}m'
-                            : '${(m / 1000).toStringAsFixed(1)}km',
+                        distanceText(m),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: context.ridey.muted,
                         ),
@@ -126,28 +125,24 @@ class StaffListPage extends StatelessWidget {
                   for (final bike in group.value)
                     RideyRow(
                       title: bike.bike,
-                      subtitle: bike.isHighAlert ? '강한 경보' : '경보',
+                      subtitle: [
+                        bike.isHighAlert ? '강한 경보' : '경보',
+                        if (session.checkOf(bike.bike) case final done?)
+                          '확인함: ${staffCheckText(done)}',
+                      ].join(' · '),
                       trailing: Text(
                         '연쇄 ${bike.chain}명',
                         style: context
                             .rideyNumbers(theme.textTheme.titleMedium)
                             ?.copyWith(
-                              color: bike.isHighAlert
+                              color:
+                                  bike.isHighAlert &&
+                                      session.checkOf(bike.bike) == null
                                   ? context.ridey.signalText
                                   : context.ridey.muted,
                             ),
                       ),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => BikeDetailPage(
-                              bike: bike,
-                              updatedAt: session.updatedAt ?? DateTime.now(),
-                              feed: session.feed,
-                            ),
-                          ),
-                        );
-                      },
+                      onTap: () => openStaffBike(context, session, bike),
                     ),
                 ],
               ),

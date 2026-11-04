@@ -112,6 +112,11 @@ class _Live implements LiveSnapshotRepository {
 
 class _Ops implements OpsListRepository {
   @override
+  Future<List<OpsScore>> scores() async => const [
+    OpsScore(day: '2026-11-03', listed: 79, rode: 58, firstDud: 28),
+    OpsScore(day: '2026-11-02', listed: 32, rode: 26, firstDud: 10),
+  ];
+  @override
   Future<List<String>> days() async => const ['2026-10-25', '2026-10-24'];
 
   @override

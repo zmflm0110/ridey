@@ -47,6 +47,8 @@ class _FakeStations implements StationRepository {
 
 class _FakeOps implements OpsListRepository {
   @override
+  Future<List<OpsScore>> scores() async => const [];
+  @override
   Future<List<String>> days() async => const ['2026-10-19'];
 
   @override
