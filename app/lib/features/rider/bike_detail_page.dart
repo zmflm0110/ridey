@@ -15,7 +15,7 @@ class BikeDetailPage extends StatelessWidget {
     required this.updatedAt,
     this.feed,
     this.onCheckAnother,
-    this.staffPanel,
+    this.forStaff = false,
   });
 
   final LiveBike bike;
@@ -23,8 +23,8 @@ class BikeDetailPage extends StatelessWidget {
   final FeedHealth? feed;
   final VoidCallback? onCheckAnother;
 
-  /// 직원 모드: 시민용 '다른 자전거 확인하기' 대신 현장 확인 단추(가져감·멀쩡함).
-  final Widget? staffPanel;
+  /// 직원 모드: 안내를 '타기 전에' 가 아니라 '겉보기엔 멀쩡해도 직접 확인' 으로, 단추는 목록으로 돌아가기.
+  final bool forStaff;
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +63,9 @@ class BikeDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              staffPanel == null
-                  ? '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.'
-                  : '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 브레이크·타이어·체인·안장을 확인하고 결과를 남겨 주세요.',
+              forStaff
+                  ? '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 겉보기엔 멀쩡해도 타 봐야 아는 고장일 수 있어요 — 브레이크·타이어·체인·안장을 직접 확인해 주세요.'
+                  : '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurface,
                 height: 1.5,
@@ -97,12 +97,11 @@ class BikeDetailPage extends StatelessWidget {
               ratio: feed?.ratio,
             ),
             const SizedBox(height: 20),
-            staffPanel ??
-                RideyButton(
-                  label: '다른 자전거 확인하기',
-                  onPressed:
-                      onCheckAnother ?? () => Navigator.of(context).maybePop(),
-                ),
+            RideyButton(
+              label: forStaff ? '목록으로 돌아가기' : '다른 자전거 확인하기',
+              onPressed:
+                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
+            ),
             const SizedBox(height: 14),
             Center(
               child: _UnderlinedAction(

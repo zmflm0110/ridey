@@ -7,7 +7,7 @@ import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/staff/staff_source_line.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
-import 'package:ridey_app/features/staff/staff_check_panel.dart';
+import 'package:ridey_app/features/staff/staff_bike.dart';
 import 'package:ridey_app/widgets/ridey_map_sheet.dart';
 import 'package:ridey_app/widgets/station_card.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -127,10 +127,6 @@ class StaffOverviewPage extends StatelessWidget {
         for (final bike in session.bikes)
           if (bike.station == id) bike,
       ],
-      note: (bike) => switch (session.checkOf(bike.bike)) {
-        final done? => '확인함: ${staffCheckText(done)}',
-        null => null,
-      },
       onBike: (bike) => openStaffBike(context, session, bike),
     );
   }
@@ -164,7 +160,6 @@ class _NearMe extends StatelessWidget {
     final count = near.fold<int>(0, (n, e) => n + e.bikes.length);
     final stops = session.visitOrder();
     final walk = stops.fold<double>(0, (m, e) => m + e.leg);
-    final checked = session.checks.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -180,13 +175,6 @@ class _NearMe extends StatelessWidget {
             ],
           ),
         ),
-        if (checked > 0) ...[
-          const SizedBox(height: 4),
-          Text(
-            '오늘 현장 확인 $checked대는 뺐어요.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
-          ),
-        ],
         const SizedBox(height: 12),
         if (stops.isEmpty)
           Text(
@@ -322,8 +310,7 @@ String _md(String day) {
 
 List<NearbyMapStation> _alertStations(StaffSession session) {
   final pins = <String, NearbyMapStation>{};
-  // 현장 확인한 자전거는 지도 수에서 뺀다(목록 탭에는 '확인함' 으로 남아 되돌릴 수 있다).
-  for (final bike in session.uncheckedBikes) {
+  for (final bike in session.bikes) {
     final catalog = session.stations[bike.station];
     if (catalog == null) continue;
     final current = pins[catalog.id];

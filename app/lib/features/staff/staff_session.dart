@@ -5,7 +5,6 @@ import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
-import 'package:ridey_app/features/staff/staff_checks.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_districts.dart';
@@ -20,7 +19,6 @@ class StaffSession extends ChangeNotifier {
     required OpsListRepository opsRepository,
     required StationRepository stationRepository,
     this.districtsStore = const StaffDistrictsStore(),
-    this.checksStore = const StaffChecksStore(),
     this.now,
     this.readLocation,
   }) : _liveRepository = liveRepository,
@@ -31,16 +29,10 @@ class StaffSession extends ChangeNotifier {
   final OpsListRepository _opsRepository;
   final StationRepository _stationRepository;
   final StaffDistrictsStore districtsStore;
-  final StaffChecksStore checksStore;
   final DateTime? now;
 
   /// 최근 아침 목록 채점(새 날부터) — '이 목록이 맞았나' 를 직원이 직접 본다. 못 받으면 빈 목록.
   List<OpsScore> scores = const [];
-
-  /// 오늘 이 폰에서 현장 확인한 자전거.
-  Map<String, StaffCheck> checks = const {};
-
-  DateTime get _today => now ?? DateTime.now();
 
   /// 직원이 지금 서 있는 곳 — 재배치 길에서 '가까운 고장 의심' 을 먼저 보여 주려고 쓴다. 없으면 구별로만.
   final Future<DeviceLocation?> Function()? readLocation;
@@ -73,9 +65,6 @@ class StaffSession extends ChangeNotifier {
 
   Future<void> start() async {
     assigned = await districtsStore.read();
-    try {
-      checks = await checksStore.read(_today);
-    } catch (_) {}
     await Future.wait([reload(), locate(), _loadScores()]);
   }
 
@@ -85,27 +74,6 @@ class StaffSession extends ChangeNotifier {
       notifyListeners();
     } catch (_) {}
   }
-
-  StaffCheck? checkOf(String bike) => checks[bike];
-
-  /// 현장 확인을 남기거나([kind] 가 null 이면) 지운다.
-  Future<void> setCheck(String bike, StaffCheck? kind) async {
-    final next = {...checks};
-    if (kind == null) {
-      next.remove(bike);
-    } else {
-      next[bike] = kind;
-    }
-    checks = next;
-    notifyListeners();
-    try {
-      await checksStore.write(_today, next);
-    } catch (_) {}
-  }
-
-  /// 아직 현장 확인하지 않은 고장 의심.
-  Iterable<LiveBike> get uncheckedBikes =>
-      bikes.where((bike) => !checks.containsKey(bike.bike));
 
   /// 위치를 다시 찾는다(못 찾으면 그대로 구별 보기).
   Future<void> locate() async {
@@ -143,7 +111,7 @@ class StaffSession extends ChangeNotifier {
     double radius = 2000,
   }) {
     final grouped = <String, List<LiveBike>>{};
-    for (final bike in uncheckedBikes) {
+    for (final bike in bikes) {
       (grouped[bike.station] ??= []).add(bike);
     }
     final out =

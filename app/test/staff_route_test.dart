@@ -1,11 +1,10 @@
-// 직원의 '들를 순서'·현장 확인·아침 목록 성적.
+// 직원의 '들를 순서'·아침 목록 성적.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
-import 'package:ridey_app/features/staff/staff_checks.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
@@ -95,31 +94,6 @@ void main() {
     final s = await start([_bike('1', 'A'), _bike('2', 'D', high: true)]);
     // D 는 400m 지만 강한 경보라 400×0.6=240 < 300
     expect(s.visitOrder().first.station.id, 'D');
-  });
-
-  test(
-    'a checked bike leaves the route and the nearby count; undo brings it back',
-    () async {
-      final s = await start([_bike('1', 'A'), _bike('2', 'B')]);
-      await s.setCheck('1', StaffCheck.pickedUp);
-      expect([for (final o in s.visitOrder()) o.station.id], ['B']);
-      expect(s.nearby().expand((e) => e.bikes).length, 1);
-
-      // 같은 날 다시 켜도 남아 있다
-      final again = await start([_bike('1', 'A'), _bike('2', 'B')]);
-      expect(again.checkOf('1'), StaffCheck.pickedUp);
-
-      await again.setCheck('1', null);
-      expect(again.visitOrder().length, 2);
-    },
-  );
-
-  test('checks from another day are not kept', () async {
-    await const StaffChecksStore().write(DateTime(2026, 11, 3), {
-      '1': StaffCheck.fine,
-    });
-    final s = await start([_bike('1', 'A')]);
-    expect(s.checkOf('1'), isNull);
   });
 
   test('loads the morning list scores', () async {

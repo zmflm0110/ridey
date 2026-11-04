@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
-import 'package:ridey_app/features/staff/staff_check_panel.dart';
+import 'package:ridey_app/features/staff/staff_bike.dart';
 import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/staff/staff_source_line.dart';
@@ -125,19 +125,13 @@ class StaffListPage extends StatelessWidget {
                   for (final bike in group.value)
                     RideyRow(
                       title: bike.bike,
-                      subtitle: [
-                        bike.isHighAlert ? '강한 경보' : '경보',
-                        if (session.checkOf(bike.bike) case final done?)
-                          '확인함: ${staffCheckText(done)}',
-                      ].join(' · '),
+                      subtitle: bike.isHighAlert ? '강한 경보' : '경보',
                       trailing: Text(
                         '연쇄 ${bike.chain}명',
                         style: context
                             .rideyNumbers(theme.textTheme.titleMedium)
                             ?.copyWith(
-                              color:
-                                  bike.isHighAlert &&
-                                      session.checkOf(bike.bike) == null
+                              color: bike.isHighAlert
                                   ? context.ridey.signalText
                                   : context.ridey.muted,
                             ),
