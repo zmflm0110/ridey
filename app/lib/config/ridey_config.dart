@@ -14,6 +14,9 @@ abstract final class RideyConfig {
 
   static const apiHeaders = {'apikey': publishableKey};
 
+  /// 시연 영상·발표용 고정 위치('위도,경도'). 비어 있으면 진짜 위치.
+  static const demoLocation = String.fromEnvironment('RIDEY_DEMO_LOCATION');
+
   static Uri rest(String resource) =>
       Uri.parse('$supabaseUrl/rest/v1/$resource');
 

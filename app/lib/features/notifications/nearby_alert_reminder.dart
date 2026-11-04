@@ -89,8 +89,10 @@ class PlatformNearbyAlertReminder implements NearbyAlertReminder {
           'nearby-alerts',
           '주변 고장 의심',
           channelDescription: '따릉이 앱에서 피할 자전거 번호를 보여 줘요.',
-          ongoing: true,
-          autoCancel: false,
+          // 대여소 앞에서 공식 앱으로 넘어가 빌리는 동안만 쓸모 있다 — 밀어서 지울 수 있게, 30분 뒤엔 저절로 사라지게.
+          ongoing: false,
+          autoCancel: true,
+          timeoutAfter: 30 * 60 * 1000,
         ),
         iOS: DarwinNotificationDetails(),
       ),

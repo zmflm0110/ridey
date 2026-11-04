@@ -182,14 +182,22 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'spb-69683');
     await tapText(tester, '조회하기');
     found.addAll(problems(tester, 'detail'));
+    // 맨 아래(공식 앱 고장 신고 안내)까지 내려야 '판단 근거' 가 떠 있는 탭 막대 위로 올라온다.
     await tester.scrollUntilVisible(
-      find.text('판단 근거 자세히 보기'),
+      find.text('따릉이 앱 열기'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    // 찾자마자 멈추면 떠 있는 탭 막대 밑일 수 있다 — 끝까지 한 번 더 민다.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    found.addAll(problems(tester, 'detail bottom'));
     await tapText(tester, '판단 근거 자세히 보기');
     found.addAll(problems(tester, 'evidence'));
     await back(tester);
+    // 내려가 있던 상세의 머리(뒤로 단추)는 목록이 다시 올라와야 생긴다.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, 800));
+    await tester.pumpAndSettle();
     await back(tester);
     await tester.enterText(find.byType(TextField).first, 'spb-12345');
     await tapText(tester, '조회하기');

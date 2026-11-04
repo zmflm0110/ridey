@@ -40,7 +40,8 @@ void main() {
 
     final stations = await BundledStationRepository().fetch();
 
-    expect(stations, hasLength(2789));
+    // tools/refresh_stations.py 가 지금 운영 중인 곳만 담는다(2026-11-04: 2,737곳).
+    expect(stations.length, greaterThan(2500));
     expect(
       stations.firstWhere((station) => station.id == '00102').district,
       '마포구',

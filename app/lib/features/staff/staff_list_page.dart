@@ -125,7 +125,11 @@ class StaffListPage extends StatelessWidget {
                   for (final bike in group.value)
                     RideyRow(
                       title: bike.bike,
-                      subtitle: bike.isHighAlert ? '강한 경보' : '경보',
+                      // 마지막 헛대여가 최근일수록 아직 그 자리에 있을 가능성이 크다.
+                      subtitle: [
+                        bike.isHighAlert ? '강한 경보' : '경보',
+                        if (bike.lastDud.isNotEmpty) '마지막 헛대여 ${bike.lastDud}',
+                      ].join(' · '),
                       trailing: Text(
                         '연쇄 ${bike.chain}명',
                         style: context

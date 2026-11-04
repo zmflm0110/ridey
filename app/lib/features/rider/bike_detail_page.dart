@@ -39,7 +39,8 @@ class BikeDetailPage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
           children: [
-            const _CheckBackTitle(),
+            // 직원은 목록에서 들어온다 — 돌아갈 곳을 머리에.
+            _CheckBackTitle(title: forStaff ? '목록' : '자전거 확인'),
             const SizedBox(height: 24),
             Text(
               bike.bike,
@@ -119,6 +120,22 @@ class BikeDetailPage extends StatelessWidget {
                 },
               ),
             ),
+            // 시민이 타 보고 고장을 확인했을 때의 다음 행동: 공식 신고(공단이 실제로 받는 곳).
+            // 우리 앱은 신고를 대신 보내지 않는다 — 공식 앱을 연다.
+            if (!forStaff) ...[
+              const SizedBox(height: 18),
+              Text(
+                '타 보니 정말 고장이었다면, 따릉이 앱의 고장 신고로 알려 주세요. 공단이 실제로 받는 곳이에요.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+              ),
+              Center(
+                child: _UnderlinedAction(
+                  label: '따릉이 앱 열기',
+                  onPressed: openOfficialBikeApp,
+                ),
+              ),
+            ],
           ],
         ),
       ),
