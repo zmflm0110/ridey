@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 
-/// 경로를 짤 때 보는 대여소 하나: 위치·거치 대수·거치대 수·고장 의심 자전거·시민 신고 수.
+/// 경로를 짤 때 보는 대여소 하나: 위치·거치 대수·거치대 수·고장 의심 자전거.
 class PlanStation {
   const PlanStation({
     required this.id,
@@ -13,7 +13,6 @@ class PlanStation {
     this.bikes,
     this.racks,
     this.suspects = const [],
-    this.reports = 0,
   });
 
   final String id;
@@ -27,9 +26,6 @@ class PlanStation {
   /// 거치대 수.
   final int? racks;
   final List<LiveBike> suspects;
-
-  /// 최근 시민 신고 건수(RIDEY 앱에서 신고한 것).
-  final int reports;
 
   /// 거치대보다 많이 세워진 몫(고장 의심은 따로 거두므로 뺀다). 넘친 곳만.
   int get surplus {
@@ -113,7 +109,7 @@ class PickupPlan {
 const defaultCapacity = 20;
 
 /// 재배치 + 고장 의심 수거를 한 번에: 지금 위치에서 시작해, 매번 '값어치 ÷ 거리' 가 가장 큰 다음 곳으로 간다.
-/// - 고장 의심(강한 경보·시민 신고는 더 무겁게)은 정비센터로 가져갈 것이라 차 자리를 차지하고 내려놓지 않는다.
+/// - 고장 의심(강한 경보는 더 무겁게)은 정비센터로 가져갈 것이라 차 자리를 차지하고 내려놓지 않는다.
 /// - 넘친 곳에서 실은 정상 자전거는 빈 곳에 내려놓는다(차에 실린 만큼만).
 /// - 차가 꽉 차면 내려놓을 곳만 고른다.
 /// 가까운 이웃 방식의 탐욕 경로라 최적은 아니지만, 매 걸음 '가까우면서 할 일이 많은 곳' 을 고른다.
@@ -148,12 +144,7 @@ PickupPlan planPickup({
       final take = math.min(c.surplus, math.max(0, room - sus));
       final drop = math.min(c.deficit, load);
       final strong = c.suspects.take(sus).where((b) => b.isHighAlert).length;
-      final value =
-          sus * 3.0 +
-          strong * 2.0 +
-          (sus > 0 ? c.reports * 2.0 : 0) +
-          take * 1.0 +
-          drop * 1.2;
+      final value = sus * 3.0 + strong * 2.0 + take * 1.0 + drop * 1.2;
       if (value <= 0) continue;
       final d = metersBetween(lat, lon, c.latitude, c.longitude);
       final score = value / (d / 1000 + .3);

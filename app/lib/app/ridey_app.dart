@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/features/staff/road_route.dart';
-import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/app/legacy_preferences.dart';
 import 'package:ridey_app/app/mode_switch.dart';
@@ -37,7 +36,6 @@ class RideyApp extends StatefulWidget {
     this.enableCamera = true,
     this.showIntro = false,
     this.askRoleOnLaunch = false,
-    this.reportRepository,
     this.roadRouter,
     this.watchLocation,
     this.openOfficialApp,
@@ -56,8 +54,7 @@ class RideyApp extends StatefulWidget {
   /// 켤 때 '떨어지는 점' 시작 장면(main 에서만 켬, 테스트는 바로 화면).
   final bool showIntro;
 
-  /// 직원 모드: 시민 신고 읽기, 도로 길(OSRM), 길안내 중 위치. 테스트는 비워 둔다(네트워크 없이).
-  final CitizenReportRepository? reportRepository;
+  /// 직원 모드: 도로 길(OSRM), 길안내 중 위치. 테스트는 비워 둔다(네트워크 없이).
   final RoadRouter? roadRouter;
   final Stream<DeviceLocation> Function()? watchLocation;
 
@@ -192,7 +189,6 @@ class _RideyAppState extends State<RideyApp> {
                       (widget.roadRouter == null
                           ? null
                           : SupabaseStationStatusRepository()),
-                  reportRepository: widget.reportRepository,
                   roadRouter: widget.roadRouter,
                   watchLocation: widget.watchLocation,
                 ),

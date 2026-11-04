@@ -4,7 +4,6 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
-import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
@@ -28,7 +27,6 @@ class StaffSession extends ChangeNotifier {
     this.now,
     this.readLocation,
     this.occupancyRepository,
-    this.reportRepository = const NoCitizenReports(),
     this.router,
     this.positions,
   }) : _liveRepository = liveRepository,
@@ -44,10 +42,6 @@ class StaffSession extends ChangeNotifier {
   /// 대여소별 지금 세워진 대수(재배치 판단). 없으면 고장 의심만으로 경로를 짠다.
   final StationStatusRepository? occupancyRepository;
   Map<String, StationOccupancy> occupancy = const {};
-
-  /// 시민이 RIDEY 앱에서 남긴 최근 72시간 신고(자전거별).
-  final CitizenReportRepository reportRepository;
-  Map<String, ReportCount> reports = const {};
 
   /// 도로를 따라간 길(OSRM). 없으면 들를 곳을 직선으로 잇는다.
   final RoadRouter? router;
@@ -105,33 +99,12 @@ class StaffSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 신고만 들어오고 경보 목록에는 없는 자전거도 '시민 신고' 로 함께 본다(대여소를 아는 것만).
-  List<LiveBike> get bikesWithReports {
-    final known = {for (final b in bikes) b.bike};
-    return [
-      ...bikes,
-      for (final r in reports.values)
-        if (!known.contains(r.bike) && r.station != null)
-          LiveBike(
-            bike: r.bike,
-            station: r.station!,
-            stationName: stations[r.station]?.name ?? '',
-            chain: 0,
-            isHighAlert: false,
-            lastDud: '',
-            probability: null,
-          ),
-    ];
-  }
-
-  int reportsFor(String bike) => reports[bike]?.count ?? 0;
-
   /// 경로에 넣을 대여소: 담당 구가 있으면 그 구 안, 없으면 내 위치 3km 안.
   List<PlanStation> planStations({double radius = 3000}) {
     final here = location;
     final chosen = assigned ?? const <String>[];
     final suspects = <String, List<LiveBike>>{};
-    for (final bike in bikesWithReports) {
+    for (final bike in bikes) {
       (suspects[bike.station] ??= []).add(bike);
     }
     final out = <PlanStation>[];
@@ -161,7 +134,6 @@ class StaffSession extends ChangeNotifier {
           bikes: occ?.bikes,
           racks: occ?.racks,
           suspects: list,
-          reports: list.fold(0, (n, b) => n + reportsFor(b.bike)),
         ),
       );
     }
@@ -182,7 +154,6 @@ class StaffSession extends ChangeNotifier {
       (assigned ?? const []).join(','),
       identityHashCode(bikes),
       identityHashCode(occupancy),
-      identityHashCode(reports),
     ].join('|');
     if (key == _planKey && _plan != null) return _plan!;
     _planKey = key;
@@ -227,21 +198,10 @@ class StaffSession extends ChangeNotifier {
 
   Future<void> _loadSide() async {
     final occ = occupancyRepository;
-    await Future.wait([
-      if (occ != null)
-        occ
-            .fetch()
-            .then((rows) {
-              occupancy = {for (final r in rows) r.id: r};
-            })
-            .catchError((_) {}),
-      reportRepository
-          .counts()
-          .then((r) {
-            reports = r;
-          })
-          .catchError((_) {}),
-    ]);
+    if (occ == null) return;
+    try {
+      occupancy = {for (final r in await occ.fetch()) r.id: r};
+    } catch (_) {}
   }
 
   Future<void> _loadScores() async {
@@ -429,7 +389,7 @@ class StaffSession extends ChangeNotifier {
     final selected = focusedDistrict == null
         ? (assigned ?? const <String>[])
         : <String>[focusedDistrict!];
-    return bikesWithReports.where((bike) {
+    return bikes.where((bike) {
       if (selected.isNotEmpty &&
           !selected.contains(districtOf(bike, stations))) {
         return false;

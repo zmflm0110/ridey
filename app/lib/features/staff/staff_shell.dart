@@ -3,7 +3,6 @@ import 'package:ridey_app/features/location/device_location.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
-import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/staff/staff_district_picker.dart';
@@ -27,14 +26,12 @@ class StaffShell extends StatefulWidget {
     this.now,
     this.readLocation,
     this.stationStatusRepository,
-    this.reportRepository,
     this.roadRouter,
     this.watchLocation,
   });
 
   /// 대여소별 거치 대수(재배치), 시민 신고, 도로 길(OSRM), 길안내 중 위치.
   final StationStatusRepository? stationStatusRepository;
-  final CitizenReportRepository? reportRepository;
   final RoadRouter? roadRouter;
   final Stream<DeviceLocation> Function()? watchLocation;
 
@@ -59,7 +56,6 @@ class _StaffShellState extends State<StaffShell> {
     now: widget.now,
     readLocation: widget.readLocation ?? readDeviceLocation,
     occupancyRepository: widget.stationStatusRepository,
-    reportRepository: widget.reportRepository ?? const NoCitizenReports(),
     router: widget.roadRouter,
     positions: widget.watchLocation,
   );

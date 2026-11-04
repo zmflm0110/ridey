@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/config/ridey_config.dart';
 import 'package:ridey_app/features/location/device_location.dart';
-import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/notifications/habit_notifier.dart';
 import 'package:workmanager/workmanager.dart';
@@ -23,7 +22,6 @@ Future<void> main() async {
       askRoleOnLaunch: true,
       readLocation: demo == null ? null : () async => demo,
       // 직원 모드: 대여소 거치 대수·시민 신고·도로 길(OSRM)로 추천 경로와 길안내.
-      reportRepository: SupabaseCitizenReportRepository(),
       roadRouter: RoadRouter(),
       watchLocation: demo == null ? null : () => Stream.value(demo),
     ),

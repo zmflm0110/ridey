@@ -4,7 +4,6 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
-import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
@@ -56,17 +55,6 @@ class _Stations implements StationRepository {
   ];
 }
 
-class _Reports implements CitizenReportRepository {
-  @override
-  Future<bool> submit({required String bike, String? station}) async => true;
-  @override
-  Future<Map<String, ReportCount>> counts() async => const {
-    // 경보 목록에 있는 자전거에 신고 2건, 목록에 없는 자전거(대여소 C)에 신고 1건.
-    '1': ReportCount(bike: '1', count: 2, station: 'A'),
-    'SPB-77777': ReportCount(bike: 'SPB-77777', count: 1, station: 'C'),
-  };
-}
-
 class _Ops implements OpsListRepository {
   @override
   Future<List<String>> days() async => const [];
@@ -106,25 +94,6 @@ void main() {
     final s = await start([_bike('1', 'A'), _bike('2', 'D', high: true)]);
     // D 는 400m 지만 강한 경보라 400×0.6=240 < 300
     expect(s.visitOrder().first.station.id, 'D');
-  });
-
-  test('citizen reports reach the staff list and the route', () async {
-    final s = StaffSession(
-      liveRepository: _Live([_bike('1', 'A')]),
-      opsRepository: _Ops(),
-      stationRepository: _Stations(),
-      now: DateTime(2026, 11, 4, 9),
-      readLocation: () async => _here,
-      reportRepository: _Reports(),
-    );
-    await s.start();
-    expect(s.reportsFor('1'), 2);
-    // 경보 목록에 없던 신고 자전거도 목록에 '시민 신고' 로 들어온다.
-    expect(s.visibleBikes.map((b) => b.bike), contains('SPB-77777'));
-    // 고장 의심만 경로: 신고 자전거가 있는 C 도 들른다.
-    s.setSuspectsOnly(true);
-    expect([for (final stop in s.plan.stops) stop.station.id], ['A', 'C']);
-    expect(s.planStations().firstWhere((p) => p.id == 'A').reports, 2);
   });
 
   test('loads the morning list scores', () async {

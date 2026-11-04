@@ -154,16 +154,11 @@ class StaffListPage extends StatelessWidget {
                       title: bike.bike,
                       // 마지막 헛대여가 최근일수록 아직 그 자리에 있을 가능성이 크다.
                       subtitle: [
-                        if (bike.chain == 0)
-                          '시민 신고'
-                        else
-                          bike.isHighAlert ? '강한 경보' : '경보',
-                        if (session.reportsFor(bike.bike) > 0)
-                          '시민 신고 ${session.reportsFor(bike.bike)}건',
+                        bike.isHighAlert ? '강한 경보' : '경보',
                         if (bike.lastDud.isNotEmpty) '마지막 헛대여 ${bike.lastDud}',
                       ].join(' · '),
                       trailing: Text(
-                        bike.chain > 0 ? '연쇄 ${bike.chain}명' : '신고',
+                        '연쇄 ${bike.chain}명',
                         style: context
                             .rideyNumbers(theme.textTheme.titleMedium)
                             ?.copyWith(

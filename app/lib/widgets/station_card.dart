@@ -20,7 +20,6 @@ Future<void> showStationCard(
   Future<void> Function()? onRent,
   double? latitude,
   double? longitude,
-  String? Function(LiveBike bike)? note,
 }) {
   final sorted = [...bikes]
     ..sort((a, b) {
@@ -112,10 +111,7 @@ Future<void> showStationCard(
                             ),
                           ),
                           title: bike.bike,
-                          subtitle: [
-                            bike.isHighAlert ? '강한 경보' : '경보',
-                            ?note?.call(bike),
-                          ].join(' · '),
+                          subtitle: bike.isHighAlert ? '강한 경보' : '경보',
                           trailing: Text(
                             '연쇄 ${bike.chain}명',
                             style: sheet

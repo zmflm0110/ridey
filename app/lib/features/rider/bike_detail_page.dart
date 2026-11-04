@@ -125,7 +125,7 @@ class BikeDetailPage extends StatelessWidget {
             // 이어서 서울시 공식 신고 화면(공단이 받는 곳)을 연다.
             if (!forStaff) ...[
               const SizedBox(height: 22),
-              ReportBikeButton(bike: bike.bike, station: bike.station),
+              ReportBikeButton(bike: bike.bike),
             ],
           ],
         ),
@@ -616,41 +616,12 @@ class _DataNote extends StatelessWidget {
 }
 
 /// 고장 신고: 신고를 잊거나 귀찮아 넘기는 일이 많아서 자전거 화면에 바로 둔다.
-/// 누르면 RIDEY 에 한 줄(번호·대여소) 남겨 관리 직원 화면에 곧바로 보이고, 이어서 서울시 공식 신고 화면이 열린다.
-class ReportBikeButton extends StatefulWidget {
-  const ReportBikeButton({
-    super.key,
-    required this.bike,
-    this.station,
-    this.repository,
-  });
+/// RIDEY 는 신고를 받지 않는다 — 누르면 서울시 공식 신고 화면이 열리고, 신고는 거기서 마친다.
+class ReportBikeButton extends StatelessWidget {
+  const ReportBikeButton({super.key, required this.bike, this.open});
 
   final String bike;
-  final String? station;
-  final CitizenReportRepository? repository;
-
-  @override
-  State<ReportBikeButton> createState() => _ReportBikeButtonState();
-}
-
-class _ReportBikeButtonState extends State<ReportBikeButton> {
-  var _busy = false;
-  var _sent = false;
-
-  Future<void> _report() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    final recorded = await reportBike(
-      bike: widget.bike,
-      station: widget.station,
-      repository: widget.repository,
-    );
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _sent = recorded;
-    });
-  }
+  final Future<bool> Function(Uri uri)? open;
 
   @override
   Widget build(BuildContext context) {
@@ -660,16 +631,13 @@ class _ReportBikeButtonState extends State<ReportBikeButton> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         RideyButton.secondary(
-          label: _sent ? '다시 신고 화면 열기' : '고장 신고하기',
+          label: '고장 신고하기',
           icon: Icons.report_outlined,
-          busy: _busy,
-          onPressed: _report,
+          onPressed: () => openOfficialReport(open: open),
         ),
         const SizedBox(height: 8),
         Text(
-          _sent
-              ? 'RIDEY 에 남겼어요 — 관리 직원 화면에 바로 보여요. 열린 서울시 신고 화면에서 신고를 마쳐 주세요.'
-              : '타 보니 고장이었다면 알려 주세요. 관리 직원에게 바로 보이고, 서울시 공식 신고 화면도 열려요.',
+          '타 보니 고장이었다면 서울시 따릉이 신고 화면에서 알려 주세요. 자전거 번호 $bike 를 적으면 돼요.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
         ),

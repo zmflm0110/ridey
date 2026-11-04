@@ -47,7 +47,7 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
       return _StaffFailure(onRetry: session.reload);
     }
 
-    final rows = districtRows(session.bikesWithReports, session.stations);
+    final rows = districtRows(session.bikes, session.stations);
     final total = session.bikes.length;
     final high = session.bikes.where((bike) => bike.isHighAlert).length;
     final plan = session.plan;
@@ -105,8 +105,7 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
         Text('구별 현황', style: theme.textTheme.displayLarge),
         const SizedBox(height: 8),
         Text(
-          '지금 고장 의심 $total대 · 그중 강한 경보 $high대'
-          '${session.reports.isEmpty ? '' : ' · 시민 신고 ${session.reports.length}대'}',
+          '지금 고장 의심 $total대 · 그중 강한 경보 $high대',
           style: theme.textTheme.bodyLarge?.copyWith(
             color: context.ridey.muted,
           ),
@@ -166,7 +165,7 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
     final chosen = session.assigned ?? const <String>[];
     if (chosen.isEmpty) return const [];
     return [
-      for (final bike in session.bikesWithReports)
+      for (final bike in session.bikes)
         if (session.stations[bike.station] case final s?
             when chosen.contains(s.district))
           LatLng(s.latitude, s.longitude),
@@ -176,7 +175,7 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
   /// 지도: 서울 전체 고장 의심 대여소 + 경로에 든 재배치 대여소.
   List<NearbyMapStation> _mapStations(PickupPlan plan) {
     final pins = <String, NearbyMapStation>{};
-    for (final bike in session.bikesWithReports) {
+    for (final bike in session.bikes) {
       final s = session.stations[bike.station];
       if (s == null) continue;
       final current = pins[s.id];
@@ -234,13 +233,9 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
       latitude: station?.latitude,
       longitude: station?.longitude,
       bikes: [
-        for (final bike in session.bikesWithReports)
+        for (final bike in session.bikes)
           if (bike.station == id) bike,
       ],
-      note: (bike) {
-        final n = session.reportsFor(bike.bike);
-        return n > 0 ? '시민 신고 $n건' : null;
-      },
       onBike: (bike) => openStaffBike(context, session, bike),
     );
   }
