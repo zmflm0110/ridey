@@ -42,7 +42,11 @@ class NearbyMap extends StatefulWidget {
     this.fullBleed = false,
     this.showCounts = false,
     this.radiusMeters,
+    this.focusMeters = 500,
   });
+
+  /// 처음 켰을 때(와 '내 위치' 단추) 보여 줄 범위. 범위 원([radiusMeters])보다 좁게 — 가까운 곳부터 크게 본다.
+  final double focusMeters;
 
   /// 내 위치 둘레의 범위(예: 2km). 있으면 처음에 그 원이 다 보이게 맞추고 얇은 원으로 그려 준다.
   final double? radiusMeters;
@@ -112,11 +116,11 @@ class _NearbyMapState extends State<NearbyMap>
     widget.fullBleed ? _height * .52 + 16 : 20,
   );
 
-  /// 처음 맞출 범위: 내 위치 둘레 [NearbyMap.radiusMeters] 원, 위치가 없으면 경보 대여소 전부.
+  /// 처음 맞출 범위: 내 위치 둘레 [NearbyMap.focusMeters](기본 500m), 위치가 없으면 경보 대여소 전부.
   CameraFit? _initialFit() {
     final here = widget.location;
-    final radius = widget.radiusMeters;
-    if (here != null && radius != null) {
+    if (here != null && widget.radiusMeters != null) {
+      final radius = math.min(widget.focusMeters, widget.radiusMeters!);
       final dLat = radius / 111320;
       final dLon = radius / (111320 * math.cos(here.latitude * math.pi / 180));
       return CameraFit.bounds(
