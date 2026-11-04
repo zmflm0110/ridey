@@ -185,28 +185,57 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
         Semantics(
           textField: true,
           label: '자전거 번호',
-          child: TextField(
-            controller: _controller,
-            // 번호 앞 'SPB-' 는 늘 같다 — 미리 적어 두고 숫자만 받는다.
-            keyboardType: TextInputType.number,
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _lookup(LookupKind.number),
-            style: context
-                .rideyNumbers(theme.textTheme.titleLarge)
-                ?.copyWith(fontSize: 20),
-            decoration: InputDecoration(
-              prefixText: 'SPB-',
-              prefixStyle: context
-                  .rideyNumbers(theme.textTheme.titleLarge)
-                  ?.copyWith(fontSize: 20),
-              hintText: '00000',
-              hintStyle: context
-                  .rideyNumbers(theme.textTheme.titleLarge)
-                  ?.copyWith(
-                    fontSize: 20,
-                    color: context.ridey.muted.withValues(alpha: .6),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.ridey.fill,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    'SPB-',
+                    style: context
+                        .rideyNumbers(theme.textTheme.titleLarge)
+                        ?.copyWith(
+                          fontSize: 20,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      keyboardType: TextInputType.number,
+                      textCapitalization: TextCapitalization.characters,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _lookup(LookupKind.number),
+                      style: context
+                          .rideyNumbers(theme.textTheme.titleLarge)
+                          ?.copyWith(
+                            fontSize: 20,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                      decoration: InputDecoration(
+                        hintText: '00000',
+                        hintStyle: context
+                            .rideyNumbers(theme.textTheme.titleLarge)
+                            ?.copyWith(
+                              fontSize: 20,
+                              color: context.ridey.muted.withValues(alpha: .6),
+                            ),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

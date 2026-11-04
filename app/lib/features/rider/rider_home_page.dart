@@ -378,8 +378,6 @@ class _LoadedHomeState extends State<_LoadedHome> {
         final data = loaded.requireData;
         _syncReminder(data);
         final area = _area(data);
-        // 대여소 자리는 언제나 보인다(서울 전체). '고장 의심' 탭은 고장 의심 대여소를 주황으로 두드러지게 하고 나머지는
-        // 작은 흰 점으로, '대여소 현황' 탭은 가까이 확대하면 모든 대여소에 탈 만한 자전거 수를 적는다.
         final shown = [
           for (final row in area.allStations)
             if (row.latitude != null && row.longitude != null)
@@ -395,7 +393,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
         return RideyMapSheet(
           map: NearbyMap(
             fullBleed: true,
-            showCounts: _showStations,
+            showCounts: true,
             stations: shown,
             location: area.location,
             focus: area.place == null

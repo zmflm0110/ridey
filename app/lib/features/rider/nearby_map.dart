@@ -77,7 +77,6 @@ class NearbyMap extends StatefulWidget {
   /// 들를 순서 번호(대여소 id → 1부터). 핀 옆 파란 원.
   final Map<String, int> stopNumbers;
 
-  /// '주변 대여소 현황' 일 때: 가까이 확대하면 대여소마다 탈 만한 자전거 수를 흰 원에 보여 준다.
   final bool showCounts;
 
   /// 홈처럼 화면을 채울 때: 둥근 카드·테두리·고정 높이 없이 부모 크기를 그대로 쓴다.
@@ -145,7 +144,6 @@ class _NearbyMapState extends State<NearbyMap>
 
   static const _seoul = LatLng(37.5665, 126.9780);
 
-  /// 이만큼 확대하면 '대여소 현황' 의 흰 원(탈 만한 자전거 수)을 그린다 — 멀리서 2천여 개를 다 그리면 무겁고 읽을 수도 없다.
   static const _countZoom = 14.5;
 
   Future<void> _tap(String id) async {
@@ -310,8 +308,10 @@ class _NearbyMapState extends State<NearbyMap>
         event.source == MapEventSource.mapController ||
         event.source == MapEventSource.fitCamera;
     final rotated = (r - _rotation).abs() > .5;
+    final countsNow = event.camera.zoom >= _countZoom;
+    final countsWas = (_camera?.zoom ?? _zoom) >= _countZoom;
     _camera = event.camera;
-    if (settled || rotated) {
+    if (settled || rotated || countsNow != countsWas) {
       setState(() => _rotation = r);
     }
   }
@@ -325,7 +325,7 @@ class _NearbyMapState extends State<NearbyMap>
     final camera = _camera;
     final zoom = camera?.zoom ?? _zoom;
     final view = camera?.visibleBounds;
-    // 확대해서 보이는 곳만 흰 원(수)으로 — 나머지 대여소는 가벼운 점.
+    // 확대해서 보이는 곳만 숫자 원으로 — 나머지 대여소는 가벼운 점.
     final countsHere = widget.showCounts && zoom >= _countZoom && view != null;
     bool inView(NearbyMapStation s) =>
         view == null || view.contains(LatLng(s.latitude, s.longitude));
@@ -393,16 +393,19 @@ class _NearbyMapState extends State<NearbyMap>
               ),
             ],
           ),
-        // 경보 없는 대여소: 흰 점 + 회색 테(가벼운 원 — 서울 전체 2천여 곳을 그려도 버벅이지 않게).
         CircleLayer(
           circles: [
             for (final s in dots)
               CircleMarker(
                 point: LatLng(s.latitude, s.longitude),
                 radius: dotRadius,
-                color: surface,
-                borderColor: c.muted,
-                borderStrokeWidth: zoom < 12 ? 1 : 2,
+                color: widget.showCounts
+                    ? Theme.of(context).colorScheme.onSurface
+                    : surface,
+                borderColor: widget.showCounts
+                    ? Theme.of(context).colorScheme.surface
+                    : c.muted,
+                borderStrokeWidth: zoom < 12 ? 1 : 1.5,
               ),
           ],
         ),
@@ -428,7 +431,8 @@ class _NearbyMapState extends State<NearbyMap>
                     child: _StationPin(
                       station: s,
                       ping: _ping,
-                      showCount: widget.showCounts && countsHere,
+                      occupancy: widget.showCounts,
+                      showCount: countsHere,
                       selected: _selected == s.id,
                       favorite: widget.favoriteIds.contains(s.id),
                       stop: widget.stopNumbers[s.id],
@@ -553,12 +557,11 @@ const _darkTiles = <double>[
   0, 0, 0, 1, 0,
 ];
 
-/// 대여소 표시. 강한 경보 = 꽉 찬 신호 원 + 숫자 + 퍼지는 고리, 경보 = 옅은 원 + 숫자,
-/// 경보 없음 = 작은 회색 점(대여소 자리만 알려 준다).
 class _StationPin extends StatelessWidget {
   const _StationPin({
     required this.station,
     required this.ping,
+    this.occupancy = false,
     this.showCount = false,
     this.selected = false,
     this.favorite = false,
@@ -567,6 +570,8 @@ class _StationPin extends StatelessWidget {
 
   final NearbyMapStation station;
   final Animation<double> ping;
+
+  final bool occupancy;
   final bool showCount;
 
   /// 카드가 열린 대여소: 잉크 테두리 고리.
@@ -628,38 +633,51 @@ class _StationPin extends StatelessWidget {
 
   Widget _pin(BuildContext context) {
     final c = context.ridey;
-    final surface = Theme.of(context).colorScheme.surface;
-    if (station.alertCount <= 0 && showCount) {
-      // 탈 만한 자전거 수: 면 색 원 + 1px 선 + 잉크 숫자(0대면 흐리게). 실시간 대수가 없으면 '·'.
+    final theme = Theme.of(context);
+    final surface = theme.colorScheme.surface;
+    final ink = theme.colorScheme.onSurface;
+    if (occupancy) {
       final parked = station.parkedBikes;
-      final empty = parked == 0;
+      final size = showCount ? 26.0 : 14.0;
+      final disc = Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: ink,
+          shape: BoxShape.circle,
+          border: Border.all(color: surface, width: showCount ? 2 : 1.5),
+        ),
+        child: showCount
+            ? Text(
+                parked == null ? '·' : '$parked',
+                style: context
+                    .rideyNumbers(const TextStyle())
+                    ?.copyWith(fontSize: 11, height: 1, color: surface),
+              )
+            : null,
+      );
+      if (station.alertCount <= 0) return Center(child: disc);
       return Center(
-        child: Container(
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: empty ? c.line : c.muted, width: 1.5),
-          ),
-          child: Text(
-            parked == null ? '·' : '$parked',
-            style: context
-                .rideyNumbers(const TextStyle())
-                ?.copyWith(
-                  fontSize: 11,
-                  height: 1,
-                  color: empty
-                      ? c.muted
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
+        child: SizedBox(
+          width: showCount ? 36 : 22,
+          height: showCount ? 36 : 22,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              disc,
+              Positioned(
+                right: 0,
+                top: 0,
+                child: _AlertDot(strong: station.isHighAlert, ping: ping),
+              ),
+            ],
           ),
         ),
       );
     }
     if (station.alertCount <= 0) {
-      // 대여소 자리: 흰 점 + 회색 테(지도 위에서 '여기 대여소' 만 알린다).
       return Center(
         child: Container(
           width: 12,
@@ -714,6 +732,56 @@ class _StationPin extends StatelessWidget {
                   border: Border.all(
                     color: c.signal.withValues(alpha: (1 - q) * .6),
                     width: 2,
+                  ),
+                ),
+              ),
+            child!,
+          ],
+        );
+      },
+      child: disc,
+    );
+  }
+}
+
+/// 고장 의심 표시: 거치 대수 원 옆의 주황 점. 강한 경보는 한 번 퍼진다.
+class _AlertDot extends StatelessWidget {
+  const _AlertDot({required this.strong, required this.ping});
+
+  final bool strong;
+  final Animation<double> ping;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.ridey;
+    final surface = Theme.of(context).colorScheme.surface;
+    final disc = Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: strong ? c.signal : c.signalSoft,
+        shape: BoxShape.circle,
+        border: Border.all(color: surface, width: 1.5),
+      ),
+    );
+    if (!strong) return disc;
+    return AnimatedBuilder(
+      animation: ping,
+      builder: (context, child) {
+        final q = ping.value;
+        return Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            if (q > 0 && q < 1)
+              Container(
+                width: 12 + q * 14,
+                height: 12 + q * 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: c.signal.withValues(alpha: (1 - q) * .6),
+                    width: 1.5,
                   ),
                 ),
               ),
