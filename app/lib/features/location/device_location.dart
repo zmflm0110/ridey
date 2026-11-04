@@ -21,7 +21,7 @@ Future<DeviceLocation?> _readDeviceLocation() async {
         permission == LocationPermission.deniedForever) {
       return null;
     }
-    // 폰이 이미 아는 위치가 10분 안의 것이면 그대로 쓴다 — 새로 잡을 때까지 홈이 기다리지 않게(2km 범위라 충분).
+    // 폰이 이미 아는 위치가 10분 안의 것이면 그대로 쓴다 — 새로 잡을 때까지 홈이 기다리지 않게(500m 를 크게 보는 데 충분).
     final known = await Geolocator.getLastKnownPosition(
       forceAndroidLocationManager:
           defaultTargetPlatform == TargetPlatform.android,
