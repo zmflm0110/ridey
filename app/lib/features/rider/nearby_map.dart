@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -40,7 +41,11 @@ class NearbyMap extends StatefulWidget {
     this.location,
     this.fullBleed = false,
     this.showCounts = false,
+    this.radiusMeters,
   });
+
+  /// 내 위치 둘레의 범위(예: 2km). 있으면 처음에 그 원이 다 보이게 맞추고 얇은 원으로 그려 준다.
+  final double? radiusMeters;
 
   /// '주변 대여소 현황' 일 때: 고장 의심이 없는 대여소도 탈 만한 자전거 수를 흰 원에 보여 준다.
   final bool showCounts;
@@ -99,26 +104,47 @@ class _NearbyMapState extends State<NearbyMap>
   Offset get _focusOffset =>
       widget.fullBleed ? Offset(0, -_height * .26) : Offset.zero;
 
-  void _focus() {
-    if (!_ready) return;
-    // 내 위치가 없으면(직원 모드 등) 경보 대여소가 모두 보이게 맞춘다 — 아래 시트가 덮는 부분은 비워 둔다.
+  EdgeInsets get _fitPadding => EdgeInsets.fromLTRB(
+    20,
+    64,
+    20,
+    widget.fullBleed ? _height * .52 + 16 : 20,
+  );
+
+  /// 처음 맞출 범위: 내 위치 둘레 [NearbyMap.radiusMeters] 원, 위치가 없으면 경보 대여소 전부.
+  CameraFit? _initialFit() {
+    final here = widget.location;
+    final radius = widget.radiusMeters;
+    if (here != null && radius != null) {
+      final dLat = radius / 111320;
+      final dLon = radius / (111320 * math.cos(here.latitude * math.pi / 180));
+      return CameraFit.bounds(
+        bounds: LatLngBounds(
+          LatLng(here.latitude - dLat, here.longitude - dLon),
+          LatLng(here.latitude + dLat, here.longitude + dLon),
+        ),
+        padding: _fitPadding,
+      );
+    }
     final alerts = [
       for (final s in widget.stations)
         if (s.alertCount > 0) LatLng(s.latitude, s.longitude),
     ];
-    if (widget.location == null && alerts.length > 1) {
-      _map.fitCamera(
-        CameraFit.coordinates(
-          coordinates: alerts,
-          padding: EdgeInsets.fromLTRB(
-            48,
-            72,
-            48,
-            widget.fullBleed ? _height * .52 + 24 : 48,
-          ),
-          maxZoom: 15,
-        ),
+    if (here == null && alerts.length > 1) {
+      return CameraFit.coordinates(
+        coordinates: alerts,
+        padding: _fitPadding,
+        maxZoom: 15,
       );
+    }
+    return null;
+  }
+
+  void _focus() {
+    if (!_ready) return;
+    final fit = _initialFit();
+    if (fit != null) {
+      _map.fitCamera(fit);
       return;
     }
     _map.move(_center, _zoom, offset: _focusOffset);
@@ -170,11 +196,13 @@ class _NearbyMapState extends State<NearbyMap>
     final ordered = [...widget.stations]
       ..sort((a, b) => rank(a).compareTo(rank(b)));
 
-    final map = FlutterMap(
+    Widget buildMap() => FlutterMap(
       mapController: _map,
       options: MapOptions(
         initialCenter: _center,
         initialZoom: _zoom,
+        // 처음 모습은 지도를 만들 때 정한다(다 만든 뒤 옮기면 첫 타일을 못 받는 경우가 있었다).
+        initialCameraFit: _initialFit(),
         minZoom: 10,
         maxZoom: 18,
         backgroundColor: dark ? const Color(0xFF1B1D21) : c.fill,
@@ -187,7 +215,7 @@ class _NearbyMapState extends State<NearbyMap>
         ),
         onMapReady: () {
           _ready = true;
-          _focus();
+          if (_initialFit() == null) _focus();
         },
       ),
       children: [
@@ -208,13 +236,29 @@ class _NearbyMapState extends State<NearbyMap>
               cachingProvider: const DisabledMapCachingProvider(),
             ),
           ),
+        if (widget.location != null && widget.radiusMeters != null)
+          CircleLayer(
+            circles: [
+              CircleMarker(
+                point: LatLng(
+                  widget.location!.latitude,
+                  widget.location!.longitude,
+                ),
+                radius: widget.radiusMeters!,
+                useRadiusInMeter: true,
+                color: c.calm.withValues(alpha: dark ? .07 : .05),
+                borderColor: c.calm.withValues(alpha: .45),
+                borderStrokeWidth: 1.5,
+              ),
+            ],
+          ),
         MarkerLayer(
           markers: [
             for (final s in ordered)
               Marker(
                 point: LatLng(s.latitude, s.longitude),
-                width: s.alertCount > 0 || widget.showCounts ? 64 : 14,
-                height: s.alertCount > 0 || widget.showCounts ? 64 : 14,
+                width: s.alertCount > 0 || widget.showCounts ? 64 : 28,
+                height: s.alertCount > 0 || widget.showCounts ? 64 : 28,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => widget.onStationTap(s.id),
@@ -263,7 +307,7 @@ class _NearbyMapState extends State<NearbyMap>
               _height = constraints.maxHeight;
               return Stack(
                 children: [
-                  Positioned.fill(child: map),
+                  Positioned.fill(child: buildMap()),
                   Positioned(
                     left: 12,
                     top: 12,
@@ -365,14 +409,15 @@ class _StationPin extends StatelessWidget {
       );
     }
     if (station.alertCount <= 0) {
+      // 대여소 자리: 흰 점 + 회색 테(지도 위에서 '여기 대여소' 만 알린다).
       return Center(
         child: Container(
-          width: 9,
-          height: 9,
+          width: 12,
+          height: 12,
           decoration: BoxDecoration(
-            color: c.muted.withValues(alpha: .55),
+            color: surface,
             shape: BoxShape.circle,
-            border: Border.all(color: surface, width: 1.5),
+            border: Border.all(color: c.muted, width: 2),
           ),
         ),
       );

@@ -42,6 +42,7 @@ class StaffOverviewPage extends StatelessWidget {
         fullBleed: true,
         stations: _alertStations(session),
         location: session.location,
+        radiusMeters: session.location == null ? null : 2000,
         onStationTap: (id) => _openStation(context, id),
       ),
       children: [

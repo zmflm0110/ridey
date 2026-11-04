@@ -306,18 +306,15 @@ class _LoadedHomeState extends State<_LoadedHome> {
           );
         }
 
-        // 목록 탭과 지도를 맞춘다: '고장 의심' 이면 고장 의심 대여소만, '대여소 현황' 이면 주변 대여소 전부를
-        // 탈 만한 자전거 수와 함께.
-        final shown = _showStations
-            ? pins.values.toList(growable: false)
-            : [
-                for (final pin in pins.values)
-                  if (pin.alertCount > 0) pin,
-              ];
+        // 대여소 자리는 언제나 보인다. '고장 의심' 탭은 고장 의심 대여소를 주황으로 두드러지게 하고 나머지는
+        // 작은 흰 점으로, '대여소 현황' 탭은 모든 대여소에 탈 만한 자전거 수를 적는다.
+        final shown = pins.values.toList(growable: false);
         return RideyMapSheet(
           map: NearbyMap(
             fullBleed: true,
             showCounts: _showStations,
+            // 홈 문구가 '내 주변 2km' 이니 지도도 처음에 그 2km 가 다 보이게.
+            radiusMeters: area.usingDeviceLocation ? 2000 : null,
             stations: shown,
             location: area.location,
             onStationTap: (id) => _openStation(id, area),
