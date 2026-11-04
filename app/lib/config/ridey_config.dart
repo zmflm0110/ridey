@@ -35,8 +35,6 @@ abstract final class RideyConfig {
 
   static String naverMapClientId = naverMapClientIdFromDefine;
 
-  /// True after [FlutterNaverMap.init] succeeds. Widget tests leave this false.
-  static var naverMapReady = false;
 
   static Future<void> loadLocalEnv() async {
     if (naverMapClientId.isNotEmpty) return;
