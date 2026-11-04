@@ -91,7 +91,7 @@ class _RideyAppState extends State<RideyApp> {
       _mode = mode;
       _lastMode = saved;
       _ready = true;
-      // 첫 실행은 점이 떨어지는 장면이 첫 화면(서울 지도) 안에서 한 번만 나온다 — 시작 애니메이션을 겹치지 않는다.
+      // 역할을 묻는 날(켤 때마다)은 점이 떨어지는 장면이 첫 화면(서울 지도) 안에서 나온다 — 시작 애니메이션을 겹치지 않는다.
       if (mode == null) _intro = false;
     });
   }

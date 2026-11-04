@@ -2,6 +2,7 @@
 // 켤 때마다 역할을 묻는다(지난번 고른 것은 표시만).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ridey_app/app/seoul_hero.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
@@ -105,6 +106,9 @@ void main() {
         nearbyAlertReminder: const SilentNearbyAlertReminder(),
       ),
     );
+    // 켤 때마다 '점 하나 → 서울' 장면부터(처음 한 번만이 아니라).
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SeoulHero), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));
     expect(find.text('따릉이를 이용하는 일반 시민이에요'), findsOneWidget);
     expect(find.text('지난번엔 관리 직원으로 썼어요'), findsOneWidget);

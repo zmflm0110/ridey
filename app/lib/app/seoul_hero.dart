@@ -7,7 +7,7 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 
-/// Full-screen first-launch story, told once (the site's "점 하나 → 서울"):
+/// Full-screen launch story, told on every launch with the role question (the site's "점 하나 → 서울"):
 /// one signal dot drops and bounces, bursts into Seoul's bike stations which
 /// spring into place, then stations with a suspect bike right now light up and
 /// ping while [overlay] shows the count. Only real data lights anything up.
