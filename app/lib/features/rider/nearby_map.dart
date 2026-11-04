@@ -26,12 +26,12 @@ class NearbyMapStation {
   final int? parkedBikes;
 }
 
-/// The area map. Tiles are OpenStreetMap data drawn in CARTO's quiet styles
-/// (Positron by day, Dark Matter at night) so the brand's signal dots stand
-/// out: a filled orange disc with the number of suspect bikes for a strong
-/// alert (it pings a few times), a soft disc for a 2-person chain, a small
-/// grey dot for a station without alerts, and a calm-blue dot for the phone.
-/// No key or sign-up — it works the same on iPhone and Android.
+/// The area map: OpenStreetMap's standard tiles (no key, Korean labels) seen
+/// through a colour filter — near-grey by day, inverted and dark at night — so
+/// the brand's signal markers stand out: a filled orange disc with the number
+/// of suspect bikes for a strong alert (it pings a few times), a soft disc for
+/// a 2-person chain, a small grey dot for a station without alerts, and a
+/// calm-blue dot for the phone. Works the same on iPhone and Android.
 class NearbyMap extends StatefulWidget {
   const NearbyMap({
     super.key,
