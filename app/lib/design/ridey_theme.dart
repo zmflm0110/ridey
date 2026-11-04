@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/cupertino.dart' show CupertinoRouteTransitionMixin;
 import 'package:flutter/material.dart';
 
 /// Same values as docs/brand.md.
@@ -350,20 +351,13 @@ class RideyPageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) {
     if (RideyMotion.reduced(context)) return child;
-    final enter = CurvedAnimation(
-      parent: animation,
-      curve: RideyMotion.ease,
-      reverseCurve: Curves.easeInCubic,
-    );
-    return FadeTransition(
-      opacity: enter,
-      child: SlideTransition(
-        position: Tween(
-          begin: const Offset(0, 0.03),
-          end: Offset.zero,
-        ).animate(enter),
-        child: child,
-      ),
+    // 화면 왼쪽 가장자리에서 오른쪽으로 밀면 뒤로 간다(아이폰·안드로이드 모두) — 밀면서 앞 화면이 따라 보인다.
+    return CupertinoRouteTransitionMixin.buildPageTransitions<T>(
+      route,
+      context,
+      animation,
+      secondaryAnimation,
+      child,
     );
   }
 }

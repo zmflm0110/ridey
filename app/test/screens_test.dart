@@ -112,6 +112,11 @@ class _Live implements LiveSnapshotRepository {
 
 class _Ops implements OpsListRepository {
   @override
+  Future<List<OpsScore>> scores() async => const [
+    OpsScore(day: '2026-11-03', listed: 79, rode: 58, firstDud: 28),
+    OpsScore(day: '2026-11-02', listed: 32, rode: 26, firstDud: 10),
+  ];
+  @override
   Future<List<String>> days() async => const ['2026-10-25', '2026-10-24'];
 
   @override
@@ -247,8 +252,6 @@ void main() {
     testWidgets('home stations$tag', (tester) async {
       await open(tester, dark: dark);
       await tester.ensureVisible(find.text('주변 대여소 현황'));
-      await tester.drag(find.byType(ListView).first, const Offset(0, -140));
-      await settle(tester);
       await tester.tap(find.text('주변 대여소 현황'));
       await settle(tester);
       await shot(tester, '02b_home_stations$tag');
@@ -295,7 +298,23 @@ void main() {
 
     testWidgets('staff list$tag', (tester) async {
       await open(tester, dark: dark, prefs: _staff);
-      await tester.tap(find.text('목록'));
+      // 직원 탭은 구별 현황·더보기 두 개 — 구를 누르면 그 구의 대여소별 목록이 열린다.
+      await tester.scrollUntilVisible(
+        find.text('강서구'),
+        150,
+        scrollable: find
+            .descendant(
+              of: find.byType(DraggableScrollableSheet),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await Scrollable.ensureVisible(
+        tester.element(find.text('강서구').last),
+        alignment: .5,
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('강서구').last);
       await shot(tester, '10_staff_list$tag');
     }, skip: _out == null);
 

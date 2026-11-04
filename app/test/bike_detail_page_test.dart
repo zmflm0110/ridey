@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 
 void main() {
@@ -40,5 +41,29 @@ void main() {
     expect(find.text('+12%p'), findsOneWidget);
     expect(find.text('현장에서 확인하기'), findsNothing);
     expect(find.textContaining('현장 확인'), findsNothing);
+  });
+
+  testWidgets('the report button only opens the Seoul report page', (
+    tester,
+  ) async {
+    final opened = <Uri>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: RideyTheme.light(),
+        home: Scaffold(
+          body: ReportBikeButton(
+            bike: 'SPB-69683',
+            open: (uri) async {
+              opened.add(uri);
+              return true;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('고장 신고하기'));
+    await tester.pump();
+    expect(opened, [officialReportUri]);
+    expect(find.textContaining('SPB-69683'), findsOneWidget);
   });
 }

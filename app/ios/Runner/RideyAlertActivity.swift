@@ -39,7 +39,8 @@ final class RideyAlertActivity {
       if #available(iOS 16.2, *) {
         let activity = try Activity<RideyAlertAttributes>.request(
           attributes: attributes,
-          content: .init(state: state, staleDate: nil)
+          // 대여소 앞에서 잠깐 쓰는 표시 — 30분 지나면 '오래된 정보' 로 표시된다.
+          content: .init(state: state, staleDate: Date().addingTimeInterval(30 * 60))
         )
         activityId = activity.id
       } else {

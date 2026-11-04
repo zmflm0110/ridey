@@ -33,6 +33,7 @@
 		<string>ttareungi</string>
 		<string>smartbike</string>
 		<string>itms-apps</string>
+		<string>nmap</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

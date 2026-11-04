@@ -1,11 +1,14 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:ridey_app/app/launch_mark.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 
-/// Full-screen first-launch story, told once (the site's "점 하나 → 서울"):
+/// Full-screen launch story, told on every launch with the role question (the site's "점 하나 → 서울"):
 /// one signal dot drops and bounces, bursts into Seoul's bike stations which
 /// spring into place, then stations with a suspect bike right now light up and
 /// ping while [overlay] shows the count. Only real data lights anything up.
@@ -37,10 +40,11 @@ class SeoulHero extends StatefulWidget {
 }
 
 class _SeoulHeroState extends State<SeoulHero> with TickerProviderStateMixin {
-  // 0.00–0.24 점이 떨어져 튀며 앉음 · 0.24–1.00 서울로 퍼짐
+  // 0.00–0.06 시작 화면의 'R.' 그대로 · 0.03–0.15 R 이 사라짐 · 0.06–0.30 점이 R 에서 튀어 올라 떨어져 앉음
+  // · 0.30–1.00 서울로 퍼짐
   late final AnimationController _story = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 3200),
+    duration: const Duration(milliseconds: 3500),
   );
   late final AnimationController _lit = AnimationController(
     vsync: this,
@@ -75,7 +79,9 @@ class _SeoulHeroState extends State<SeoulHero> with TickerProviderStateMixin {
         .catchError((_) {});
     widget.snapshot
         .then((snap) {
+          // 인터넷이 안 돼 폰에 남은 옛 사본이거나 대여 기록이 멈췄으면 '지금' 숫자로 보이지 않는다.
           if (!mounted || snap == null) return;
+          if (snap.isOffline || !snap.feed.isHealthy) return;
           setState(() {
             _alertIds = {for (final b in snap.bikes) b.station};
             _count = snap.bikes.length;
@@ -166,16 +172,38 @@ class _SeoulPainter extends CustomPainter {
     final t = story.value;
     final signal = Paint()..color = RideyColors.heroSignal;
 
-    // 1) 떨어지는 점 — 위에서 떨어져 두 번 작게 튀고 앉는다(로고·사이트의 '떨어져 앉는 점').
-    const dropEnd = .24;
+    // 0) 시작 화면의 R — 같은 자리에서 이어받아 사라진다.
+    LaunchMark.paintR(canvas, size, 1 - ((t - .03) / .12).clamp(0.0, 1.0));
+
+    // 1) 떨어지는 점 — 'R.' 의 점이 튀어 올랐다가 지도 가운데로 떨어져 두 번 작게 튀고 앉는다.
+    const dropStart = .06, dropEnd = .30;
     if (t < dropEnd + .06) {
-      final d = (t / dropEnd).clamp(0.0, 1.0);
-      final y = origin.dy - _height(d) * 260;
+      final d = ((t - dropStart) / (dropEnd - dropStart)).clamp(0.0, 1.0);
+      final start = size.center(Offset.zero) + LaunchMark.dot;
+      final Offset at;
+      final double radius;
+      if (d < .45) {
+        // 시작 자리에서 지도 가운데까지 포물선(위로 솟았다 떨어짐).
+        final p = d / .45;
+        at = Offset(
+          start.dx + (origin.dx - start.dx) * Curves.easeInOut.transform(p),
+          start.dy + (origin.dy - start.dy) * p - 4 * 180 * p * (1 - p),
+        );
+        radius = LaunchMark.dotRadius + (7 - LaunchMark.dotRadius) * p;
+      } else {
+        at = Offset(origin.dx, origin.dy - _height(d) * 260);
+        radius = 7;
+      }
       final fade = t <= dropEnd ? 1.0 : 1 - (t - dropEnd) / .06;
+      final color = Color.lerp(
+        LaunchMark.dotColor,
+        RideyColors.heroSignal,
+        (d / .45).clamp(0.0, 1.0),
+      )!;
       canvas.drawCircle(
-        Offset(origin.dx, y),
-        7 * fade + .01,
-        Paint()..color = RideyColors.heroSignal.withValues(alpha: fade),
+        at,
+        radius * fade + .01,
+        Paint()..color = color.withValues(alpha: fade),
       );
     }
     if (stations.isEmpty) return;
@@ -204,18 +232,27 @@ class _SeoulPainter extends CustomPainter {
     final b = ((t - dropEnd) / (1 - dropEnd)).clamp(0.0, 1.0);
     final dot = Paint()..color = RideyColors.heroText.withValues(alpha: .28);
     final alerts = <(Offset, double)>[];
+    // 2,789개 점을 원 하나씩 그리면 프레임마다 그리기 호출이 수천 번이라 끊긴다 — 좌표를 모아 한 번에 그린다.
+    final points = Float32List(stations.length * 2);
+    var n = 0;
     for (final s in stations) {
       final target = at(s);
       final d = ((target - origin).distance / reach).clamp(0.0, 1.0);
       final local = ((b - d * .4) / .5).clamp(0.0, 1.0);
-      if (local <= 0) continue;
-      final p = Offset.lerp(
-        origin,
-        target,
-        RideyMotion.spring.transform(local),
-      )!;
-      canvas.drawCircle(p, 1.3, dot);
       if (alertIds.contains(s.id)) alerts.add((target, d));
+      if (local <= 0) continue;
+      final k = RideyMotion.spring.transform(local);
+      points[n++] = origin.dx + (target.dx - origin.dx) * k;
+      points[n++] = origin.dy + (target.dy - origin.dy) * k;
+    }
+    if (n > 0) {
+      canvas.drawRawPoints(
+        ui.PointMode.points,
+        Float32List.sublistView(points, 0, n),
+        dot
+          ..strokeWidth = 2.6
+          ..strokeCap = StrokeCap.round,
+      );
     }
 
     // 3) 지금 고장 의심이 있는 대여소 — 가까운 곳부터 켜지고 고리가 퍼진다.

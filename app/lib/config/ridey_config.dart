@@ -1,5 +1,3 @@
-import 'package:flutter/services.dart';
-
 /// Public Supabase settings. Override with --dart-define at build time.
 abstract final class RideyConfig {
   static const supabaseUrl = String.fromEnvironment(
@@ -14,6 +12,9 @@ abstract final class RideyConfig {
 
   static const apiHeaders = {'apikey': publishableKey};
 
+  /// 시연 영상·발표용 고정 위치('위도,경도'). 비어 있으면 진짜 위치.
+  static const demoLocation = String.fromEnvironment('RIDEY_DEMO_LOCATION');
+
   static Uri rest(String resource) =>
       Uri.parse('$supabaseUrl/rest/v1/$resource');
 
@@ -25,43 +26,10 @@ abstract final class RideyConfig {
   static Uri get opsListDaysUri =>
       rest('ops_lists?select=day&order=day.desc&limit=14');
 
-  static Uri opsListDayUri(String day) =>
-      rest('ops_lists?select=body&day=eq.$day');
-
-  /// `--dart-define=NAVER_MAP_CLIENT_ID=...` wins over [loadLocalEnv].
-  static const naverMapClientIdFromDefine = String.fromEnvironment(
-    'NAVER_MAP_CLIENT_ID',
+  static Uri get opsScoresUri => rest(
+    'ops_scores?select=day,listed,rode,first_dud&order=day.desc&limit=7',
   );
 
-  static String naverMapClientId = naverMapClientIdFromDefine;
-
-  /// True after [FlutterNaverMap.init] succeeds. Widget tests leave this false.
-  static var naverMapReady = false;
-
-  static Future<void> loadLocalEnv() async {
-    if (naverMapClientId.isNotEmpty) return;
-    try {
-      final raw = await rootBundle.loadString('.env');
-      naverMapClientId = naverMapClientIdFromEnv(raw);
-    } catch (_) {}
-  }
-}
-
-/// Reads `NAVER_MAP_CLIENT_ID` from a `.env` file. Empty when the key is absent.
-String naverMapClientIdFromEnv(String raw) {
-  for (final line in raw.split('\n')) {
-    final trimmed = line.trim();
-    if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
-    final index = trimmed.indexOf('=');
-    if (index <= 0) continue;
-    if (trimmed.substring(0, index).trim() != 'NAVER_MAP_CLIENT_ID') continue;
-    var value = trimmed.substring(index + 1).trim();
-    if (value.length >= 2 &&
-        ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'")))) {
-      value = value.substring(1, value.length - 1);
-    }
-    return value;
-  }
-  return '';
+  static Uri opsListDayUri(String day) =>
+      rest('ops_lists?select=body&day=eq.$day');
 }

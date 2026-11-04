@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
+import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -15,12 +16,16 @@ class BikeDetailPage extends StatelessWidget {
     required this.updatedAt,
     this.feed,
     this.onCheckAnother,
+    this.forStaff = false,
   });
 
   final LiveBike bike;
   final DateTime updatedAt;
   final FeedHealth? feed;
   final VoidCallback? onCheckAnother;
+
+  /// 직원 모드: 안내를 '타기 전에' 가 아니라 '겉보기엔 멀쩡해도 직접 확인' 으로, 단추는 목록으로 돌아가기.
+  final bool forStaff;
 
   @override
   Widget build(BuildContext context) {
@@ -29,87 +34,101 @@ class BikeDetailPage extends StatelessWidget {
     final station = bike.stationName.isEmpty ? bike.station : bike.stationName;
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
-        children: [
-          const _CheckBackTitle(),
-          const SizedBox(height: 24),
-          Text(
-            bike.bike,
-            style: context
-                .rideyNumbers(theme.textTheme.titleLarge)
-                ?.copyWith(fontSize: 22),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            station,
-            style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            bike.isHighAlert ? '강한 경보가 켜졌어요.' : '경보가 켜졌어요.',
-            style: theme.textTheme.headlineLarge?.copyWith(
-              color: c.signalText,
-              fontSize: 28,
-              height: 1.3,
+      // 세부 화면은 시민 탭 안이 아니라 화면 전체로도 열린다(직원 모드·지도 카드) — 상태 표시줄·다이내믹 아일랜드 아래로 내려 뒤로 단추가 눌리게.
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+          children: [
+            // 직원은 목록에서 들어온다 — 돌아갈 곳을 머리에.
+            _CheckBackTitle(title: forStaff ? '목록' : '자전거 확인'),
+            const SizedBox(height: 24),
+            Text(
+              bike.bike,
+              style: context
+                  .rideyNumbers(theme.textTheme.titleLarge)
+                  ?.copyWith(fontSize: 22),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurface,
-              height: 1.5,
+            const SizedBox(height: 4),
+            Text(
+              station,
+              style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
             ),
-          ),
-          const SizedBox(height: 20),
-          RideyCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ChainStrip(chain: bike.chain),
-                const SizedBox(height: 14),
-                _Fact(label: '연쇄', value: '${bike.chain}명', strong: true),
-                if (bike.lastDud.isNotEmpty)
-                  _Fact(label: '마지막 헛대여', value: bike.lastDud),
-                if (bike.probability != null)
-                  _Fact(
-                    label: '다음 사람도 바로 반납할 확률',
-                    value: '${bike.probability}%',
-                    strong: true,
-                  ),
-              ],
+            const SizedBox(height: 14),
+            Text(
+              bike.isHighAlert ? '강한 경보가 켜졌어요.' : '경보가 켜졌어요.',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                color: c.signalText,
+                fontSize: 28,
+                height: 1.3,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          RideyDataConfidence(
-            updatedAt: updatedAt,
-            isHealthy: feed?.isHealthy ?? true,
-            ratio: feed?.ratio,
-          ),
-          const SizedBox(height: 20),
-          RideyButton(
-            label: '다른 자전거 확인하기',
-            onPressed: onCheckAnother ?? () => Navigator.of(context).maybePop(),
-          ),
-          const SizedBox(height: 14),
-          Center(
-            child: _UnderlinedAction(
-              label: '판단 근거 자세히 보기',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => BikeEvidencePage(
-                      bike: bike,
-                      updatedAt: updatedAt,
-                      feed: feed,
+            const SizedBox(height: 8),
+            Text(
+              forStaff
+                  ? '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 겉보기엔 멀쩡해도 타 봐야 아는 고장일 수 있어요 — 브레이크·타이어·체인·안장을 직접 확인해 주세요.'
+                  : '서로 다른 ${bike.chain}명이 빌리자마자 반납했어요. 타기 전에 브레이크와 타이어를 살펴보세요.',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+            RideyCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ChainStrip(chain: bike.chain),
+                  const SizedBox(height: 14),
+                  _Fact(label: '연쇄', value: '${bike.chain}명', strong: true),
+                  if (bike.lastDud.isNotEmpty)
+                    _Fact(label: '마지막 헛대여', value: bike.lastDud),
+                  if (bike.probability != null)
+                    _Fact(
+                      label: '다음 사람도 바로 반납할 확률',
+                      value: '${bike.probability}%',
+                      strong: true,
                     ),
-                  ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            RideyDataConfidence(
+              updatedAt: updatedAt,
+              isHealthy: feed?.isHealthy ?? true,
+              ratio: feed?.ratio,
+            ),
+            const SizedBox(height: 20),
+            RideyButton(
+              label: forStaff ? '목록으로 돌아가기' : '다른 자전거 확인하기',
+              onPressed:
+                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
+            ),
+            const SizedBox(height: 14),
+            Center(
+              child: _UnderlinedAction(
+                label: '판단 근거 자세히 보기',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => BikeEvidencePage(
+                        bike: bike,
+                        updatedAt: updatedAt,
+                        feed: feed,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // 시민이 타 보고 고장을 확인했을 때의 다음 행동: 신고. RIDEY 에 남겨 직원 화면에 바로 보이게 하고,
+            // 이어서 서울시 공식 신고 화면(공단이 받는 곳)을 연다.
+            if (!forStaff) ...[
+              const SizedBox(height: 22),
+              ReportBikeButton(bike: bike.bike),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -138,59 +157,67 @@ class BikeCheckMessagePage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
-        children: [
-          const _CheckBackTitle(),
-          const SizedBox(height: 28),
-          if (bikeId != null) ...[
+      // 세부 화면은 시민 탭 안이 아니라 화면 전체로도 열린다(직원 모드·지도 카드) — 상태 표시줄·다이내믹 아일랜드 아래로 내려 뒤로 단추가 눌리게.
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+          children: [
+            const _CheckBackTitle(),
+            const SizedBox(height: 28),
+            if (bikeId != null) ...[
+              Text(
+                bikeId!,
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Text(title, style: theme.textTheme.headlineLarge),
+            const SizedBox(height: 12),
             Text(
-              bikeId!,
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
+              message,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
+                height: 1.5,
               ),
             ),
-            const SizedBox(height: 10),
-          ],
-          Text(title, style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurface,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 28),
-          if (offerOfficialApp) ...[
-            RideyButton(
-              label: '따릉이 앱에서 대여하기',
-              onPressed: onOpenOfficialApp ?? openOfficialBikeApp,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '공식 앱이 열립니다. 해당 번호로 바로 대여되지는 않아요.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: context.ridey.muted,
+            const SizedBox(height: 28),
+            if (offerOfficialApp) ...[
+              RideyButton(
+                label: '따릉이 앱에서 대여하기',
+                onPressed: onOpenOfficialApp ?? openOfficialBikeApp,
               ),
-            ),
-            const SizedBox(height: 14),
+              const SizedBox(height: 8),
+              Text(
+                '공식 앱이 열립니다. 해당 번호로 바로 대여되지는 않아요.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: context.ridey.muted,
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (bikeId != null) ...[
+              ReportBikeButton(bike: bikeId!),
+              const SizedBox(height: 14),
+            ],
+            // 대여하기가 있으면 그것이 주 동작이고, 다른 자전거 확인은 한 단 낮춘다(검은 단추 둘이면 무엇을 누를지 흐려짐).
+            if (offerOfficialApp)
+              RideyButton.secondary(
+                label: '다른 자전거 확인하기',
+                onPressed:
+                    onCheckAnother ?? () => Navigator.of(context).maybePop(),
+              )
+            else
+              RideyButton(
+                label: '다른 자전거 확인하기',
+                onPressed:
+                    onCheckAnother ?? () => Navigator.of(context).maybePop(),
+              ),
           ],
-          // 대여하기가 있으면 그것이 주 동작이고, 다른 자전거 확인은 한 단 낮춘다(검은 단추 둘이면 무엇을 누를지 흐려짐).
-          if (offerOfficialApp)
-            RideyButton.secondary(
-              label: '다른 자전거 확인하기',
-              onPressed:
-                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
-            )
-          else
-            RideyButton(
-              label: '다른 자전거 확인하기',
-              onPressed:
-                  onCheckAnother ?? () => Navigator.of(context).maybePop(),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -215,110 +242,114 @@ class BikeEvidencePage extends StatelessWidget {
     final station = bike.stationName.isEmpty ? bike.station : bike.stationName;
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
-        children: [
-          const _CheckBackTitle(title: '판단 근거'),
-          const SizedBox(height: 22),
-          Text(
-            bike.bike,
-            style: context
-                .rideyNumbers(theme.textTheme.titleLarge)
-                ?.copyWith(fontSize: 20),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            station,
-            style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
-          ),
-          const SizedBox(height: 16),
-          RideyDataConfidence(
-            updatedAt: updatedAt,
-            isHealthy: feed?.isHealthy ?? true,
-            ratio: feed?.ratio,
-          ),
-          const RideySectionTitle('왜 경보가 켜졌나요?'),
-          RideyCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ChainStrip(chain: bike.chain),
-                const SizedBox(height: 16),
-                Text(
-                  '서로 다른 ${bike.chain}명의 기록으로 경보',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '빌리자마자 반납한 사람 하나하나가 점이에요. 첫 점은 실수일 수 있어 비워 두고, '
-                  '서로 다른 다음 사람이 이어 반납하면 고리를 두른 점 — 경보가 돼요.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
-                ),
-              ],
+      // 세부 화면은 시민 탭 안이 아니라 화면 전체로도 열린다(직원 모드·지도 카드) — 상태 표시줄·다이내믹 아일랜드 아래로 내려 뒤로 단추가 눌리게.
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, rideyTabClearance),
+          children: [
+            const _CheckBackTitle(title: '판단 근거'),
+            const SizedBox(height: 22),
+            Text(
+              bike.bike,
+              style: context
+                  .rideyNumbers(theme.textTheme.titleLarge)
+                  ?.copyWith(fontSize: 20),
             ),
-          ),
-          if (bike.probability != null) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
+            Text(
+              station,
+              style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
+            ),
+            const SizedBox(height: 16),
+            RideyDataConfidence(
+              updatedAt: updatedAt,
+              isHealthy: feed?.isHealthy ?? true,
+              ratio: feed?.ratio,
+            ),
+            const RideySectionTitle('왜 경보가 켜졌나요?'),
             RideyCard(
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '다음 사람도 바로 반납할 확률',
-                      style: theme.textTheme.bodyLarge,
-                    ),
+                  _ChainStrip(chain: bike.chain),
+                  const SizedBox(height: 16),
+                  Text(
+                    '서로 다른 ${bike.chain}명의 기록으로 경보',
+                    style: theme.textTheme.titleMedium,
                   ),
-                  RideyNumber(
-                    '${bike.probability}%',
-                    size: 18,
-                    color: c.signalText,
+                  const SizedBox(height: 4),
+                  Text(
+                    '빌리자마자 반납한 사람 하나하나가 점이에요. 첫 점은 실수일 수 있어 비워 두고, '
+                    '서로 다른 다음 사람이 이어 반납하면 고리를 두른 점 — 경보가 돼요.',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
                   ),
                 ],
               ),
             ),
-          ],
-          if (bike.reasons.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                '확률을 올리고 내린 것',
-                style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+            if (bike.probability != null) ...[
+              const SizedBox(height: 14),
+              RideyCard(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '다음 사람도 바로 반납할 확률',
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
+                    RideyNumber(
+                      '${bike.probability}%',
+                      size: 18,
+                      color: c.signalText,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            RideyListCard(
-              children: [
-                for (final reason in bike.reasons)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            reason.text,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 15,
+            ],
+            if (bike.reasons.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '확률을 올리고 내린 것',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+                ),
+              ),
+              const SizedBox(height: 8),
+              RideyListCard(
+                children: [
+                  for (final reason in bike.reasons)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reason.text,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontSize: 15,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        RideyNumber(
-                          reason.deltaLabel,
-                          size: 13,
-                          color: (reason.deltaPoints ?? 0) < 0
-                              ? c.calmText
-                              : c.signalText,
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          RideyNumber(
+                            reason.deltaLabel,
+                            size: 13,
+                            color: (reason.deltaPoints ?? 0) < 0
+                                ? c.calmText
+                                : c.signalText,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 14),
+            _DataNote(updatedAt: updatedAt, feed: feed),
           ],
-          const SizedBox(height: 14),
-          _DataNote(updatedAt: updatedAt, feed: feed),
-        ],
+        ),
       ),
     );
   }
@@ -580,6 +611,37 @@ class _DataNote extends StatelessWidget {
           context,
         ).textTheme.bodyMedium?.copyWith(color: context.ridey.calmText),
       ),
+    );
+  }
+}
+
+/// 고장 신고: 신고를 잊거나 귀찮아 넘기는 일이 많아서 자전거 화면에 바로 둔다.
+/// RIDEY 는 신고를 받지 않는다 — 누르면 서울시 공식 신고 화면이 열리고, 신고는 거기서 마친다.
+class ReportBikeButton extends StatelessWidget {
+  const ReportBikeButton({super.key, required this.bike, this.open});
+
+  final String bike;
+  final Future<bool> Function(Uri uri)? open;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.ridey;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RideyButton.secondary(
+          label: '고장 신고하기',
+          icon: Icons.report_outlined,
+          onPressed: () => openOfficialReport(open: open),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '타 보니 고장이었다면 서울시 따릉이 신고 화면에서 알려 주세요. 자전거 번호 $bike 를 적으면 돼요.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+        ),
+      ],
     );
   }
 }

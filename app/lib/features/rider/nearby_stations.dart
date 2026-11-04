@@ -334,3 +334,12 @@ List<NearbyStationRow> savedStationRows({
       ),
   ];
 }
+
+/// 걸어서 걸리는 시간(분) 어림: 직선거리 × 1.3(길이 굽는 몫) ÷ 분당 67m(시속 4km). 최소 1분.
+/// 길찾기 서버 없이 쓰는 어림이라 화면에는 '약' 을 붙인다.
+int walkMinutes(double meters) => math.max(1, (meters * 1.3 / 67).round());
+
+/// 거리 글자: 1km 아래는 m, 위는 소수 한 자리 km.
+String distanceText(double meters) => meters < 1000
+    ? '${meters.round()}m'
+    : '${(meters / 1000).toStringAsFixed(1)}km';

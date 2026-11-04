@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.56 은 26.04 를 지원하지 않는다(2026-11 러너 교체)
     services:   # 클라우드 SQL(supabase/*.sql) 이 파이썬 엔진과 같은 답인지 진짜 Postgres 에서 (tests/test_sql_parity.py)
       postgres:
         image: postgres:17

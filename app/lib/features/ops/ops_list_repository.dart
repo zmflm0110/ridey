@@ -7,6 +7,9 @@ import 'package:ridey_app/features/ops/ops_list.dart';
 abstract interface class OpsListRepository {
   Future<List<String>> days();
   Future<OpsList> fetch(String day);
+
+  /// 최근 아침 목록 채점(새 날부터). 직원이 목록을 믿을 근거로 보여 준다.
+  Future<List<OpsScore>> scores();
 }
 
 class SupabaseOpsListRepository implements OpsListRepository {
@@ -31,6 +34,15 @@ class SupabaseOpsListRepository implements OpsListRepository {
       throw const FormatException('그 날짜의 아침 목록이 없습니다.');
     }
     return OpsList.fromRow(day, rows.first);
+  }
+
+  @override
+  Future<List<OpsScore>> scores() async {
+    final rows = await _get(RideyConfig.opsScoresUri);
+    return rows
+        .map(OpsScore.fromRow)
+        .whereType<OpsScore>()
+        .toList(growable: false);
   }
 
   Future<List<Map<String, dynamic>>> _get(Uri uri) async {

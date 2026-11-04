@@ -6,14 +6,20 @@ import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
+import 'package:ridey_app/features/live/station_status.dart';
 import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
+import 'package:ridey_app/features/places/place_search.dart';
+import 'package:ridey_app/features/places/place_search_page.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/features/stations/saved_stations.dart';
+import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
+import 'package:ridey_app/widgets/ridey_map_sheet.dart';
+import 'package:ridey_app/widgets/station_card.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -115,21 +121,46 @@ class _RiderHomePageState extends State<RiderHomePage> {
 
 const _pagePadding = EdgeInsets.fromLTRB(20, 4, 20, rideyTabClearance);
 
+/// 홈에 필요한 것 한 묶음: 서울 대여소 전부·실시간 거치 대수·내 위치·즐겨찾는 대여소.
+class _HomeData {
+  const _HomeData({
+    required this.stations,
+    required this.parked,
+    required this.favorites,
+    this.location,
+  });
+
+  final List<BikeStation> stations;
+  final List<StationOccupancy> parked;
+  final List<String> favorites;
+  final DeviceLocation? location;
+}
+
+/// 지금 보는 기준(내 위치 또는 검색한 곳)으로 줄 세운 결과.
 class _HomeArea {
   const _HomeArea({
     required this.bikes,
     required this.stations,
-    required this.usingDeviceLocation,
-    required this.hasSavedStations,
+    required this.allStations,
+    this.center,
+    this.place,
     this.location,
   });
 
+  /// 서울 전체 고장 의심 — 기준점에서 가까운 순(기준이 없으면 강한 경보 먼저).
   final List<NearbyBike> bikes;
+
+  /// '주변 대여소 현황' 목록: 기준점에서 가까운 [_stationListLimit]곳.
   final List<NearbyStationRow> stations;
-  final bool usingDeviceLocation;
-  final bool hasSavedStations;
+
+  /// 지도에 찍을 서울 대여소 전부(경보 수·거치 대수 포함).
+  final List<NearbyStationRow> allStations;
+  final DeviceLocation? center;
+  final SearchPlace? place;
   final DeviceLocation? location;
 }
+
+const _stationListLimit = 30;
 
 class _LoadedHome extends StatefulWidget {
   const _LoadedHome({
@@ -157,66 +188,156 @@ class _LoadedHome extends StatefulWidget {
 }
 
 class _LoadedHomeState extends State<_LoadedHome> {
-  late Future<_HomeArea> _area = _load();
+  late Future<_HomeData> _data = _load();
   var _showStations = false;
   String? _reminderKey;
 
-  Future<_HomeArea> _load() async {
-    final stations = await widget.stationRepository.fetch();
-    final occupancy = await widget.stationStatusRepository.fetch();
-    final location = await widget.readLocation();
-    if (location != null) {
-      return _HomeArea(
-        bikes: bikesNear(
-          bikes: widget.snapshot.bikes,
-          stations: stations,
-          latitude: location.latitude,
-          longitude: location.longitude,
-        ),
-        stations: nearbyStationRows(
-          stations: stations,
-          bikes: widget.snapshot.bikes,
-          occupancy: occupancy,
-          latitude: location.latitude,
-          longitude: location.longitude,
-        ),
-        location: location,
-        usingDeviceLocation: true,
-        hasSavedStations: false,
-      );
-    }
-    final saved = await widget.savedStationsStore.load();
-    return _HomeArea(
-      bikes: bikesAtStations(
-        bikes: widget.snapshot.bikes,
-        stations: stations,
-        stationIds: saved,
+  /// 검색해서 옮겨 본 곳(학원·약속 장소). null 이면 내 위치 기준.
+  SearchPlace? _place;
+  var _view = 0;
+
+  Future<_HomeData> _load() async {
+    final results = await Future.wait<Object?>([
+      widget.stationRepository.fetch(),
+      widget.stationStatusRepository.fetch().catchError(
+        (_) => const <StationOccupancy>[],
       ),
-      stations: savedStationRows(
-        stations: stations,
-        bikes: widget.snapshot.bikes,
-        occupancy: occupancy,
-        stationIds: saved,
-      ),
-      usingDeviceLocation: false,
-      hasSavedStations: saved.isNotEmpty,
+      widget.readLocation().catchError((_) => null),
+      widget.savedStationsStore.load().catchError((_) => const <String>[]),
+    ]);
+    return _HomeData(
+      stations: results[0]! as List<BikeStation>,
+      parked: results[1]! as List<StationOccupancy>,
+      location: results[2] as DeviceLocation?,
+      favorites: results[3]! as List<String>,
     );
   }
 
-  void _reloadArea() => setState(() => _area = _load());
+  void _reloadArea() => setState(() {
+    _data = _load();
+    _place = null;
+    _view++;
+  });
 
-  void _syncReminder(_HomeArea area) {
-    final ids = [for (final item in area.bikes) item.bike.bike];
+  _HomeArea _area(_HomeData data) {
+    final place = _place;
+    final DeviceLocation? center = place != null
+        ? (latitude: place.latitude, longitude: place.longitude)
+        : data.location;
+    final bikes = widget.snapshot.bikes;
+    final all = nearbyStationRows(
+      stations: data.stations,
+      bikes: bikes,
+      occupancy: data.parked,
+      latitude: center?.latitude ?? 37.5665,
+      longitude: center?.longitude ?? 126.9780,
+      withinMeters: double.infinity,
+    );
+    final List<NearbyBike> suspects;
+    if (center != null) {
+      suspects = bikesNear(
+        bikes: bikes,
+        stations: data.stations,
+        latitude: center.latitude,
+        longitude: center.longitude,
+        withinMeters: double.infinity,
+      );
+    } else {
+      final byId = {for (final s in data.stations) s.id: s};
+      suspects =
+          [
+            for (final bike in bikes)
+              NearbyBike(
+                bike: bike,
+                stationName: stationDisplayName(bike, byId[bike.station]),
+                latitude: byId[bike.station]?.latitude,
+                longitude: byId[bike.station]?.longitude,
+              ),
+          ]..sort((a, b) {
+            if (a.bike.isHighAlert != b.bike.isHighAlert) {
+              return a.bike.isHighAlert ? -1 : 1;
+            }
+            return b.bike.chain.compareTo(a.bike.chain);
+          });
+    }
+    return _HomeArea(
+      bikes: suspects,
+      stations: center == null
+          ? const []
+          : all.take(_stationListLimit).toList(growable: false),
+      allStations: all,
+      center: center,
+      place: place,
+      location: data.location,
+    );
+  }
+
+  /// 다이내믹 아일랜드·알림의 '피할 번호' 는 지금 서 있는 곳(내 위치) 1km 안만 — 서울 전체를 띄우면 쓸모가 없다.
+  void _syncReminder(_HomeData data) {
+    final here = data.location;
+    final ids = here == null
+        ? const <String>[]
+        : [
+            for (final item in bikesNear(
+              bikes: widget.snapshot.bikes,
+              stations: data.stations,
+              latitude: here.latitude,
+              longitude: here.longitude,
+              withinMeters: 1000,
+            ))
+              item.bike.bike,
+          ];
     final key = ids.join(',');
     if (_reminderKey == key) return;
     _reminderKey = key;
     widget.nearbyAlertReminder.sync(ids);
   }
 
-  /// 지도에서 대여소를 누르면 그곳의 강한 경보 자전거를 먼저 연다(없으면 첫 자전거).
-  void _openStation(String stationId, List<NearbyBike> bikes) {
-    final bike = firstBikeAt([for (final item in bikes) item.bike], stationId);
-    if (bike != null) widget.onBikeSelected(bike);
+  Future<void> _search(_HomeData data) async {
+    final place = await Navigator.of(context, rootNavigator: true)
+        .push<SearchPlace>(
+          MaterialPageRoute(
+            builder: (_) => PlaceSearchPage(stations: data.stations),
+          ),
+        );
+    if (place == null || !mounted) return;
+    setState(() {
+      _place = place;
+      _view++;
+    });
+  }
+
+  void _backToMe() => setState(() {
+    _place = null;
+    _view++;
+  });
+
+  /// 지도에서 대여소를 누르면 그곳 정보 카드(이름·거리·탈 만한 자전거·고장 의심 목록)를 띄운다.
+  /// 카드가 닫힐 때 끝나는 Future — 그동안 지도는 그 대여소를 강조해 둔다.
+  Future<void> _openStation(String stationId, _HomeArea area) {
+    final row = area.allStations.where((s) => s.id == stationId).firstOrNull;
+    final here = [
+      for (final item in area.bikes)
+        if (item.bike.station == stationId) item,
+    ];
+    final name = row?.name ?? here.firstOrNull?.stationName ?? '대여소 $stationId';
+    final location = area.location;
+    final lat = row?.latitude ?? here.firstOrNull?.latitude;
+    final lon = row?.longitude ?? here.firstOrNull?.longitude;
+    return showStationCard(
+      context,
+      name: name,
+      // 거리는 언제나 '나' 에서 — 검색한 곳 기준이 아니라 실제로 걸어갈 거리.
+      meters: location == null || lat == null || lon == null
+          ? null
+          : metersBetween(location.latitude, location.longitude, lat, lon),
+      choosable: row?.choosableCount,
+      bikes: [for (final item in here) item.bike],
+      onBike: widget.onBikeSelected,
+      onRent: widget.openOfficialApp,
+      latitude: lat,
+      longitude: lon,
+    );
   }
 
   List<Widget> _stationList(_HomeArea area) {
@@ -225,11 +346,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
           child: Text(
-            area.usingDeviceLocation
-                ? '이 근처 2km 안에는 대여소가 없어요.'
-                : area.hasSavedStations
-                ? '저장한 대여소 현황을 아직 받지 못했어요.'
-                : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
+            '위치를 허용하거나 위에서 장소를 검색하면 가까운 대여소가 여기에 나와요.',
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
@@ -249,8 +366,8 @@ class _LoadedHomeState extends State<_LoadedHome> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_HomeArea>(
-      future: _area,
+    return FutureBuilder<_HomeData>(
+      future: _data,
       builder: (context, loaded) {
         if (loaded.connectionState != ConnectionState.done) {
           return const _LoadingHome();
@@ -258,94 +375,165 @@ class _LoadedHomeState extends State<_LoadedHome> {
         if (loaded.hasError || !loaded.hasData) {
           return _LoadFailure(onRetry: _reloadArea);
         }
-        final area = loaded.requireData;
-        _syncReminder(area);
-        final pins = <String, NearbyMapStation>{};
-        for (final station in area.stations) {
-          final latitude = station.latitude;
-          final longitude = station.longitude;
-          if (latitude == null || longitude == null) continue;
-          pins[station.id] = NearbyMapStation(
-            id: station.id,
-            latitude: latitude,
-            longitude: longitude,
-            isHighAlert: station.highAlertCount > 0,
-            alertCount: station.alertCount,
-            parkedBikes: station.parkedBikes,
-          );
-        }
-        for (final item in area.bikes) {
-          final latitude = item.latitude;
-          final longitude = item.longitude;
-          if (latitude == null || longitude == null) continue;
-          final current = pins[item.bike.station];
-          pins[item.bike.station] = NearbyMapStation(
-            id: item.bike.station,
-            latitude: latitude,
-            longitude: longitude,
-            isHighAlert:
-                item.bike.isHighAlert || (current?.isHighAlert ?? false),
-            alertCount: current?.alertCount ?? 1,
-            parkedBikes: current?.parkedBikes,
-          );
-        }
-
-        return ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: _pagePadding,
-          children: [
-            _Headline(area: area, snapshot: widget.snapshot),
-            if (!area.usingDeviceLocation)
-              Align(
-                alignment: Alignment.centerLeft,
-                // 왼쪽 여백을 없애 제목 글자와 같은 선에 맞춘다(기본 TextButton 은 12px 안쪽으로 밀림).
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 44),
-                  ),
-                  onPressed: _reloadArea,
-                  child: Text(area.hasSavedStations ? '내 위치로 보기' : '내 위치 찾기'),
-                ),
+        final data = loaded.requireData;
+        _syncReminder(data);
+        final area = _area(data);
+        final shown = [
+          for (final row in area.allStations)
+            if (row.latitude != null && row.longitude != null)
+              NearbyMapStation(
+                id: row.id,
+                latitude: row.latitude!,
+                longitude: row.longitude!,
+                isHighAlert: row.highAlertCount > 0,
+                alertCount: row.alertCount,
+                parkedBikes: row.parkedBikes,
               ),
-            const SizedBox(height: 12),
-            NearbyMap(
-              stations: pins.values.toList(growable: false),
-              location: area.location,
-              onStationTap: (id) => _openStation(id, area.bikes),
-            ),
-            const SizedBox(height: 12),
-            _HomeListTabs(
-              showStations: _showStations,
-              onChanged: (showStations) =>
-                  setState(() => _showStations = showStations),
-            ),
-            if (_showStations)
-              ..._stationList(area)
-            else if (area.bikes.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
-                child: Text(
-                  area.usingDeviceLocation
-                      ? '이 근처 2km 안에는 고장 의심 자전거가 없어요.'
-                      : area.hasSavedStations
-                      ? '저장한 대여소에는 지금 고장 의심 자전거가 없어요.'
-                      : '위치를 허용하거나 더보기에서 대여소를 저장하면 여기에 나와요.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
-                ),
-              )
-            else
-              for (var i = 0; i < area.bikes.length; i++)
-                _BikeRow(
-                  item: area.bikes[i],
-                  showDivider: i < area.bikes.length - 1,
-                  onTap: () => widget.onBikeSelected(area.bikes[i].bike),
-                ),
-          ],
+        ];
+        return RideyMapSheet(
+          map: NearbyMap(
+            fullBleed: true,
+            showCounts: true,
+            stations: shown,
+            location: area.location,
+            focus: area.place == null
+                ? null
+                : (
+                    latitude: area.place!.latitude,
+                    longitude: area.place!.longitude,
+                  ),
+            viewKey: _view,
+            favoriteIds: data.favorites.toSet(),
+            controlsTop: 70,
+            onStationTap: (id) => _openStation(id, area),
+          ),
+          // 지도 앱처럼 맨 위에 검색 칸 — 시트 안에 두면 목록 탭이 아래 탭 막대에 가려졌다.
+          top: _SearchPill(
+            place: area.place,
+            onSearch: () => _search(data),
+            onClear: _backToMe,
+          ),
+          children: _sheetChildren(context, area, data),
         );
       },
+    );
+  }
+
+  List<Widget> _sheetChildren(
+    BuildContext context,
+    _HomeArea area,
+    _HomeData data,
+  ) {
+    return [
+      _Headline(area: area, snapshot: widget.snapshot),
+      if (area.location == null && area.place == null)
+        Align(
+          alignment: Alignment.centerLeft,
+          // 왼쪽 여백을 없애 제목 글자와 같은 선에 맞춘다(기본 TextButton 은 12px 안쪽으로 밀림).
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 44),
+            ),
+            onPressed: _reloadArea,
+            child: const Text('내 위치 찾기'),
+          ),
+        ),
+      const SizedBox(height: 12),
+      _HomeListTabs(
+        showStations: _showStations,
+        onChanged: (showStations) =>
+            setState(() => _showStations = showStations),
+      ),
+      if (_showStations)
+        ..._stationList(area)
+      else if (area.bikes.isEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+          child: Text(
+            '지금 서울에 고장 의심 자전거가 없어요.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: context.ridey.muted),
+          ),
+        )
+      else
+        for (var i = 0; i < area.bikes.length; i++)
+          _BikeRow(
+            item: area.bikes[i],
+            showDivider: i < area.bikes.length - 1,
+            onTap: () => widget.onBikeSelected(area.bikes[i].bike),
+          ),
+    ];
+  }
+}
+
+/// 시트 맨 위: '어디 근처를 볼까요?' — 누르면 검색 화면. 검색한 곳을 보고 있으면 그 이름과 '내 위치로'.
+class _SearchPill extends StatelessWidget {
+  const _SearchPill({
+    required this.place,
+    required this.onSearch,
+    required this.onClear,
+  });
+
+  final SearchPlace? place;
+  final VoidCallback onSearch;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.ridey;
+    final current = place;
+    return Row(
+      children: [
+        Expanded(
+          child: RideyPressable(
+            onTap: onSearch,
+            semanticLabel: '장소 검색',
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border.all(color: c.line),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search_rounded, color: c.muted, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      current == null
+                          ? '학원·역·동네 근처 미리 보기'
+                          : '${current.name} 근처',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: current == null
+                            ? c.muted
+                            : theme.colorScheme.onSurface,
+                        fontWeight: current == null
+                            ? FontWeight.w400
+                            : FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (current != null) ...[
+          const SizedBox(width: 8),
+          Material(
+            color: theme.colorScheme.surface,
+            shape: StadiumBorder(side: BorderSide(color: c.line)),
+            child: TextButton(onPressed: onClear, child: const Text('내 위치로')),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -433,39 +621,40 @@ class _Headline extends StatelessWidget {
     );
     final count = area.bikes.length;
     final note = _freshness(snapshot);
+    final nearest = area.bikes.firstOrNull?.meters;
+    final basis = area.place != null
+        ? '${area.place!.name} 기준 가까운 순'
+        : area.center != null
+        ? '내 위치에서 가까운 순'
+        : '내 위치를 찾지 못해 강한 경보부터';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (area.usingDeviceLocation || area.hasSavedStations)
-          Text.rich(
-            TextSpan(
-              style: style,
-              children: [
-                TextSpan(
-                  text: area.usingDeviceLocation
-                      ? '내 주변 2km에\n고장 의심 따릉이가 '
-                      : '저장한 대여소에\n고장 의심 따릉이가 ',
-                ),
-                TextSpan(
-                  text: '$count대',
-                  style: TextStyle(color: context.ridey.signal),
-                ),
-                const TextSpan(text: ' 있어요'),
-              ],
-            ),
-          )
-        else
-          Text('내 위치를 찾지 못했어요', style: style),
-        if (note != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            note,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: context.ridey.muted,
-            ),
+        Text.rich(
+          TextSpan(
+            style: style,
+            children: [
+              const TextSpan(text: '지금 서울에\n고장 의심 따릉이가 '),
+              TextSpan(
+                text: '$count대',
+                style: TextStyle(color: context.ridey.signal),
+              ),
+              const TextSpan(text: ' 있어요'),
+            ],
           ),
-        ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          [
+            basis,
+            if (nearest != null) '가장 가까운 곳 ${formatDistance(nearest)}',
+            ?note,
+          ].join(' · '),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: context.ridey.muted,
+          ),
+        ),
       ],
     );
   }
@@ -584,8 +773,8 @@ class _StationRow extends StatelessWidget {
     final choosable = station.choosableCount;
     final parked = station.parkedBikes;
     final counts = parked == null
-        ? '고장 의심 ${station.alertCount}대'
-        : '고장 의심 ${station.alertCount}대 · 탈 만한 자전거 약 $choosable대';
+        ? (station.alertCount > 0 ? '고장 의심 ${station.alertCount}대' : '고장 의심 없음')
+        : '${station.alertCount > 0 ? '고장 의심 ${station.alertCount}대' : '고장 의심 없음'} · 탈 만한 자전거 약 $choosable대';
 
     // 줄마다 같은 단추를 되풀이하지 않고 줄 전체를 누르면 공식 앱이 열린다(오른쪽 '대여하기 ›' 가 그 표시).
     return RideyPressable(

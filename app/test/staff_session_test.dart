@@ -34,6 +34,8 @@ class _Live implements LiveSnapshotRepository {
 }
 
 class _Ops implements OpsListRepository {
+  @override
+  Future<List<OpsScore>> scores() async => const [];
   Completer<OpsList>? pending;
   var fail = false;
 

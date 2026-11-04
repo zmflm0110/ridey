@@ -8,7 +8,7 @@
 | jsQR 1.4.0 | 사이트 QR 스티커 검사 | Apache-2.0 | https://github.com/cozmo/jsQR · https://www.npmjs.com/package/jsqr | `출처/jsqr-1.4.0/` |
 | Flutter SDK 3.47 | 앱(안드로이드 APK·아이폰을 한 코드로) | BSD-3-Clause | https://flutter.dev | `출처/flutter.txt` |
 | Flutter 패키지 — camera, mobile_scanner(QR), google_mlkit_text_recognition(번호판 글자), geolocator, shared_preferences, http, workmanager, flutter_local_notifications, cupertino_icons | 앱 카메라·QR·글자 인식·위치·폰 저장·알림 | BSD-3 · MIT · Apache-2.0 (각 꾸러미 안 LICENSE) | https://pub.dev (버전·sha256 은 `app/pubspec.lock`) | `출처/pub/` |
-| OpenStreetMap 지도 그림 | 지도 바탕(인터넷으로 불러옴) | © OpenStreetMap 기여자, ODbL — 화면 오른쪽 아래에 표시 | https://www.openstreetmap.org/copyright | `출처/openstreetmap.txt` |
+| OpenStreetMap 지도(tile.openstreetmap.org), flutter_map | 앱 지도 바탕(인터넷으로 불러와 색만 걸러 그림) | © OpenStreetMap 기여자(ODbL) — 지도 오른쪽 위에 표시. flutter_map 은 BSD-3 | https://www.openstreetmap.org/copyright | `출처/openstreetmap.txt` |
 | 서울 열린데이터광장 — 따릉이 대여이력(OA-15182, API tbCycleRentData), 고장신고(OA-15644), 대여소 정보 | 엔진·검증·실시간 | 공공누리 제1유형(출처 표시) | https://data.seoul.go.kr | `출처/공공데이터.txt` |
 | 공공데이터포털 — 대전 타슈 대여이력, 한국환경공단 전기차 충전소 정보 | 다른 도시 검증, 충전기 넓히기 | 공공누리 제1유형 | https://www.data.go.kr | `출처/공공데이터.txt` |
 | Supabase (DB + 5분마다 서울 API 받아 경보 계산·채점, pg_cron), GitHub Actions (백업·전기차 자료 모으기) | 클라우드 | 무료 요금제(서비스 이용) | https://supabase.com · https://github.com/features/actions | `출처/클라우드.txt` |

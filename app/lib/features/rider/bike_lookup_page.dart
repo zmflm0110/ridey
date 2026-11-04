@@ -96,7 +96,10 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
   Future<void> _lookup(LookupKind kind, {String? raw}) async {
     if (_busy) return;
     FocusScope.of(context).unfocus();
-    final bikeId = normalizeBikeId(raw ?? _controller.text);
+    final typed = _controller.text.trim();
+    final bikeId = normalizeBikeId(
+      raw ?? (RegExp(r'^\d+$').hasMatch(typed) ? 'SPB-$typed' : typed),
+    );
     if (bikeId == null) {
       _showMessage(title: '판단 어려움', message: 'SPB-00000 형식의 자전거 번호를 입력해 주세요.');
       return;
@@ -147,7 +150,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       MaterialPageRoute<String>(builder: (_) => const BikeQrScannerPage()),
     );
     if (!mounted || bikeId == null) return;
-    _controller.text = bikeId;
+    _controller.text = bikeId.replaceFirst('SPB-', '');
     _lookup(LookupKind.qr, raw: bikeId);
   }
 
@@ -160,7 +163,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       MaterialPageRoute<String>(builder: (_) => const BikeOcrScannerPage()),
     );
     if (!mounted || bikeId == null) return;
-    _controller.text = bikeId;
+    _controller.text = bikeId.replaceFirst('SPB-', '');
     _lookup(LookupKind.ocr, raw: bikeId);
   }
 
@@ -182,22 +185,57 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
         Semantics(
           textField: true,
           label: '자전거 번호',
-          child: TextField(
-            controller: _controller,
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _lookup(LookupKind.number),
-            style: context
-                .rideyNumbers(theme.textTheme.titleLarge)
-                ?.copyWith(fontSize: 20),
-            decoration: InputDecoration(
-              hintText: 'SPB-00000',
-              hintStyle: context
-                  .rideyNumbers(theme.textTheme.titleLarge)
-                  ?.copyWith(
-                    fontSize: 20,
-                    color: context.ridey.muted.withValues(alpha: .6),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.ridey.fill,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    'SPB-',
+                    style: context
+                        .rideyNumbers(theme.textTheme.titleLarge)
+                        ?.copyWith(
+                          fontSize: 20,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      keyboardType: TextInputType.number,
+                      textCapitalization: TextCapitalization.characters,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _lookup(LookupKind.number),
+                      style: context
+                          .rideyNumbers(theme.textTheme.titleLarge)
+                          ?.copyWith(
+                            fontSize: 20,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                      decoration: InputDecoration(
+                        hintText: '00000',
+                        hintStyle: context
+                            .rideyNumbers(theme.textTheme.titleLarge)
+                            ?.copyWith(
+                              fontSize: 20,
+                              color: context.ridey.muted.withValues(alpha: .6),
+                            ),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

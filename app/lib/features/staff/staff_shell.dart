@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:ridey_app/features/location/device_location.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
+import 'package:ridey_app/features/live/station_status_repository.dart';
+import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/staff/staff_district_picker.dart';
 import 'package:ridey_app/features/staff/staff_list_page.dart';
@@ -21,7 +24,16 @@ class StaffShell extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.onSwitchToRider,
     this.now,
+    this.readLocation,
+    this.stationStatusRepository,
+    this.roadRouter,
+    this.watchLocation,
   });
+
+  /// 대여소별 거치 대수(재배치), 시민 신고, 도로 길(OSRM), 길안내 중 위치.
+  final StationStatusRepository? stationStatusRepository;
+  final RoadRouter? roadRouter;
+  final Stream<DeviceLocation> Function()? watchLocation;
 
   final LiveSnapshotRepository liveRepository;
   final StationRepository stationRepository;
@@ -30,6 +42,7 @@ class StaffShell extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final VoidCallback onSwitchToRider;
   final DateTime? now;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<StaffShell> createState() => _StaffShellState();
@@ -41,13 +54,16 @@ class _StaffShellState extends State<StaffShell> {
     opsRepository: widget.opsListRepository,
     stationRepository: widget.stationRepository,
     now: widget.now,
+    readLocation: widget.readLocation ?? readDeviceLocation,
+    occupancyRepository: widget.stationStatusRepository,
+    router: widget.roadRouter,
+    positions: widget.watchLocation,
   );
   var _index = 0;
   var _askingDistricts = false;
 
   static const _navigationItems = [
     RideyNavigationItem('구별 현황', Symbols.map_rounded),
-    RideyNavigationItem('목록', Symbols.list_alt_rounded),
     RideyNavigationItem('더보기', Symbols.apps_rounded),
   ];
 
@@ -124,12 +140,23 @@ class _StaffShellState extends State<StaffShell> {
                         children: [
                           StaffOverviewPage(
                             session: _session,
-                            onOpenDistrict: (district) {
+                            // 구를 누르면 그 구의 대여소별 목록이 위로 열린다(탭은 '구별 현황'·'더보기' 둘).
+                            onOpenDistrict: (district) async {
                               _session.focusDistrict(district);
-                              setState(() => _index = 1);
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ListenableBuilder(
+                                    listenable: _session,
+                                    builder: (_, _) => StaffListPage(
+                                      session: _session,
+                                      title: district,
+                                    ),
+                                  ),
+                                ),
+                              );
+                              _session.clearFocus();
                             },
                           ),
-                          StaffListPage(session: _session),
                           StaffMorePage(
                             session: _session,
                             themeMode: widget.themeMode,
@@ -149,10 +176,7 @@ class _StaffShellState extends State<StaffShell> {
                 child: RideyTabBar(
                   index: _index,
                   items: _navigationItems,
-                  onChanged: (index) {
-                    if (index != 1) _session.clearFocus();
-                    setState(() => _index = index);
-                  },
+                  onChanged: (index) => setState(() => _index = index),
                 ),
               ),
             ],
