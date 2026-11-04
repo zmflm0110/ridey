@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ridey_app/features/location/device_location.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
@@ -21,6 +22,7 @@ class StaffShell extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.onSwitchToRider,
     this.now,
+    this.readLocation,
   });
 
   final LiveSnapshotRepository liveRepository;
@@ -30,6 +32,7 @@ class StaffShell extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final VoidCallback onSwitchToRider;
   final DateTime? now;
+  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   State<StaffShell> createState() => _StaffShellState();
@@ -41,6 +44,7 @@ class _StaffShellState extends State<StaffShell> {
     opsRepository: widget.opsListRepository,
     stationRepository: widget.stationRepository,
     now: widget.now,
+    readLocation: widget.readLocation ?? readDeviceLocation,
   );
   var _index = 0;
   var _askingDistricts = false;

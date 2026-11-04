@@ -167,6 +167,7 @@ class _RideyAppState extends State<RideyApp> {
                   onThemeModeChanged: (mode) =>
                       setState(() => _themeMode = mode),
                   onSwitchToRider: () => _chooseMode(UserMode.rider),
+                  readLocation: widget.readLocation,
                 ),
               },
       ),

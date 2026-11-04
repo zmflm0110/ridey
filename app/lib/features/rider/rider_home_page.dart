@@ -15,6 +15,7 @@ import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 import 'package:ridey_app/widgets/ridey_map_sheet.dart';
+import 'package:ridey_app/widgets/station_card.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -215,9 +216,23 @@ class _LoadedHomeState extends State<_LoadedHome> {
   }
 
   /// 지도에서 대여소를 누르면 그곳의 강한 경보 자전거를 먼저 연다(없으면 첫 자전거).
-  void _openStation(String stationId, List<NearbyBike> bikes) {
-    final bike = firstBikeAt([for (final item in bikes) item.bike], stationId);
-    if (bike != null) widget.onBikeSelected(bike);
+  /// 지도에서 대여소를 누르면 그곳 정보 카드(이름·거리·탈 만한 자전거·고장 의심 목록)를 띄운다.
+  void _openStation(String stationId, _HomeArea area) {
+    final row = area.stations.where((s) => s.id == stationId).firstOrNull;
+    final here = [
+      for (final item in area.bikes)
+        if (item.bike.station == stationId) item,
+    ];
+    final name = row?.name ?? here.firstOrNull?.stationName ?? '대여소 $stationId';
+    showStationCard(
+      context,
+      name: name,
+      meters: row?.meters ?? here.firstOrNull?.meters,
+      choosable: row?.choosableCount,
+      bikes: [for (final item in here) item.bike],
+      onBike: widget.onBikeSelected,
+      onRent: widget.openOfficialApp,
+    );
   }
 
   List<Widget> _stationList(_HomeArea area) {
@@ -296,7 +311,7 @@ class _LoadedHomeState extends State<_LoadedHome> {
             fullBleed: true,
             stations: pins.values.toList(growable: false),
             location: area.location,
-            onStationTap: (id) => _openStation(id, area.bikes),
+            onStationTap: (id) => _openStation(id, area),
           ),
           children: _sheetChildren(context, area),
         );

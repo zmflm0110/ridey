@@ -5,7 +5,9 @@ import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/staff_clock.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
 import 'package:ridey_app/features/staff/staff_source_line.dart';
+import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/widgets/ridey_map_sheet.dart';
+import 'package:ridey_app/widgets/station_card.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 
@@ -39,16 +41,13 @@ class StaffOverviewPage extends StatelessWidget {
       map: NearbyMap(
         fullBleed: true,
         stations: _alertStations(session),
-        onStationTap: (id) {
-          final station = session.stations[id];
-          onOpenDistrict(
-            station == null || station.district.trim().isEmpty
-                ? '기타'
-                : station.district.trim(),
-          );
-        },
+        location: session.location,
+        onStationTap: (id) => _openStation(context, id),
       ),
       children: [
+        // 재배치 길에서 바로 쓰는 것: 지금 서 있는 곳 가까이에서 먼저 가져갈 자전거.
+        _NearMe(session: session, onOpen: (id) => _openStation(context, id)),
+        const SizedBox(height: 22),
         Text('구별 현황', style: theme.textTheme.displayLarge),
         const SizedBox(height: 8),
         Text(
@@ -100,6 +99,101 @@ class StaffOverviewPage extends StatelessWidget {
                     style: context.rideyNumbers(theme.textTheme.titleMedium),
                   ),
                   onTap: () => onOpenDistrict(row.district),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  void _openStation(BuildContext context, String id) {
+    final station = session.stations[id];
+    showStationCard(
+      context,
+      name: station?.name ?? '대여소 $id',
+      district: station?.district,
+      meters: session.metersTo(id),
+      bikes: [
+        for (final bike in session.bikes)
+          if (bike.station == id) bike,
+      ],
+      onBike: (bike) => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => BikeDetailPage(
+            bike: bike,
+            updatedAt: session.updatedAt ?? DateTime.now(),
+            feed: session.feed,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// '지금 내 주변 2km' — 가까운 고장 의심 대여소 다섯 곳. 위치가 없으면 켜는 단추만.
+class _NearMe extends StatelessWidget {
+  const _NearMe({required this.session, required this.onOpen});
+
+  final StaffSession session;
+  final ValueChanged<String> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.ridey;
+    if (session.location == null) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(
+              '위치를 켜면 지금 서 있는 곳 가까이의 고장 의심부터 보여 줘요.',
+              style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+            ),
+          ),
+          TextButton(onPressed: session.locate, child: const Text('내 위치 찾기')),
+        ],
+      );
+    }
+    final near = session.nearby();
+    final count = near.fold<int>(0, (n, e) => n + e.bikes.length);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text.rich(
+          TextSpan(
+            style: theme.textTheme.headlineLarge?.copyWith(fontSize: 24),
+            children: [
+              const TextSpan(text: '지금 내 주변 2km에\n고장 의심 '),
+              TextSpan(
+                text: '$count대',
+                style: TextStyle(color: c.signal),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (near.isEmpty)
+          Text(
+            '가까운 대여소에는 지금 고장 의심 자전거가 없어요.',
+            style: theme.textTheme.bodyLarge?.copyWith(color: c.muted),
+          )
+        else
+          RideyListCard(
+            children: [
+              for (final item in near.take(5))
+                RideyRow(
+                  title: item.station.name.trim(),
+                  subtitle: [
+                    '고장 의심 ${item.bikes.length}대',
+                    if (item.bikes.any((b) => b.isHighAlert)) '강한 경보 있음',
+                  ].join(' · '),
+                  trailing: Text(
+                    item.meters < 1000
+                        ? '${item.meters.round()}m'
+                        : '${(item.meters / 1000).toStringAsFixed(1)}km',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
+                  ),
+                  onTap: () => onOpen(item.station.id),
                 ),
             ],
           ),

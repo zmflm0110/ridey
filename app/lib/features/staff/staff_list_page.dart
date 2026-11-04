@@ -25,8 +25,14 @@ class StaffListPage extends StatelessWidget {
     for (final bike in bikes) {
       (groups[bike.station] ??= []).add(bike);
     }
+    final byDistance = session.location != null && session.sortByDistance;
     final stations = groups.entries.toList()
       ..sort((a, b) {
+        if (byDistance) {
+          final da = session.metersTo(a.key) ?? double.infinity;
+          final db = session.metersTo(b.key) ?? double.infinity;
+          if (da != db) return da.compareTo(db);
+        }
         final byExpected = (expectOf(b.value) ?? 0).compareTo(
           expectOf(a.value) ?? 0,
         );
@@ -62,6 +68,26 @@ class StaffListPage extends StatelessWidget {
                 ),
             ],
           ),
+          // 위치가 있으면 재배치 길 순서(가까운 순)가 기본, 위험한 순으로도 볼 수 있다.
+          if (session.location != null) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                RideySelectBadge(
+                  label: '가까운 순',
+                  selected: session.sortByDistance,
+                  onSelected: (_) => session.setSortByDistance(true),
+                ),
+                RideySelectBadge(
+                  label: '위험한 순',
+                  selected: !session.sortByDistance,
+                  onSelected: (_) => session.setSortByDistance(false),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           if (bikes.isEmpty)
             Text(
@@ -74,10 +100,25 @@ class StaffListPage extends StatelessWidget {
             for (final group in stations) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
-                child: Text(
-                  session.stations[group.key]?.name ??
-                      group.value.first.stationName,
-                  style: theme.textTheme.titleMedium,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        session.stations[group.key]?.name ??
+                            group.value.first.stationName,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
+                    if (session.metersTo(group.key) case final m?)
+                      Text(
+                        m < 1000
+                            ? '${m.round()}m'
+                            : '${(m / 1000).toStringAsFixed(1)}km',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: context.ridey.muted,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               RideyListCard(
