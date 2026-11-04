@@ -14,22 +14,34 @@ class SupabaseStationStatusRepository implements StationStatusRepository {
 
   final http.Client _client;
 
+  /// Supabase(PostgREST)는 한 번에 1,000줄까지만 준다. 서울 대여소는 2,700곳이 넘어서
+  /// 한 번만 받으면 나머지 대여소가 '실시간 대수 없음' 이 된다 — 쪽을 나눠 끝까지 받는다.
+  static const _page = 1000;
+
   @override
   Future<List<StationOccupancy>> fetch() async {
+    final all = <StationOccupancy>[];
     try {
-      final response = await _client
-          .get(
-            RideyConfig.liveStationStatusUri,
-            headers: RideyConfig.apiHeaders,
-          )
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return const [];
+      for (var from = 0; from < 10 * _page; from += _page) {
+        final response = await _client
+            .get(
+              RideyConfig.liveStationStatusUri,
+              headers: {
+                ...RideyConfig.apiHeaders,
+                'Range-Unit': 'items',
+                'Range': '$from-${from + _page - 1}',
+              },
+            )
+            .timeout(const Duration(seconds: 12));
+        if (response.statusCode < 200 || response.statusCode >= 300) break;
+        final rows = parseStationOccupancy(response.body);
+        all.addAll(rows);
+        if (rows.length < _page) break;
       }
-      return parseStationOccupancy(response.body);
     } catch (_) {
-      return const [];
+      // 받은 데까지는 쓴다.
     }
+    return all;
   }
 }
 

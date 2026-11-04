@@ -99,7 +99,7 @@
 
 | 모드 | 탭 | 하는 일 |
 |---|---|---|
-| 시민 | 홈, 자전거 확인, 더보기 | 홈 지도(OpenStreetMap 자료를 CARTO 스타일로, 키 없이)에서 내 주변 2km의 고장 의심 자전거를 본다. 강한 경보(연쇄 3명 이상)는 꽉 찬 주황 점, 경보(연쇄 2명)는 옅은 점이다. 지도 아래에서 '주변 대여소 현황'으로 바꾸면 대여소마다 고장 의심 대수와 탈 만한 자전거 수(서울 대여소 현황 API, 같은 5분 작업이 받음)가 나오고, 줄을 누르면 공식 따릉이 앱이 열린다. 근처 고장 의심 번호는 아이폰 다이내믹 아일랜드와 안드로이드 알림에 떠서, 따릉이 앱에서 대여할 때 피할 번호를 바로 본다. 자전거 확인에서 번호를 넣거나 QR, 번호판을 찍으면 경보 단계와 연쇄 인원, 마지막 헛대여 시각, 다음 사람도 바로 반납할 확률이 한 화면에 나온다. 조회 기록과 알림은 그 폰 안에만 남는다 |
+| 시민 | 홈, 자전거 확인, 더보기 | 홈 지도(OpenStreetMap, 키 없이 차분한 색으로)에서 내 주변 2km의 고장 의심 자전거를 본다. 강한 경보(연쇄 3명 이상)는 꽉 찬 주황 점, 경보(연쇄 2명)는 옅은 점이다. 지도 아래에서 '주변 대여소 현황'으로 바꾸면 대여소마다 고장 의심 대수와 탈 만한 자전거 수(서울 대여소 현황 API, 같은 5분 작업이 받음)가 나오고, 줄을 누르면 공식 따릉이 앱이 열린다. 근처 고장 의심 번호는 아이폰 다이내믹 아일랜드와 안드로이드 알림에 떠서, 따릉이 앱에서 대여할 때 피할 번호를 바로 본다. 자전거 확인에서 번호를 넣거나 QR, 번호판을 찍으면 경보 단계와 연쇄 인원, 마지막 헛대여 시각, 다음 사람도 바로 반납할 확률이 한 화면에 나온다. 조회 기록과 알림은 그 폰 안에만 남는다 |
 | 직원 | 구별 현황, 목록, 더보기 | 담당 구를 고르면 지도와 구마다 고장 의심 대수, 대여소별 목록을 본다. 실시간과 그날 07:00 아침 목록 중 고를 수 있고, 목록에는 언제 받은 자료인지와 받기 실패가 한 줄로 나온다. 현장 판정이나 사진 올리기는 없다 |
 
 두 모드가 답하는 질문이 다르다. 시민은 '지금 내 앞의 이 자전거를 타도 되나', 직원은 '재배치하러 가는 대여소에 먼저 가져갈 자전거가 있나'다. 공단 직원은 고장을 찾아 순찰하지 않고 재배치하다 눈에 띄는 고장만 거둔다는 것을 [전화로 확인했고](docs/operations.md), 직원 모드는 그 길에 얹는 목록이다. 직원이 실제로 쓸지는 아직 확인하지 못했다.
@@ -181,7 +181,7 @@ security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase
 - 안드로이드 APK는 GitHub Actions의 `flutter` 실행 화면에서 `ridey-apk`로 받는다. 테스트를 통과해야 만들어진다. 직접 만들려면 `cd app && flutter build apk --release`. `app/android/key.properties`(git에 넣지 않음)가 있으면 그 키로, 없으면 디버그 키로 서명한다.
 - 아이폰은 `cd app && flutter build ios` 또는 Xcode에서 `app/ios/Runner.xcworkspace`를 열고 Team을 고른 뒤 실행한다.
 - 앱 아이콘은 `node tools/make_flutter_assets.js`로 다시 만든다(`docs/brand/icon.svg`에서). 기기의 시작 화면은 잉크색 바탕만 두고, 로고는 앱이 켜지며 그린다(`app/lib/widgets/ridey_intro.dart`).
-- 지도는 OpenStreetMap 자료를 CARTO 지도 그림(낮: Positron, 밤: Dark Matter)으로 그린다. 키나 가입이 필요 없고 아이폰과 안드로이드에서 같다. 지도 오른쪽 위에 출처(© OpenStreetMap © CARTO)를 표시한다.
+- 지도는 OpenStreetMap 기본 지도를 받아 색을 차분하게 걸러 그린다(밝은 화면은 옅은 회색, 어두운 화면은 뒤집어 어둡게). 키나 가입이 필요 없고 아이폰과 안드로이드에서 같다. 지도 오른쪽 위에 출처(© OpenStreetMap)를 표시한다.
 - 같은 Actions 실행의 `ridey-screens`에는 주요 화면을 밝은 화면과 어두운 화면으로 찍은 사진이 있다. Flutter가 없는 컴퓨터에서도 디자인을 확인할 수 있다.
 </details>
 
@@ -222,5 +222,5 @@ python tools/live_sql_compare.py --old <커밋>                                 
 
 - 자료: 서울 열린데이터광장의 따릉이 대여이력([OA-15182](https://data.seoul.go.kr/dataList/OA-15182/F/1/datasetView.do), 실시간 API `tbCycleRentData`), 고장신고([OA-15644](https://data.seoul.go.kr/dataList/OA-15644/F/1/datasetView.do)), 대여소 정보. 공공데이터포털의 대전 타슈 대여이력과 한국환경공단 전기차 충전기 상태. 모두 공공누리 제1유형이다. 앱과 공개 화면에는 이용자 정보(생년, 성별)가 없고, 클라우드는 대여 기록을 8일만 둔다.
 - 참고 연구: Kaspi, Raviv, Tzur, [Detection of Unusable Bicycles in Bike-Sharing Systems](https://www.researchgate.net/publication/290496984_Detection_of_Unusable_Bicycles_in_Bike-Sharing_Systems) (Omega, 2016), [Self-Supervised Transformer for Unusable Shared Bike Detection](https://arxiv.org/pdf/2505.00932) (2025). 비교는 [related_work](docs/related_work.md)에 있다.
-- 라이브러리: 앱은 Flutter와 pub.dev 패키지를 쓰고, 지도는 [flutter_map](https://pub.dev/packages/flutter_map)으로 [OpenStreetMap](https://www.openstreetmap.org/copyright)(ODbL) 자료를 [CARTO](https://carto.com/attributions) 지도 그림으로 그린다. QR 검사에는 [jsQR](https://github.com/cozmo/jsQR) 1.4.0(Apache-2.0)을 `tests/vendor/`에 라이선스와 함께 넣었다. 전체 목록은 [docs/credits.md](docs/credits.md). 글꼴은 Unbounded(OFL)에서 숫자와 대문자만 잘라 넣었다.
+- 라이브러리: 앱은 Flutter와 pub.dev 패키지를 쓰고, 지도는 [flutter_map](https://pub.dev/packages/flutter_map)으로 [OpenStreetMap](https://www.openstreetmap.org/copyright)(ODbL) 기본 지도를 그린다. QR 검사에는 [jsQR](https://github.com/cozmo/jsQR) 1.4.0(Apache-2.0)을 `tests/vendor/`에 라이선스와 함께 넣었다. 전체 목록은 [docs/credits.md](docs/credits.md). 글꼴은 Unbounded(OFL)에서 숫자와 대문자만 잘라 넣었다.
 - 라이선스: 코드는 [MIT](LICENSE). 자료는 각 출처의 공공누리 제1유형(출처 표시)을 따른다.

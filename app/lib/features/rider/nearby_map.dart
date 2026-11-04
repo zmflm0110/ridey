@@ -48,8 +48,13 @@ class NearbyMap extends StatefulWidget {
   final DeviceLocation? location;
   final ValueChanged<String> onStationTap;
 
+  /// 화면 미리보기 테스트에서만 켠다(실제 타일을 받아 그려 본다).
+  @visibleForTesting
+  static bool forceTiles = false;
+
   /// 테스트에서는 지도 그림(타일)을 받지 않는다 — 네트워크가 막혀 있고 화면 확인에 필요 없다.
   static bool get _tilesEnabled {
+    if (forceTiles) return true;
     try {
       return !Platform.environment.containsKey('FLUTTER_TEST');
     } catch (_) {
@@ -82,7 +87,38 @@ class _NearbyMapState extends State<NearbyMap>
   }
 
   double get _zoom =>
-      widget.location != null || widget.stations.isNotEmpty ? 15 : 12;
+      widget.location != null || widget.stations.isNotEmpty ? 14 : 12;
+
+  double _height = 0;
+
+  /// 화면을 채운 지도는 아래 절반을 시트가 덮는다 — 내 위치가 보이는 위쪽 가운데에 오도록 올린다.
+  Offset get _focusOffset =>
+      widget.fullBleed ? Offset(0, -_height * .26) : Offset.zero;
+
+  void _focus() {
+    if (!_ready) return;
+    // 내 위치가 없으면(직원 모드 등) 경보 대여소가 모두 보이게 맞춘다 — 아래 시트가 덮는 부분은 비워 둔다.
+    final alerts = [
+      for (final s in widget.stations)
+        if (s.alertCount > 0) LatLng(s.latitude, s.longitude),
+    ];
+    if (widget.location == null && alerts.length > 1) {
+      _map.fitCamera(
+        CameraFit.coordinates(
+          coordinates: alerts,
+          padding: EdgeInsets.fromLTRB(
+            48,
+            72,
+            48,
+            widget.fullBleed ? _height * .52 + 24 : 48,
+          ),
+          maxZoom: 15,
+        ),
+      );
+      return;
+    }
+    _map.move(_center, _zoom, offset: _focusOffset);
+  }
 
   @override
   void didChangeDependencies() {
@@ -104,7 +140,7 @@ class _NearbyMapState extends State<NearbyMap>
     super.didUpdateWidget(old);
     // 위치를 늦게 찾으면 그 자리로 옮긴다(첫 화면은 대여소 근처로 열려 있음).
     if (_ready && old.location == null && widget.location != null) {
-      _map.move(_center, 15);
+      _focus();
     }
   }
 
@@ -145,18 +181,28 @@ class _NearbyMapState extends State<NearbyMap>
               InteractiveFlag.doubleTapZoom |
               InteractiveFlag.flingAnimation,
         ),
-        onMapReady: () => _ready = true,
+        onMapReady: () {
+          _ready = true;
+          _focus();
+        },
       ),
       children: [
         if (NearbyMap._tilesEnabled)
           TileLayer(
-            urlTemplate: dark
-                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-            subdomains: const ['a', 'b', 'c', 'd'],
-            retinaMode: RetinaMode.isHighDensity(context),
+            // OpenStreetMap 기본 지도(키 없음, 한글 지명). CARTO 는 앱에서 키를 요구해서 쓰지 않는다.
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'kr.bikedoctor.ridey',
             maxNativeZoom: 19,
+            // 원래 색은 알록달록해 신호 주황이 묻힌다 — 밝을 땐 거의 회색으로, 어두울 땐 뒤집어 어둡게.
+            tileBuilder: (context, tile, _) => ColorFiltered(
+              colorFilter: ColorFilter.matrix(dark ? _darkTiles : _lightTiles),
+              child: tile,
+            ),
+            // flutter_map 의 디스크 캐시는 시작할 때 저장 폴더를 찾다 실패하면 타일이 하나도 안 그려진다
+            // (테스트에서 재현). 지도 그림은 앱이 켜져 있는 동안 메모리에 남으니 디스크 캐시는 끈다.
+            tileProvider: NetworkTileProvider(
+              cachingProvider: const DisabledMapCachingProvider(),
+            ),
           ),
         MarkerLayer(
           markers: [
@@ -202,44 +248,65 @@ class _NearbyMapState extends State<NearbyMap>
         ),
         child: SizedBox(
           height: widget.fullBleed ? double.infinity : 312,
-          child: Stack(
-            children: [
-              Positioned.fill(child: map),
-              Positioned(
-                left: 12,
-                top: 12,
-                child: _ZoomControls(onZoom: _zoomBy),
-              ),
-              // 지도 자료 출처(라이선스 조건) — 작게, 위쪽에(아래는 시트가 덮는다).
-              Positioned(
-                right: 8,
-                top: 8,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: .8),
-                    borderRadius: BorderRadius.circular(6),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              _height = constraints.maxHeight;
+              return Stack(
+                children: [
+                  Positioned.fill(child: map),
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _ZoomControls(onZoom: _zoomBy),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    child: Text(
-                      '© OpenStreetMap © CARTO',
-                      style: TextStyle(fontSize: 9, color: c.muted),
+                  // 지도 자료 출처(라이선스 조건) — 작게, 위쪽에(아래는 시트가 덮는다).
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: .8),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          '© OpenStreetMap',
+                          style: TextStyle(fontSize: 9, color: c.muted),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 }
+
+/// 밝은 화면: 채도를 15%로 낮추고 살짝 밝게(종이색 바탕과 어울리게).
+const _lightTiles = <double>[
+  0.3313, 0.6079, 0.0614, 0, 14, //
+  0.1807, 0.7585, 0.0614, 0, 14, //
+  0.1807, 0.6079, 0.2120, 0, 14, //
+  0, 0, 0, 1, 0,
+];
+
+/// 어두운 화면: 뒤집고 채도를 낮추고 어둡게(잉크 바탕과 어울리게).
+const _darkTiles = <double>[
+  -0.2650, -0.4863, -0.0491, 0, 200, //
+  -0.1446, -0.6068, -0.0491, 0, 200, //
+  -0.1446, -0.4863, -0.1696, 0, 205, //
+  0, 0, 0, 1, 0,
+];
 
 /// 대여소 표시. 강한 경보 = 꽉 찬 신호 원 + 숫자 + 퍼지는 고리, 경보 = 옅은 원 + 숫자,
 /// 경보 없음 = 작은 회색 점(대여소 자리만 알려 준다).

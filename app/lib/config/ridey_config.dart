@@ -35,7 +35,6 @@ abstract final class RideyConfig {
 
   static String naverMapClientId = naverMapClientIdFromDefine;
 
-
   static Future<void> loadLocalEnv() async {
     if (naverMapClientId.isNotEmpty) return;
     try {

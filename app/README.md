@@ -20,6 +20,6 @@ flutter test
 flutter run
 ```
 
-지도는 OpenStreetMap 자료를 CARTO 지도 그림으로 그린다(`flutter_map`, 키 없음, 출처는 지도 오른쪽 위). Supabase 주소와 publishable 키는 앱 설정을 따른다. secret 키는 넣지 않는다. 대여소 좌표는 `assets/data/stations.json`에 들어 있다. 다시 만들려면 저장소 루트에서 `analysis/export_web.py`를 돌린다(`data/stations.json`에도 같이 쓴다).
+지도는 OpenStreetMap 기본 지도를 차분한 색으로 걸러 그린다(`flutter_map`, 키 없음, 출처는 지도 오른쪽 위). Supabase 주소와 publishable 키는 앱 설정을 따른다. secret 키는 넣지 않는다. 대여소 좌표는 `assets/data/stations.json`에 들어 있다. 다시 만들려면 저장소 루트에서 `analysis/export_web.py`를 돌린다(`data/stations.json`에도 같이 쓴다).
 
 Android 릴리스 매니페스트에는 `INTERNET`이 있다. 알림을 쓰려면 알림 권한과, Android에서는 부팅 뒤 예약을 위한 `RECEIVE_BOOT_COMPLETED`가 필요하다. iOS 배경 갱신 시각은 기기가 정한다.
