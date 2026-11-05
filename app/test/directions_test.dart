@@ -28,6 +28,25 @@ void main() {
     );
   });
 
+  test('starts from the location RIDEY measured from', () async {
+    final uris = <Uri>[];
+    await openWalkingDirections(
+      latitude: 37.65,
+      longitude: 127.07,
+      name: '중계역 1번 출구',
+      from: (latitude: 37.5, longitude: 127.0),
+      platform: TargetPlatform.iOS,
+      launch: (uri, {LaunchMode mode = LaunchMode.platformDefault}) async {
+        uris.add(uri);
+        return false;
+      },
+    );
+    expect(uris.first.queryParameters['slat'], '37.5');
+    expect(uris.first.queryParameters['slng'], '127.0');
+    expect(uris.first.queryParameters['sname'], '내 위치');
+    expect(uris.last.queryParameters['saddr'], '37.5,127.0');
+  });
+
   test(
     'falls back to Apple Maps on iPhone and Google Maps on Android',
     () async {

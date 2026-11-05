@@ -337,6 +337,9 @@ class _LoadedHomeState extends State<_LoadedHome> {
       onRent: widget.openOfficialApp,
       latitude: lat,
       longitude: lon,
+      from: location == null
+          ? null
+          : (latitude: location.latitude, longitude: location.longitude),
     );
   }
 

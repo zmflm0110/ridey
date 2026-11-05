@@ -20,6 +20,7 @@ Future<void> showStationCard(
   Future<void> Function()? onRent,
   double? latitude,
   double? longitude,
+  ({double latitude, double longitude})? from,
 }) {
   final sorted = [...bikes]
     ..sort((a, b) {
@@ -146,6 +147,7 @@ Future<void> showStationCard(
                               latitude: latitude,
                               longitude: longitude,
                               name: name,
+                              from: from,
                             );
                           },
                         ),
