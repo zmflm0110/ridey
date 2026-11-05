@@ -48,6 +48,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # 시연 영상: 폰에서 앱을 스스로 조작하는 자동 실행(integration_test/demo_test.dart)
+  integration_test:
+    sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
