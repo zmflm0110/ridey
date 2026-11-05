@@ -8,6 +8,7 @@ const lookupHabitRetention = Duration(days: 14);
 const lookupGridMeters = 500.0;
 const lookupHabitsKey = 'lookup_habits';
 
+// ocr 은 예전 '번호판 읽기'(지금은 없음) 기록을 읽으려고 남겨 둔다.
 enum LookupKind { number, qr, ocr, station }
 
 class LookupEvent {

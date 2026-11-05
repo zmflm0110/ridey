@@ -26,17 +26,32 @@ void main() {
     expect(findBike(bikes, 'SPB-12345'), isNull);
   });
 
-  test('extracts a bike number from OCR text', () {
-    expect(bikeIdFromRecognizedText('RIDEY\nspb 69683\n대여소'), 'SPB-69683');
-    expect(bikeIdFromRecognizedText('번호를 읽지 못했어요'), isNull);
+  test('bike sticker QR codes decode to the printed number', () {
+    // 실제 번호표 사진(2026-11-05)의 QR 내용과 옆에 찍힌 번호.
+    const samples = {
+      '6va03gATEBjUem2w': 'SPB-72627',
+      '6va03gATEBIu4g6t': 'SPB-63951',
+      '6va03gATEBITEgIT': 'SPB-60160',
+      '6va03gATEB6Xeg2x': 'SPB-58529',
+      '6va03gATEBjueBAT': 'SPB-73400',
+      // 같은 날 저녁 12장 중 QR 이 찍힌 11장(80000번대 새싹 따릉이 포함).
+      '6va03gATEBIX4gIt': 'SPB-68961',
+      '6va03gATEBIuEgET': 'SPB-63130',
+      '6va03gATEBLteuIX': 'SPB-81768',
+      '6va03gATEB6T4g2t': 'SPB-50921',
+      '6va03gATEBLTeB6V': 'SPB-80454',
+      '6va03gATEBIvEB2U': 'SPB-65022',
+      '6va03gATEB6UEm2V': 'SPB-52224',
+      '6va03gATEBLteBLx': 'SPB-81489',
+      '6va03gATEBIxEgNt': 'SPB-69191',
+      '6va03gATEBIU4BjT': 'SPB-62870',
+      '6va03gATEBIxEBIv': 'SPB-69065',
+    };
+    for (final e in samples.entries) {
+      expect(bikeIdFromQr(e.key), e.value, reason: e.key);
+    }
+    expect(bikeIdFromQr('https://example.com'), isNull);
+    expect(bikeIdFromQr('6va03gATEBjUem2'), isNull);
+    expect(bikeIdFromQr(''), isNull);
   });
-
-  test(
-    'ignores a partly read plate instead of padding it into another bike',
-    () {
-      expect(bikeIdFromRecognizedText('SPB-123'), isNull);
-      expect(bikeIdFromRecognizedText('SPB-1234'), isNull);
-      expect(bikeIdFromRecognizedText('SPB-1234567'), isNull);
-    },
-  );
 }

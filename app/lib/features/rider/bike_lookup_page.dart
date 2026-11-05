@@ -6,7 +6,6 @@ import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
-import 'package:ridey_app/features/rider/bike_ocr_scanner_page.dart';
 import 'package:ridey_app/features/rider/bike_qr_scanner_page.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
@@ -154,19 +153,6 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     _lookup(LookupKind.qr, raw: bikeId);
   }
 
-  Future<void> _scanPlate() async {
-    if (!widget.cameraEnabled) {
-      _showMessage(title: '판단 어려움', message: '이 화면에서는 카메라를 쓸 수 없어요.');
-      return;
-    }
-    final bikeId = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(builder: (_) => const BikeOcrScannerPage()),
-    );
-    if (!mounted || bikeId == null) return;
-    _controller.text = bikeId.replaceFirst('SPB-', '');
-    _lookup(LookupKind.ocr, raw: bikeId);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -242,21 +228,8 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
         const SizedBox(height: 12),
         RideyButton(label: '조회하기', onPressed: () => _lookup(LookupKind.number)),
         const SizedBox(height: 10),
-        // QR 과 번호판은 같은 무게의 두 방법이라 같은 알약 두 개로 나란히.
-        Row(
-          children: [
-            Expanded(
-              child: RideyButton.secondary(label: 'QR로 찍기', onPressed: _scanQr),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: RideyButton.secondary(
-                label: '번호판 읽기',
-                onPressed: _scanPlate,
-              ),
-            ),
-          ],
-        ),
+        // 번호표의 QR 에는 번호가 섞인 글자로 들어 있다 — 풀어서 바로 조회한다(bikeIdFromQr).
+        RideyButton.secondary(label: 'QR로 찍기', onPressed: _scanQr),
       ],
     );
   }
