@@ -56,7 +56,9 @@ class _QrPreviewState extends State<QrPreview> {
 
   void _detect(BarcodeCapture capture) {
     for (final barcode in capture.barcodes) {
-      final bikeId = normalizeBikeId(barcode.rawValue ?? '');
+      // 따릉이 번호표 QR 은 번호를 섞은 글자로 담고 있다 — 풀어서 읽는다. 'SPB-12345' 가 그대로 든 QR 도 받는다.
+      final raw = barcode.rawValue ?? '';
+      final bikeId = bikeIdFromQr(raw) ?? normalizeBikeId(raw);
       if (bikeId == null) continue;
       widget.onDetected(bikeId);
       if (_message != bikeId) setState(() => _message = bikeId);

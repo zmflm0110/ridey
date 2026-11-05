@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:ridey_app/features/rider/bike_number_text.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
 
 class BikeOcrScannerPage extends StatefulWidget {
@@ -20,7 +21,7 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
   CameraController? _cameraController;
   CameraDescription? _camera;
   String? _error;
-  String _hint = '번호판의 SPB- 글자가 네모 안에 오게 맞춰 주세요.';
+  String _hint = '번호표 옆 세로 숫자가 네모 안에 오게 맞춰 주세요.';
   bool _initializing = true;
   bool _processing = false;
   bool _completed = false;
@@ -130,19 +131,25 @@ class _BikeOcrScannerPageState extends State<BikeOcrScannerPage>
     _processing = true;
     try {
       final recognized = await _recognizer.processImage(inputImage);
-      final bikeId = bikeIdFromRecognizedText(recognized.text);
+      // 'SPB-12345' 처럼 가로로 읽힌 번호, 아니면 번호표처럼 세로로 한 글자씩 놓인 숫자.
+      final bikeId =
+          bikeIdFromRecognizedText(recognized.text) ??
+          bikeIdFromStackedLines([
+            for (final block in recognized.blocks)
+              for (final line in block.lines) (line.text, line.boundingBox),
+          ]);
       if (bikeId != null && mounted) {
         _completed = true;
         await _cameraController?.stopImageStream();
         if (mounted) Navigator.of(context).pop(bikeId);
         return;
       }
-      if (mounted && _hint != '번호판에서 SPB 번호를 찾고 있어요.') {
-        setState(() => _hint = '번호판에서 SPB 번호를 찾고 있어요.');
+      if (mounted && _hint != '번호를 찾고 있어요.') {
+        setState(() => _hint = '번호를 찾고 있어요.');
       }
     } catch (_) {
-      if (mounted && _hint != '번호판을 더 가까이 비춰 주세요.') {
-        setState(() => _hint = '번호판을 더 가까이 비춰 주세요.');
+      if (mounted && _hint != '번호표를 더 가까이 비춰 주세요.') {
+        setState(() => _hint = '번호표를 더 가까이 비춰 주세요.');
       }
     } finally {
       _processing = false;
@@ -283,8 +290,9 @@ class _OcrGuide extends StatelessWidget {
     return IgnorePointer(
       child: Center(
         child: Container(
-          width: 290,
-          height: 128,
+          // 번호표의 번호는 세로 한 줄 — 좁고 긴 네모.
+          width: 120,
+          height: 300,
           decoration: BoxDecoration(
             border: Border.all(color: Colors.white, width: 2),
             borderRadius: BorderRadius.circular(22),
