@@ -874,8 +874,8 @@
       for (let y = 0; y <= YMAX; y += 20) axes.append(mk("line", { class: "ax", x1: L, x2: W - R, y1: py(y), y2: py(y) }), Object.assign(mk("text", { class: "axl", x: L - 8, y: py(y) + 4, "text-anchor": "end" }), { textContent: y + "%" }));
       const step = xMax <= 120 ? 20 : xMax <= 300 ? 50 : 100;
       for (let x = 0; x <= xMax; x += step) axes.append(Object.assign(mk("text", { class: "axl", x: px(x), y: H - B + 20, "text-anchor": "middle" }), { textContent: String(x) }));
-      axes.append(Object.assign(mk("text", { class: "axl", x: W - R, y: H - 6, "text-anchor": "end" }), { textContent: "하루 경보 수 (건) →" }),
-        Object.assign(mk("text", { class: "axl", x: L, y: 8 }), { textContent: "경보 뒤 다음 사람도 또 반납한 비율" }));
+      axes.append(Object.assign(mk("text", { class: "axl", x: W - R, y: H - 6, "text-anchor": "end" }), { textContent: "하루 경보 수 (많을수록 많이 잡음) →" }),
+        Object.assign(mk("text", { class: "axl", x: L, y: 8 }), { textContent: "↑ 경보가 맞은 비율 (높을수록 잘 맞음)" }));
       // 평소 비율 점선 — 고른 기준의 헛대여 정의에 따라 평소 값도 다르므로(느슨하면 평소도 큼) 고른 기준의 값을 따라감
       baseG = mk("g", { class: "baseg" }); baseT = mk("text", { class: "basel", x: W - R, y: -7, "text-anchor": "end" });
       baseG.append(mk("line", { class: "base", x1: L, x2: W - R, y1: 0, y2: 0 }), baseT); axes.append(baseG);
@@ -978,6 +978,19 @@
     let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(layout, 150); });
   })();
 
+  // ── 점 비교(.dotcmp): 다음에 빌린 사람 40명을 점으로, 앞에서부터 data-on 개가 주황
+  function dotsFill(box, on) {
+    if (!box) return;
+    box.dataset.on = on;
+    box.replaceChildren(...Array.from({ length: 40 }, (_, i) => { const d = document.createElement("i"); d.className = "dc-d" + (i < on ? " on" : ""); d.style.setProperty("--i", i); return d; }));
+  }
+  for (const box of document.querySelectorAll(".dc-dots")) dotsFill(box, +box.dataset.on || 0);
+  for (const cmp of document.querySelectorAll(".dotcmp")) {
+    if (!("IntersectionObserver" in window)) { cmp.classList.add("in"); continue; }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { cmp.classList.add("in"); io.disconnect(); } }, { threshold: 0.4 });
+    io.observe(cmp);
+  }
+
   // ── 05 실시간 채점 — 공개 뷰에서 지금 숫자로 (못 받으면 적어 둔 숫자)
   (async () => {
     if (!$("#livescore")) return;
@@ -989,6 +1002,7 @@
         const n = sc.scored, k = sc.next_rider_dud, p = k / n, z = 1.96, d = 1 + z * z / n;
         const c = (p + z * z / (2 * n)) / d, m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d, at = new Date(row.at + "+09:00");
         if (!$("#ls-pct").dataset.counted) $("#ls-pct").textContent = Math.round(p * 100) + "%";
+        dotsFill($("#ls-dots"), Math.round(p * 40)); $("#ls-dv").firstChild.textContent = String(Math.round(p * 40));
         $("#ls-n").textContent = ko(n); $("#ls-k").textContent = ko(k);
         $("#ls-ci").textContent = `${Math.round((c - m) * 100)}~${Math.round((c + m) * 100)}%`; $("#ls-w").textContent = ko(sc.waiting);
         const md = sc.model || {};

@@ -168,7 +168,7 @@
           <div class="stat"><b class="num">90~243<small>명</small></b><p>경보가 있었다면 서울에서 하루에 막을 수 있었던 헛걸음입니다. 달마다 조금씩 다릅니다.</p></div>
         </div>
       </div>
-      <p class="easy reveal"><b>쉽게 말하면</b> 막대 하나는 '앞에서 몇 명이 연달아 포기했나'입니다. 앞에서 두 명이 포기한 자전거는, 다음 사람도 셋 중 한 명 넘게 또 포기했습니다. 아무 일 없던 자전거는 마흔 명 중 한 명꼴입니다. 앞사람들의 포기가 고장을 미리 알려 준다는 뜻입니다.</p>
+      <div class="dotcmp reveal" role="img" aria-label="다음에 빌린 사람 40명 중 또 바로 반납한 사람. 아무 자전거는 1명, 앞에서 두 명이 포기한 자전거는 15명"><div class="dc-row"><span class="dc-k">아무 자전거</span><span class="dc-dots" data-on="1"></span><b class="dc-v num">1<small>/40명</small></b></div><div class="dc-row hot"><span class="dc-k">앞에서 두 명이 <br>포기한 자전거</span><span class="dc-dots" data-on="15"></span><b class="dc-v num">15<small>/40명</small></b></div><p class="dc-cap"><span><i class="dc-d on"></i>다음 사람이 또 바로 반납</span><span><i class="dc-d"></i>그냥 타고 감</span></p></div>
       <div class="explore card reveal" id="explore">
         <header class="ex-head">
           <div>
@@ -193,7 +193,6 @@
             <p class="ex-say" id="ex-say"></p>
           </div>
         </div>
-        <p class="easy"><b>쉽게 말하면</b> 기준을 엄하게 하면 경보는 잘 맞지만, 그만큼 놓치는 자전거가 늘어납니다. 느슨하게 하면 많이 잡지만 헛경보도 늘어납니다. 그림의 점 하나가 기준 하나이고, 오른쪽 위로 갈수록 많이 잡으면서 잘 맞는 기준입니다. 단추를 눌러 직접 바꿔 보세요.</p>
         <p class="fine ex-fine">18가지 기준을 실제 대여 기록에 모두 돌린 결과입니다. 기준은 <b>1월 기록만</b> 보고 정했습니다. 맞는 비율이 30% 이상인 것 중 하루에 헛걸음을 가장 많이 막는 것을 골랐고, 다른 달과 대전에는 그대로 썼습니다. <code>analysis/rule_grid.py</code></p>
       </div>
       <div class="replay dark-card reveal" aria-label="2026년 6월 15일 서울 따릉이 하루를 빠르게 재생하는 지도">
@@ -207,9 +206,14 @@
           </div>
         </div>
         <canvas id="replay" role="img" aria-label="서울 대여소 2,789곳을 점으로 그린 지도. 재생하는 동안 경보, 경보 뒤 헛걸음, 뒤늦은 고장 신고가 색 점으로 켜집니다."></canvas>
+        <ol class="rflow" aria-label="재생에서 점이 켜지는 차례">
+          <li><i class="kd k-gray"></i>누가 빌리자마자 반납</li>
+          <li><i class="kd k-sig"></i>두 번째 사람에서 경보</li>
+          <li><i class="kd k-paper"></i>그래도 또 헛걸음</li>
+          <li><i class="kd k-calm"></i>한참 뒤 고장 신고</li>
+        </ol>
         <button class="btn sm line" id="playbtn" type="button">일시정지</button>
       </div>
-      <p class="easy reveal"><b>쉽게 말하면</b> 2026년 6월 15일 하루를 몇 분으로 빨리 돌린 화면입니다. 회색 점은 누군가 빌리자마자 반납한 곳, 주황은 RIDEY가 경보를 켰을 곳, 흰 점은 경보가 켜진 뒤에도 또 헛걸음한 곳, 파랑은 그제야 들어온 고장 신고입니다. 주황이 파랑보다 한참 먼저 켜집니다.</p>
     </div>
   </section>
 
@@ -230,7 +234,7 @@
             <div class="dayaxis" aria-hidden="true"><span id="ls-d0">9/27</span><span id="ls-d1">10/7</span></div>
             <figcaption><b id="ls-days-head">11일 하루도 빠짐없이 평소의 9배 이상</b> (<span id="ls-range">24~39%</span>) · 점선은 평소 자전거 2.5%</figcaption>
           </figure>
-          <p class="easy"><b>쉽게 말하면</b> 경보가 켜진 자전거를 다음에 빌린 사람이 위 비율만큼 또 바로 반납했습니다. 아무 자전거나 빌리면 마흔 명 중 한 명꼴(2.5%)입니다. 경보가 헛짚은 게 아니라는 뜻입니다.</p>
+          <div class="dotcmp reveal" role="img" aria-label="다음에 빌린 사람 40명 중 또 바로 반납한 사람. 경보가 켜진 자전거와 아무 자전거"><div class="dc-row hot"><span class="dc-k">경보가 켜진 자전거</span><span class="dc-dots" data-on="12" id="ls-dots"></span><b class="dc-v num" id="ls-dv">12<small>/40명</small></b></div><div class="dc-row"><span class="dc-k">아무 자전거</span><span class="dc-dots" data-on="1"></span><b class="dc-v num">1<small>/40명</small></b></div><p class="dc-cap"><span><i class="dc-d on"></i>다음 사람이 또 바로 반납</span><span><i class="dc-d"></i>그냥 타고 감</span></p></div>
           <p class="fine">지난 기록(1·3·6월)으로 잰 값은 32~34%입니다. 오차를 따져도 <span id="ls-ci">28~31%</span> · 다음 사람이 아직 안 빌려 기다리는 경보 <span id="ls-w">140</span>건 · <span id="ls-at">10월 8일 17:45</span> 기준</p>
           <p class="fine" id="ls-model" hidden>자체 모델 채점: 경보 때 모델이 말한 확률은 평균 <b id="ls-mp">–</b>, 실제는 <b id="ls-mr">–</b>입니다(<span id="ls-mn">0</span>건). 가을에는 연쇄 2명인 자전거를 조금 높게 봅니다. 고친 모델을 매주 시험하지만, 2% 넘게 나아질 때만 바꿉니다.</p>
         </div>
@@ -328,7 +332,6 @@
           <p class="fine">숫자만 보여 주지 않습니다. 확률을 가장 크게 움직인 이유 셋을 사람 말로 적습니다.</p>
         </div>
       </div>
-      <p class="easy reveal"><b>쉽게 말하면</b> 규칙은 '경보냐 아니냐'만 말합니다. 모델은 여기에 '얼마나 확실한지'와 '왜 그렇게 봤는지'를 붙입니다. 정비하는 사람이 어느 자전거부터 볼지 정하도록 돕습니다.</p>
     </div>
   </section>
 

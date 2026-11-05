@@ -129,9 +129,28 @@ h3 { font-size: 21px; letter-spacing: -.03em; line-height: 1.3; }
 .thesis { margin-top: clamp(48px, 6vw, 80px); max-width: 26em; font-size: clamp(22px, 2.5vw, 34px); line-height: 1.45; letter-spacing: -.035em; font-weight: 700; color: var(--fg2); }
 .thesis b { color: var(--fg); } .thesis em { font-style: normal; color: var(--sig); }
 .src { margin-top: 28px; font-size: 13.5px; color: var(--fg3); }
-/* 쉽게 말하면: 처음 보는 사람을 위한 한두 문장 풀이 */
-.easy { margin-top: 22px; max-width: 46em; padding: 14px 18px; border-radius: 16px; background: color-mix(in srgb, var(--fg) 5%, transparent); font-size: 15.5px; line-height: 1.7; color: var(--fg2); }
-.easy b { margin-right: 6px; color: var(--fg); }
+/* 점 비교: 다음에 빌린 사람 40명을 점으로 — 주황 = 또 바로 반납 */
+.dotcmp { margin-top: 28px; display: grid; gap: 14px; max-width: 760px; }
+.dc-row { display: grid; grid-template-columns: 9.5em minmax(0, 440px) auto; align-items: center; gap: 18px; }
+.dc-k { font-size: 14.5px; line-height: 1.35; font-weight: 700; color: var(--fg2); }
+.dc-row.hot .dc-k { color: var(--fg); }
+.dc-dots { display: grid; grid-template-columns: repeat(20, 1fr); gap: 5px; }
+.dc-d { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; background: color-mix(in srgb, var(--fg) 14%, transparent); }
+.dc-d.on { background: var(--signal); }
+.js .dotcmp .dc-dots .dc-d.on { transform: scale(.2); opacity: 0; transition: transform .5s var(--ease), opacity .3s; transition-delay: calc(var(--i, 0) * 28ms); }
+.js .dotcmp.in .dc-dots .dc-d.on, .dotcmp .dc-dots .dc-d.on.shown { transform: none; opacity: 1; }
+.dc-v { font-size: 26px; line-height: 1; white-space: nowrap; }
+.dc-row.hot .dc-v { color: var(--sigt); }
+.dc-v small { margin-left: 2px; font: 600 13px var(--font); color: var(--fg3); }
+.dc-cap { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg3); }
+.dc-cap span { display: inline-flex; align-items: center; gap: 7px; }
+.dc-cap .dc-d { width: 10px; height: 10px; }
+.dark .dc-row.hot .dc-v, .dark-card .dc-row.hot .dc-v { color: var(--signal); }
+@media (max-width: 640px) { .dc-row { grid-template-columns: 1fr auto; gap: 8px 12px; } .dc-k { grid-column: 1 / -1; } .dc-k br { display: none; } .dc-dots { gap: 4px; } }
+/* 재생: 점이 켜지는 차례 */
+.rflow { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 13.5px; font-weight: 600; color: var(--fg2); }
+.rflow li { display: inline-flex; align-items: center; gap: 8px; }
+.rflow li + li::before { content: "→"; margin-right: 6px; color: var(--fg3); font-weight: 400; }
 .split { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(24px, 4vw, 56px); align-items: start; }
 /* 움직임은 아래 '움직임' 묶음에 */
 
