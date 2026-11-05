@@ -16,8 +16,8 @@
     <text x="58" y="176" font-size="14" fill="#474B53">따릉이 대여이력 API</text>
     <text x="58" y="198" font-size="13" fill="#63676F">반납 즉시 · 하루 15만 건</text>
     <rect x="40" y="236" width="210" height="80" rx="16" fill="#F7F5F0"/>
-    <text x="58" y="268" font-size="16" font-weight="700" fill="#111317">한국환경공단</text>
-    <text x="58" y="292" font-size="14" fill="#474B53">전기차 충전기 상태 API</text>
+    <text x="58" y="268" font-size="16" font-weight="700" fill="#111317">서울 열린데이터광장</text>
+    <text x="58" y="292" font-size="14" fill="#474B53">대여소 실시간 거치 대수</text>
     <rect x="40" y="336" width="210" height="96" rx="16" fill="#F7F5F0"/>
     <text x="58" y="368" font-size="16" font-weight="700" fill="#111317">지난 기록 1천만 건</text>
     <text x="58" y="392" font-size="14" fill="#474B53">서울 3개월 · 대전 2개월</text>

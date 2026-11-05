@@ -25,7 +25,6 @@
 | [station_fault.md](station_fault.md) | 자전거 탓인가 대여소 탓인가 — 여러 자전거가 한꺼번에 헛대여한 대여소는 평소의 1.3\~2배뿐(자전거 경보는 14배) → 대여소 경보는 안 만듦 | `analysis/station_fault.py` |
 | [phase2.md](phase2.md) · [phase2_nextday.md](phase2_nextday.md) | 실시간 대여소 대수로 되나(안 됨) · 하루 늦은 자전거별 목록 | `analysis/phase2_*.py` |
 | [api_parity.md](api_parity.md) | 실시간 대여이력 API 와 월별 파일이 같은 자료인가 (같음) | `analysis/api_parity.py` |
-| [ev_validation.md](ev_validation.md) | 전기차 충전기 헛충전 중간 검증 — 기록 품질 거르기, 연쇄 뒤 다음 충전 | `analysis/ev_validate.py` |
 | [talk.md](talk.md) | 발표 대본(12장, 약 6분) + 예상 질문과 답 | — |
 | [outreach.md](outreach.md) | 이야기와 실제 반응 모으기 — 이용자 설문·정비 쪽 인터뷰·공단 문의 초안 | — |
 | [phase3_rehearsal.md](phase3_rehearsal.md) | 매일 아침 작업 7일 연속 예행연습 | `server/rehearse.py` |

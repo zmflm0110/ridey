@@ -34,7 +34,7 @@ TEXTS = {
                      "공공데이터포털(https://www.data.go.kr): 대전 타슈 대여이력, 한국환경공단 전기자동차 충전소 정보 — 공공누리 제1유형\n"
                      "앱 안에는 가공 결과(자전거 번호·대여소·시각)만 있고 이용자 정보(생년·성별)는 없다.\n",
     "클라우드.txt": "Supabase(무료 요금제) — 5분마다 서울 API 로 대여이력을 받아 경보 계산·채점(pg_cron, supabase/live.sql)\n"
-                   "GitHub Actions(무료, 공개 저장소) — 백업·전기차 충전기 자료 모으기 (.github/workflows/cloud.yml)\n",
+                   "GitHub Actions(무료, 공개 저장소) — 백업·검사·APK 빌드 (.github/workflows/)\n",
     "직접만든것.txt": "앱 아이콘·시작 화면·색·화면 디자인, 엔진·서버·분석 코드, 자체 모델(analysis/train_model.py 로 학습 → supabase/model.sql)은 모두 직접 만들었다.\n"
                     "분석·학습 도구: Python pandas·NumPy·scikit-learn(BSD, 무료) — 앱에는 들어가지 않는다.\n"
                     "로고·아이콘(RIDEY. 워드마크·R. 아이콘)은 tools/make_brand.py 가 코드로 그림(docs/brand.md). 앱 아이콘·시작 화면 PNG 는 tools/make_flutter_assets.js 가 만듦.\n"

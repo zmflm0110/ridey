@@ -132,7 +132,6 @@
 ## 다른 곳에도 쓸 수 있을까
 
 - 대전 타슈: 서울 기준을 그대로 썼을 때 두 명이 포기한 뒤 다음 사람도 포기한 비율이 41.6\~43.6%였다(평소 2.9%).
-- 전기차 충전기: 2026년 8월 권익위가 전기차 충전 민원주의보를 냈다(3년 사이 1.8배). 앱에는 '사용 가능'인데 실제로는 안 되는 충전기를 같은 방법으로 찾아봤다. 연달아 두 번 바로 끊긴 충전기 252대 중 다음 충전도 36.5%가 바로 끊겼다(평소 2.7%). 다만 사람을 구분할 수 없고 정답 자료가 없어서 아직은 가능성만 본 단계다([ev_validation](docs/ev_validation.md)).
 
 ## 만든 방법
 
@@ -141,7 +140,7 @@
 | 엔진 | 파이썬(`engine/`). 같은 규칙을 SQL로도 짰고 서로 같은 답이 나오는지 자동으로 검사한다 |
 | 클라우드 | Supabase Postgres. pg_cron으로 5분마다, pg_net으로 서울 API를 받고 SQL로 연쇄와 확률을 계산한다. 키는 DB의 Vault와 맥 키체인에만 둔다 |
 | 앱 | Flutter 하나로 안드로이드와 아이폰(시민 모드와 직원 모드, OpenStreetMap 지도, 번호표 QR 풀기, 끊기면 마지막 기록) |
-| 검사 | 파이썬 45개, Flutter 100개(화면 촬영 22개 포함), 사이트와 QR 검사. 올릴 때마다 GitHub Actions가 돌고 APK도 여기서 만든다 |
+| 검사 | 파이썬 40개, Flutter 100개(화면 촬영 22개 포함), 사이트와 QR 검사. 올릴 때마다 GitHub Actions가 돌고 APK도 여기서 만든다 |
 
 무료 DB(메모리 0.5GB)가 10월 2일 밤 6시간 멈춘 적이 있다. 5분 작업 한 번이 145MB를 건드려서 DB 캐시가 디스크로 밀려난 탓이었다. '헛대여가 둘 이상 이어져야 경보'라는 조건으로 후보를 먼저 줄이고(답은 같다), 자전거별 기록을 색인에서 바로 읽게 고쳐 한 번에 40MB, 16\~20초로 줄였다. 옛 SQL과 새 SQL이 같은 답을 내는지는 로컬 Postgres에 6월 기록을 흘려 넣어 36시간 동안 73번 비교했다([`tools/live_sql_compare.py`](tools/live_sql_compare.py)).
 
@@ -172,15 +171,15 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ```sh
 security add-generic-password -a bike-doctor -s seoul-openapi -w      # 서울 열린데이터광장
-security add-generic-password -a bike-doctor -s datagokr -w           # 공공데이터포털 (충전기, 선택)
+security add-generic-password -a bike-doctor -s datagokr -w           # 공공데이터포털 (아침 목록을 --source api 로 돌릴 때, 선택)
 security add-generic-password -a bike-doctor -s supabase-db -w        # Supabase DB 비밀번호
 ```
 
-1. Supabase 프로젝트에 `supabase/schema.sql`(쓰기 표), `staff.sql`(직원 명단과 권한), `model.sql`(모델 식), `live.sql`(5분 작업), `ev.sql`(충전기), `calib.sql`(보정) 순서로 적용한다. 클라우드에는 DB 비밀번호로 psql에서 직접 적용한다.
-2. Vault에 `seoul_openapi`(필요하면 `datagokr`)를 넣고, 처음에는 `tools/supabase_live_load.py --stations --backfill 8`로 채운다.
+1. Supabase 프로젝트에 `supabase/schema.sql`(쓰기 표), `staff.sql`(직원 명단과 권한), `model.sql`(모델 식), `live.sql`(5분 작업), `calib.sql`(보정) 순서로 적용한다. 클라우드에는 DB 비밀번호로 psql에서 직접 적용한다.
+2. Vault에 `seoul_openapi`를 넣고, 처음에는 `tools/supabase_live_load.py --stations --backfill 8`로 채운다.
 3. 공개(publishable) 키를 `app/lib/config/ridey_config.dart`에 넣는다.
 
-확인은 `select at, ms from live.tick_log order by at desc limit 5`로 한다. 파이썬과 같은 답인지는 `tools/supabase_live_load.py --parity`, `--parity-model`로 본다. 충전기 기록은 클라우드에 3일만 남으니 3일 안에 `tools/ev_pull.py` 다음 `analysis/ev_validate.py`를 돌린다. 모델 점검과 다시 배우기는 `tools/retrain.py`(`--deploy`는 나아졌을 때만 바꾼다).
+확인은 `select at, ms from live.tick_log order by at desc limit 5`로 한다. 파이썬과 같은 답인지는 `tools/supabase_live_load.py --parity`, `--parity-model`로 본다. 모델 점검과 다시 배우기는 `tools/retrain.py`(`--deploy`는 나아졌을 때만 바꾼다).
 </details>
 
 <details>
@@ -213,8 +212,8 @@ python tools/live_sql_compare.py --old <커밋>                                 
 
 | 폴더 | 내용 |
 |---|---|
-| [`engine/`](engine) | 헛대여, 연쇄, 경보 규칙(`core.py`), 아침 목록(`morning.py`), 충전기(`ev.py`) |
-| [`supabase/`](supabase) | 5분 작업(`live.sql`), 모델 식(`model.sql`), 충전기(`ev.sql`), 쓰기 표(`schema.sql`), 직원 명단(`staff.sql`) |
+| [`engine/`](engine) | 헛대여, 연쇄, 경보 규칙(`core.py`), 아침 목록(`morning.py`) |
+| [`supabase/`](supabase) | 5분 작업(`live.sql`), 모델 식(`model.sql`), 쓰기 표(`schema.sql`), 직원 명단(`staff.sql`) |
 | [`app/`](app/README.md) | Flutter 앱(시민 모드와 직원 모드) |
 | [`analysis/`](analysis) | 검증 스크립트. 기준 고르기, 실시간 대조, 모델 학습과 비교, 공단 수거 효과, 그림 |
 | [`site/`](site) | 작품 소개 웹사이트(GitHub Pages) |
@@ -228,7 +227,7 @@ python tools/live_sql_compare.py --old <커밋>                                 
 
 ## 자료와 참고
 
-- 자료: 서울 열린데이터광장의 따릉이 대여이력([OA-15182](https://data.seoul.go.kr/dataList/OA-15182/F/1/datasetView.do), 실시간 API `tbCycleRentData`), 고장신고([OA-15644](https://data.seoul.go.kr/dataList/OA-15644/F/1/datasetView.do)), 대여소 정보. 공공데이터포털의 대전 타슈 대여이력과 한국환경공단 전기차 충전기 상태. 모두 공공누리 제1유형이다. 앱과 공개 화면에는 이용자 정보(생년, 성별)가 없고, 클라우드는 대여 기록을 8일만 둔다.
+- 자료: 서울 열린데이터광장의 따릉이 대여이력([OA-15182](https://data.seoul.go.kr/dataList/OA-15182/F/1/datasetView.do), 실시간 API `tbCycleRentData`), 고장신고([OA-15644](https://data.seoul.go.kr/dataList/OA-15644/F/1/datasetView.do)), 대여소 정보. 공공데이터포털의 대전 타슈 대여이력. 모두 공공누리 제1유형이다. 앱과 공개 화면에는 이용자 정보(생년, 성별)가 없고, 클라우드는 대여 기록을 8일만 둔다.
 - 참고 연구: Kaspi, Raviv, Tzur, [Detection of Unusable Bicycles in Bike-Sharing Systems](https://www.researchgate.net/publication/290496984_Detection_of_Unusable_Bicycles_in_Bike-Sharing_Systems) (Omega, 2016), [Self-Supervised Transformer for Unusable Shared Bike Detection](https://arxiv.org/pdf/2505.00932) (2025). 비교는 [related_work](docs/related_work.md)에 있다.
 - 라이브러리: 앱은 Flutter와 pub.dev 패키지를 쓰고, 지도는 [flutter_map](https://pub.dev/packages/flutter_map)으로 [OpenStreetMap](https://www.openstreetmap.org/copyright)(ODbL) 기본 지도를 그린다. QR 검사에는 [jsQR](https://github.com/cozmo/jsQR) 1.4.0(Apache-2.0)을 `tests/vendor/`에 라이선스와 함께 넣었다. 전체 목록은 [docs/credits.md](docs/credits.md). 글꼴은 Unbounded(OFL)에서 숫자와 대문자만 잘라 넣었다.
 - 라이선스: 코드는 [MIT](LICENSE). 자료는 각 출처의 공공누리 제1유형(출처 표시)을 따른다.
