@@ -4,9 +4,9 @@
 <script>document.documentElement.classList.add("js");try{const t=localStorage.getItem("hz-theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>진행 기록 — RIDEY</title>
-<meta name="description" content="앞사람들이 빌리자마자 반납한 흔적이 이어지면 경보를 켭니다. 공개 대여기록만으로, 신고되지 않은 고장 따릉이를 5분마다 찾습니다.">
-<meta property="og:title" content="RIDEY. — Ready before you ride">
+<title>진행 기록. RIDEY</title>
+<meta name="description" content="앞사람들이 빌리자마자 반납한 흔적이 이어지면 경보를 켭니다. 공개된 대여 기록만으로, 아무도 신고하지 않은 고장 따릉이를 5분마다 찾습니다.">
+<meta property="og:title" content="RIDEY. Ready before you ride.">
 <meta property="og:url" content="https://zmflm0110.github.io/ridey/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="RIDEY.">
@@ -14,9 +14,9 @@
 <meta property="og:image" content="https://zmflm0110.github.io/ridey/img/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="RIDEY. 타기 전에, 고장 난 따릉이를 먼저 — 자전거 한 대의 12일을 점으로 그린 그림">
+<meta property="og:image:alt" content="RIDEY. 타기 전에, 고장 난 따릉이를 먼저. 자전거 한 대의 12일을 점으로 그린 그림">
 <meta name="twitter:card" content="summary_large_image">
-<meta property="og:description" content="점 하나가 신호다 — 앞사람들의 '빌리자마자 반납' 기록으로, 신고되지 않은 고장 따릉이를 실시간으로 찾습니다.">
+<meta property="og:description" content="점 하나가 신호다. 앞사람들이 빌리자마자 반납한 기록으로, 아무도 신고하지 않은 고장 따릉이를 찾습니다.">
 <meta name="theme-color" content="#0D0F12">
 <link rel="icon" href="img/mark.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/unbounded-ridey.woff2" as="font" type="font/woff2" crossorigin>
@@ -42,16 +42,16 @@
 </header>
 <main class="doc">
 <h1>진행 기록</h1>
-<p class="lede">RIDEY 가 달라진 점을 모았습니다. 자세한 측정과 실패 기록은 <a href="https://github.com/zmflm0110/ridey/blob/master/PLAN.md">PLAN.md</a> 의 진행 기록에 있습니다.</p>
+<p class="lede">RIDEY가 달라진 점을 모았습니다. 자세한 측정과 실패한 시도는 <a href="https://github.com/zmflm0110/ridey/blob/master/PLAN.md">PLAN.md</a>에 있습니다.</p>
 <h2>0.32.0<small>2026-11-05</small></h2>
 <ul>
-<li><b>서울 전체, 내 근처부터.</b> 2km 제한을 없애고 서울 전체 고장 의심을 지도에 그린다. 처음엔 내 근처 500m를 크게 보여 주고, 검색 칸에서 구·대여소·지명(학원·역)을 찾으면 그곳 기준으로 미리 본다. 지도는 OpenStreetMap, 길 찾기는 네이버 지도 앱.</li>
-<li><b>직원: 재배치와 고장 의심 수거를 한 길로.</b> 대여소별 거치 대수로 넘친 곳(거치대 1.2배 초과)에서 싣고 빈 곳(25% 미만)에 내려놓으면서 고장 의심도 함께 거두는 '오늘 추천 경로'(트럭 20대 기준). '고장 의심만'은 가장 짧은 순서(2-opt). 경로는 실제 도로(OSRM)를 따라 그리고 앱 안에서 길안내한다. 아래 탭은 구별 현황·더보기 두 개.</li>
-<li><b>번호표 QR 풀기.</b> 따릉이 번호표 QR 은 <code>SPB-00072627</code> 을 글자판을 섞은 base64 로 담고 있었다(<code>6va03gATEBjUem2w</code>). 글자판을 찾아 풀어서 번호를 바로 읽는다. 실제 번호표 16장으로 확인. 세로로 찍힌 숫자를 읽는 글자 인식은 실제 번호표에서 거의 못 읽어 뺐다.</li>
-<li><b>켤 때마다 역할을 묻고, 시작 화면의 <code>R.</code> 을 이어받는다.</b> 같은 폰을 시민·직원이 번갈아 쓸 수 있어서. R 은 사라지고 마침표만 떨어져 서울로 퍼진다.</li>
-<li>고장 신고는 서울시 공식 신고 화면으로 이어 주기만 한다(RIDEY 는 받지 않는다). 내 대여소는 지도 + 목록/검색, 화면 왼쪽 끝에서 밀면 뒤로, 'SPB-' 는 미리 적혀 있다.</li>
-<li><b>전기차 충전기 확장은 뺐다.</b> 따릉이에 집중한다. 모으기·검증 코드(<code>engine/ev.py</code>, <code>supabase/ev.sql</code> 등)와 문서·사이트·발표의 언급을 지웠다.</li>
-<li>시연 영상은 아이폰에서 앱이 스스로 조작하게 하고(<code>app/integration_test/demo_test.dart</code>) 맥에서 케이블로 녹화했다(<code>tools/iphone_rec.swift</code>).</li>
+<li><b>서울 전체를 봅니다.</b> 2km 제한을 없앴습니다. 처음엔 내 근처를 크게 보여 주고, 학원이나 역을 검색하면 갈 곳의 대여소를 미리 볼 수 있습니다.</li>
+<li><b>직원은 재배치하는 길에 고장 의심도 거둡니다.</b> 넘친 대여소에서 싣고, 빈 대여소에 내려놓으면서, 고장 의심도 함께 거두는 '오늘 추천 경로'를 짭니다. 실제 도로를 따라 앱 안에서 길안내합니다.</li>
+<li><b>번호표 QR을 직접 풀었습니다.</b> QR에는 <code>SPB-00072627</code> 같은 번호가 글자판을 섞은 base64로 들어 있었습니다. 실제 번호표 16장으로 규칙을 찾았고, 모두 맞았습니다. 세로로 찍힌 숫자를 읽는 글자 인식은 거의 못 읽어서 뺐습니다.</li>
+<li><b>켤 때마다 누가 쓰는지 묻습니다.</b> 같은 폰을 시민과 직원이 번갈아 쓸 수 있어서입니다. 첫 장면은 폰 시작 화면의 <code>R.</code>을 이어받아, 마침표만 떨어져 서울로 퍼집니다.</li>
+<li>고장 신고는 서울시 공식 신고 화면으로 이어 주기만 합니다. 내 대여소는 지도에서 고르고, 'SPB-'는 미리 적혀 있습니다.</li>
+<li>전기차 충전기로 넓히던 부분은 뺐습니다. 따릉이에 집중합니다.</li>
+<li>시연 영상은 앱이 아이폰에서 스스로 움직이게 해서 맥으로 녹화했습니다.</li>
 </ul>
 <h2>0.31.0<small>2026-11-01</small></h2>
 <ul>

@@ -49,7 +49,7 @@ def releases():
     if in_list:
         body.append("</ul>")
     idx = (S / "index.html").read_text()
-    head = re.sub(r"<title>.*?</title>", "<title>진행 기록 — RIDEY</title>", idx[:idx.index("</head>")], count=1)
+    head = re.sub(r"<title>.*?</title>", "<title>진행 기록. RIDEY</title>", idx[:idx.index("</head>")], count=1)
     head = re.sub(r"<!-- 진행 기록 링크에.*?-->\n<script type=\"speculationrules\">.*?</script>\n", "", head, flags=re.S)
     header = idx[idx.index('<header class="nav"'):idx.index("</header>") + len("</header>")]
     header = header.replace('class="nav"', 'class="nav solid"').replace('href="#', 'href="./#')

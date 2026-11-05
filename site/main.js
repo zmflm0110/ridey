@@ -227,7 +227,7 @@
         const m = await (await fetch("data/morning.json")).json();
         marks = m.bikes.map((b) => [b[1], b[3], b[0]]);
         $("#live-k").textContent = "6월 15일 아침, 고장 의심 따릉이"; $("#live-n").textContent = m.bikes.length;
-        $("#live-d").textContent = "시연 자료 — 지금은 실시간 목록을 받지 못했어요"; $("#hero-src").textContent = "서울 따릉이 · 2026년 6월 15일 실제 기록";
+        $("#live-d").textContent = "시연 자료입니다. 지금은 실시간 목록을 받지 못했습니다"; $("#hero-src").textContent = "서울 따릉이 · 2026년 6월 15일 실제 기록";
       } catch {}
     }
     if (!eng.tb) setTimeout(() => countUp($("#live-n"), 1800), reduce ? 0 : Math.max(0, T0 + 1100 - performance.now()));
@@ -570,7 +570,7 @@
     if (row && row.bikes && row.bikes.length) {
       const top = [...row.bikes].sort((a, b) => (b.chain || 0) - (a.chain || 0)).slice(0, 18);
       msg = `지금 서울 경보 ${row.bikes.length}대   ●   ` + top.map((b) => { const s = st[b.station]; return `${s ? s.gu + " " + s.name.replace(/\s*\(.*\)$/, "") : "대여소 " + b.station} · ${b.bike} · ${b.chain}명 연속`; }).join("   ●   ") + "   ●   ";
-      box.setAttribute("aria-label", `지금 서울 경보 ${row.bikes.length}대 — ` + top.slice(0, 3).map((b) => `${st[b.station]?.gu || ""} ${b.bike} ${b.chain}명 연속`).join(", "));
+      box.setAttribute("aria-label", `지금 서울 경보 ${row.bikes.length}대: ` + top.slice(0, 3).map((b) => `${st[b.station]?.gu || ""} ${b.bike} ${b.chain}명 연속`).join(", "));
     }
     if (document.fonts) await document.fonts.ready;
     const m = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
@@ -673,8 +673,8 @@
     // 시각은 버림(15:43:34 → 15:43) — 본문·보고서의 시각과 같게
     const hm = (h) => { const m = Math.floor((h % 24) * 60 + 1e-6); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
     const WD = ["일", "월", "화", "수", "목", "금", "토"];
-    const NOTE = { 12: ["alarm", `<b>15:43</b>RIDEY 경보 — 서로 다른 두 번째 사람`], 13: ["", `<b>07:58</b>첫 고장 신고. 그 뒤에도 54번 더`],
-                   16: ["", `<b>07:13</b>출근길 37분 사이 7명이 연달아`], 21: ["", "누군가 탔다 — 그래도 고쳐지지 않음"], 24: ["", `<b>17:18</b>두 번째 신고 → 사라짐`] };
+    const NOTE = { 12: ["alarm", `<b>15:43</b>RIDEY 경보. 서로 다른 두 번째 사람`], 13: ["", `<b>07:58</b>첫 고장 신고. 그 뒤에도 54번 더`],
+                   16: ["", `<b>07:13</b>출근길 37분 사이 7명이 연달아`], 21: ["", "누군가 탔지만 고쳐지지 않음"], 24: ["", `<b>17:18</b>두 번째 신고 → 사라짐`] };
     let html = "", n = 0;
     for (let d = 12; d <= 24; d++) {
       const row = ev.filter(([h]) => 12 + Math.floor(h / 24) === d), dots = row.filter(([, k]) => k === "d").length, rides = row.filter(([, k]) => k === "r").length;
@@ -782,15 +782,15 @@
       btn.classList.remove("down"); void btn.offsetWidth; btn.classList.add("tap");
       if (grow) {   // 선 — 누군가 제대로 탔음: 연쇄가 끊김
         grow.classList.remove("grow");
-        tell(chain >= 2 ? "누군가 제대로 타고 갔습니다 — 연쇄가 끊기고 <b>경보가 꺼집니다</b>." : "제대로 탄 대여(선) — 괜찮습니다.");
+        tell(chain >= 2 ? "누군가 제대로 타고 갔습니다. 연쇄가 끊기고 <b>경보가 꺼집니다</b>." : "제대로 탄 대여(선)입니다. 괜찮습니다.");
         chain = 0; card.classList.remove("alarm"); grow = null; return;
       }
       chain++;   // 점 — 빌리자마자 반납
       const gd = add(`dot${chain === 1 ? " first" : chain === 2 ? " alarm" : ""}`);
       if (chain >= 2) requestAnimationFrame(() => burst(card, gd, chain === 2 ? 1 : 0.6));
-      if (chain === 1) { buzz(12); tell("한 사람이 빌리자마자 반납 — 한 명은 실수일 수 있어 아직 조용합니다."); }
+      if (chain === 1) { buzz(12); tell("한 사람이 빌리자마자 반납했습니다. 한 명은 실수일 수 있어 아직 조용합니다."); }
       else if (chain === 2) { buzz([40, 60, 40]); tone(1320, 0.09, 0.05); tone(1320, 0.09, 0.2); flash(); tell("서로 다른 두 번째 사람도 바로 반납 → <b>경보</b>. 지도에 점이 켜지고 정비 목록에 오릅니다."); }
-      else { buzz([30, 40, 30, 40, 90]); tone(1568, 0.08, 0.05); tone(1568, 0.08, 0.17); tone(1568, 0.08, 0.29); flash(); tell(`<b>${chain}명 연속</b> — 더 강한 경보. 다음 사람에게 '피하세요' 라고 알려 줍니다.`); }
+      else { buzz([30, 40, 30, 40, 90]); tone(1568, 0.08, 0.05); tone(1568, 0.08, 0.17); tone(1568, 0.08, 0.29); flash(); tell(`<b>${chain}명 연속</b>, 강한 경보입니다. 다음 사람에게 '피하세요'라고 알려 줍니다.`); }
     };
     btn.addEventListener("pointerdown", (e) => { if (e.button > 0) return; e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch {} btn.focus({ preventScroll: true }); down(); });
     btn.addEventListener("pointerup", up); btn.addEventListener("pointercancel", up); btn.addEventListener("lostpointercapture", up);
@@ -910,15 +910,15 @@
       $("#ex-title").textContent = isChosen(cur) ? "3분 · 300m · 서로 다른 2명, 왜 이 기준일까?" : `${min(cur.sec)} · ${cur.m}m · 서로 다른 ${cur.k}명이라면?`;
       let say;
       if (isChosen(cur)) {
-        say = cur.set === 0 ? `<b>1월 기록만</b>으로, 정밀도 30% 이상인 기준 중 <b>하루 막은 헛걸음이 가장 많은</b> 이 기준을 골랐습니다.`
-          : `<b>1월에 고른 기준 그대로</b>인데, 처음 보는 ${esc(set.name)}에서도 정밀도 <em>${me.p}%</em> — 평소(${me.base}%)의 ${Math.round(me.p / me.base)}배입니다.`;
+        say = cur.set === 0 ? `<b>1월 기록만</b> 보고, 맞는 비율이 30% 이상인 기준 중 <b>하루에 헛걸음을 가장 많이 막는</b> 이 기준을 골랐습니다.`
+          : `<b>1월에 고른 기준 그대로</b>인데, 처음 보는 ${esc(set.name)}에서도 <em>${me.p}%</em>가 맞았습니다. 평소(${me.base}%)의 ${Math.round(me.p / me.base)}배입니다.`;
       } else {
         const dA = Math.round(me.a - ch.a), dP = me.p - ch.p, dV = Math.round(me.v - ch.v);
-        say = `우리 선택보다 경보는 <b>${Math.abs(dA)}건 ${dA < 0 ? "적고" : "많고"}</b>, 정밀도는 <b>${Math.abs(dP).toFixed(1)}%p ${dP >= 0 ? "높고" : "낮고"}</b>, 막을 수 있던 헛걸음은 <em>${Math.abs(dV)}명 ${dV < 0 ? "줄어요" : "늘어요"}</em>. ` +
+        say = `우리가 고른 기준보다 경보는 <b>${Math.abs(dA)}건 ${dA < 0 ? "적고" : "많고"}</b>, 맞는 비율은 <b>${Math.abs(dP).toFixed(1)}%p ${dP >= 0 ? "높고" : "낮고"}</b>, 막을 수 있던 헛걸음은 <em>${Math.abs(dV)}명 ${dV < 0 ? "줄어듭니다" : "늘어납니다"}</em>. ` +
           (dP > 0 && dV < 0 ? "더 정확해지지만, 그만큼 놓치는 자전거가 늘어납니다." : dP < 0 ? "경보는 늘어도 그중 맞는 비율이 떨어집니다." : "");
       }
       $("#ex-say").innerHTML = say;
-      plot.parentElement.querySelector("svg")?.setAttribute("aria-label", `${set.name}: 경보 기준 18가지 — 가로 하루 경보 수, 세로 다음 사람도 또 반납한 비율`);
+      plot.parentElement.querySelector("svg")?.setAttribute("aria-label", `${set.name}: 경보 기준 18가지. 가로는 하루 경보 수, 세로는 다음 사람도 또 반납한 비율`);
     };
     render(true);
     let rt2, lastW = W; addEventListener("resize", () => { clearTimeout(rt2); rt2 = setTimeout(() => { fitSize(); if (W !== lastW) { lastW = W; render(true); } }, 150); });
@@ -1030,7 +1030,7 @@
       await loadQR(); cur = id;
       const name = s.name.trim().replace(/\s+/g, " ");
       sticker.innerHTML = `${logo.replace('class="wordmark"', 'class="wordmark s-logo"')}` +
-        `<p class="s-t">타기 전에, 스캔<i></i></p><p class="s-sub">이 대여소에 지금 서 있는<br>고장 의심 따릉이 번호가 바로 떠요</p>` +
+        `<p class="s-t">타기 전에, 스캔<i></i></p><p class="s-sub">타기 전에 RIDEY로<br>고장 의심 따릉이를 먼저 확인해요</p>` +
         `<div class="s-qr">${window.RideyQR.svg(APP + id, { label: `${name} 대여소 QR 코드` })}</div>` +
         `<div><div class="s-name">${esc(name)}</div><div class="s-gu">${esc(s.gu || "")} · ${esc(id)}</div></div>` +
         `<p class="s-foot">RIDEY. 점 하나가 신호다 · zmflm0110.github.io/ridey</p>`;
@@ -1070,10 +1070,10 @@
       if (hit) {
         const [bike, , stn, chain, level, lastDud] = hit;
         out.className = "result warn pop";
-        out.innerHTML = `<h4><i class="rdot" aria-hidden="true"></i>${esc(bike)} 는 피하세요</h4>어제까지 <b>서로 다른 ${chain}명</b>이 빌리자마자 반납했어요 (마지막 ${esc(lastDud)}, ${esc(stn)}). ` +
+        out.innerHTML = `<h4><i class="rdot" aria-hidden="true"></i>${esc(bike)}, 피하세요</h4>어제까지 <b>서로 다른 ${chain}명</b>이 빌리자마자 반납했어요 (마지막 ${esc(lastDud)}, ${esc(stn)}). ` +
           `이런 자전거는 다음 사람도 ${level === "빨강" ? "절반 넘게" : "3명 중 1명꼴로"} 바로 반납했어요. 옆 자전거를 고르세요.`;
         setTimeout(() => burst(out, out.querySelector(".rdot"), 0.7), 120);
-      } else { out.className = "result ok pop"; out.innerHTML = `<h4>${esc(id)} — 타도 괜찮아요</h4>어제까지 기록에 빌리자마자 반납한 연쇄가 없어요.`; }
+      } else { out.className = "result ok pop"; out.innerHTML = `<h4>${esc(id)}, 타도 괜찮아요</h4>어제까지 기록에 빌리자마자 반납한 연쇄가 없어요.`; }
     }
     form.addEventListener("submit", (e) => { e.preventDefault(); lookup($("#bike").value); });
     const picks = [m.bikes[0][0], (m.bikes.find((b) => b[4] === "노랑") || m.bikes[1])[0], "SPB-12345"];

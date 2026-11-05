@@ -86,7 +86,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       await page.click('#ex-k button[data-v="3"]'); await wait(700);
       const p3 = await num("#ex-p"), a3 = await num("#ex-a");
       check(p3 > 54.1 && a3 < 95, `탐색기: 3명 연속 → 정밀도↑ ${p3}% · 경보↓ ${a3}건`);
-      check(/놓치는|떨어집니다|줄어요/.test(await page.textContent("#ex-say")), "탐색기: 균형을 말로 설명");
+      check(/놓치는|떨어집니다|줄어듭니다|늘어납니다/.test(await page.textContent("#ex-say")), "탐색기: 균형을 말로 설명");
       await page.click("#ex-sets button:nth-child(3)"); await page.click('#ex-k button[data-v="2"]'); await wait(900);
       check((await num("#ex-p")) === 51.8, "탐색기: 서울 6월(기준을 정하지 않은 달)에도 같은 기준 51.8%");
       await page.click('#ex-sec button[data-v="60"]'); await page.click('#ex-m button[data-v="100"]'); await page.click('#ex-k button[data-v="2"]'); await wait(700);

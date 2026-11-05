@@ -4,9 +4,9 @@
 <script>document.documentElement.classList.add("js");try{const t=localStorage.getItem("hz-theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RIDEY — 타기 전에, 고장 난 따릉이를 먼저</title>
-<meta name="description" content="앞사람들이 빌리자마자 반납한 흔적이 이어지면 경보를 켭니다. 공개 대여기록만으로, 신고되지 않은 고장 따릉이를 5분마다 찾습니다.">
-<meta property="og:title" content="RIDEY. — Ready before you ride">
+<title>RIDEY. 타기 전에, 고장 난 따릉이를 먼저</title>
+<meta name="description" content="앞사람들이 빌리자마자 반납한 흔적이 이어지면 경보를 켭니다. 공개된 대여 기록만으로, 아무도 신고하지 않은 고장 따릉이를 5분마다 찾습니다.">
+<meta property="og:title" content="RIDEY. Ready before you ride.">
 <meta property="og:url" content="https://zmflm0110.github.io/ridey/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="RIDEY.">
@@ -14,9 +14,9 @@
 <meta property="og:image" content="https://zmflm0110.github.io/ridey/img/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="RIDEY. 타기 전에, 고장 난 따릉이를 먼저 — 자전거 한 대의 12일을 점으로 그린 그림">
+<meta property="og:image:alt" content="RIDEY. 타기 전에, 고장 난 따릉이를 먼저. 자전거 한 대의 12일을 점으로 그린 그림">
 <meta name="twitter:card" content="summary_large_image">
-<meta property="og:description" content="점 하나가 신호다 — 앞사람들의 '빌리자마자 반납' 기록으로, 신고되지 않은 고장 따릉이를 실시간으로 찾습니다.">
+<meta property="og:description" content="점 하나가 신호다. 앞사람들이 빌리자마자 반납한 기록으로, 아무도 신고하지 않은 고장 따릉이를 찾습니다.">
 <meta name="theme-color" content="#0D0F12">
 <link rel="icon" href="img/mark.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/unbounded-ridey.woff2" as="font" type="font/woff2" crossorigin>
@@ -52,12 +52,12 @@
     <canvas id="livemap" aria-hidden="true"></canvas>
     <div class="blips" id="blips" aria-hidden="true"></div>
     <div class="wrap">
-      <p class="eyebrow"><i class="ping" aria-hidden="true"></i><span id="hero-src">서울 따릉이 · 5분마다 실시간</span></p>
+      <p class="eyebrow"><i class="ping" aria-hidden="true"></i><span id="hero-src">서울 따릉이, 5분마다 새로</span></p>
       <h1>타기 전에,<br>고장 난 따릉이를<br><em>먼저.</em></h1>
-      <p class="lede">앞사람들이 빌리자마자 반납한 흔적이 이어지면, RIDEY 가 경보를 켭니다. 신고를 기다리지 않아요.</p>
+      <p class="lede">앞사람들이 빌리자마자 반납한 흔적이 이어지면 RIDEY가 경보를 켭니다. 신고를 기다리지 않습니다.</p>
       <div class="cta">
         <a class="btn solid" href="#try">번호로 확인해 보기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="btn line" href="#try">번호로 확인해 보기</a>
+        <a class="btn line" href="#how">어떻게 찾나요</a>
       </div>
       <div class="counter" aria-live="polite">
         <span class="k" id="live-k">지금 서울, 고장 의심 따릉이</span>
@@ -66,8 +66,8 @@
       </div>
     </div>
     <ul class="proof-strip" aria-label="한눈에">
-      <li><b class="num">1천만</b><span>건 대여기록으로 검증</span></li>
-      <li><b class="num">14<small>배</small></b><span>평소보다 또 반납할 확률</span></li>
+      <li><b class="num">1천만</b><span>건 대여 기록으로 검증</span></li>
+      <li><b class="num">14<small>배</small></b><span>경보 뒤 다음 사람도 포기할 확률, 평소 대비</span></li>
       <li><b class="num">20<small>시간+</small></b><span>고장 신고보다 먼저</span></li>
     </ul>
   </section>
@@ -86,9 +86,9 @@
           <p class="lk" aria-hidden="true"><span><i class="g dot"></i>빌리자마자 반납 <b>73명</b></span><span><i class="g dash"></i>그냥 타고 감 <b>30번</b></span><span><i class="g rep"></i>고장 신고</span></p>
         </header>
         <ol class="lrows" id="lrows"></ol>
-        <figcaption id="ledger-cap" class="lf">점 하나가 한 사람입니다. 서로 다른 <b>두 번째 점</b>에서 RIDEY 경보 — 그 뒤로도 <em>71명</em>이 이 자전거를 빌렸다가 바로 돌려놓았습니다.</figcaption>
+        <figcaption id="ledger-cap" class="lf">점 하나가 한 사람입니다. 서로 다른 <b>두 번째 점</b>에서 RIDEY가 경보를 켭니다. 그 뒤로도 <em>71명</em>이 이 자전거를 빌렸다가 바로 돌려놓았습니다.</figcaption>
       </figure>
-      <p class="thesis reveal">RIDEY 라면 6월 12일 오후 3시 43분, 두 번째 사람이 반납한 그 순간 이 자전거는 <b>정비 목록 맨 위</b>에 올랐습니다. 그 뒤 <em>71명</em>에게 먼저 알 기회가 있었습니다.</p>
+      <p class="thesis reveal">RIDEY라면 6월 12일 오후 3시 43분, 두 번째 사람이 반납한 그 순간 이 자전거는 <b>정비 목록 맨 위</b>에 올랐습니다. 그 뒤 <em>71명</em>에게 먼저 알 기회가 있었습니다.</p>
     </div>
   </section>
 
@@ -100,12 +100,12 @@
         <h2>신고는 귀찮고,<br>눈으로는 안 보입니다.</h2>
       </header>
       <div class="facts reveal stagger">
-        <div class="fact"><b class="num">16<small>만 건</small></b><h3>따릉이 고장 접수 (2024년)</h3><p>운영 적자는 127억 원. 그런데 고장 난 자전거를 만난 사람 대부분은 신고하지 않고, 조용히 반납하고 옆 자전거를 빌립니다.</p></div>
+        <div class="fact"><b class="num">16<small>만 건</small></b><h3>따릉이 고장 접수 (2024년)</h3><p>운영 적자는 127억 원입니다. 그런데 고장 난 자전거를 만난 사람은 대부분 신고하지 않습니다. 조용히 반납하고 옆 자전거를 빌립니다.</p></div>
         <div class="fact"><b class="num">49~61<small>%</small></b><h3>7일이 지나도 신고가 없다</h3><p>서로 다른 사람이 연달아 포기한 자전거 중 이만큼은 일주일이 지나도 아무도 신고하지 않았습니다.</p></div>
-        <div class="fact"><b class="num">82~91<small>%</small></b><h3>하루 안에 또 빌려진다</h3><p>공단은 하루 한 번 넘게 대여소를 돌지만, 체인·브레이크처럼 타 봐야 아는 고장은 눈으로 걸러지지 않습니다.</p></div>
+        <div class="fact"><b class="num">82~91<small>%</small></b><h3>하루 안에 또 빌려진다</h3><p>공단은 하루 한 번 넘게 대여소를 돕니다. 하지만 체인이나 브레이크처럼 타 봐야 아는 고장은 눈으로 걸러지지 않습니다.</p></div>
       </div>
       <p class="thesis reveal">사람들이 귀찮아서 안 하는 일, <b>고장 신고</b>를<br>이미 남아 있는 <em>'빌리자마자 반납'</em> 기록이 대신합니다.</p>
-      <p class="src reveal">고장 접수·적자: 헤럴드경제(2026년 9월) · 미신고 비율·다시 빌려짐: 서울 2026년 1·3·6월 대여기록·고장신고로 측정(docs/operations.md, analysis/after_alarm.py)</p>
+      <p class="src reveal">출처: 고장 접수와 적자는 헤럴드경제(2026년 9월). 신고 비율과 다시 빌려진 비율은 서울 2026년 1·3·6월 대여 기록과 고장 신고로 쟀습니다(docs/operations.md, analysis/after_alarm.py).</p>
     </div>
   </section>
 
@@ -118,9 +118,9 @@
       </header>
       <div class="morse card reveal" id="morse" aria-label="자전거 한 대의 하루를 선과 점으로 보여 주는 예시">
         <ol class="mtrack">
-          <li class="m dash"><i></i><b>08:12</b><span>A 가 23분 타고 감</span><em>선 — 괜찮음</em></li>
+          <li class="m dash"><i></i><b>08:12</b><span>A 가 23분 타고 감</span><em>선, 괜찮음</em></li>
           <li class="m dot"><i></i><b>09:40</b><span>B 가 <strong>14초</strong> 만에 같은 곳에 반납</span><em>점 하나</em></li>
-          <li class="m same"><i></i><b>09:41</b><span>B 가 다시 빌렸다가 9초 만에</span><em>같은 사람 — 안 셈</em></li>
+          <li class="m same"><i></i><b>09:41</b><span>B 가 다시 빌렸다가 9초 만에</span><em>같은 사람이라 안 셈</em></li>
           <li class="m dot signal"><i></i><b>10:05</b><span>C 도 <strong>21초</strong> 만에 반납</span><em>서로 다른 두 번째 점 → 경보</em></li>
           <li class="m saved"><i></i><b>10:30</b><span>D 는 빌리기 전에 번호를 확인하고 옆 자전거로</span><em>헛걸음 하나 막음</em></li>
         </ol>
@@ -129,7 +129,7 @@
       <!-- 직접 찍어 보기: 큰 점 단추 — 짧게 누르면 점(바로 반납), 길게 누르면 선(타고 감). 서로 다른 두 사람의 점이 이어지면 경보 -->
       <div class="key card reveal" id="key">
         <div class="key-l">
-          <button class="key-btn" id="key-btn" type="button" aria-describedby="key-say"><span class="sr">찍기 — 짧게 누르면 빌리자마자 반납, 길게 누르면 타고 감</span></button>
+          <button class="key-btn" id="key-btn" type="button" aria-describedby="key-say"><span class="sr">찍기. 짧게 누르면 빌리자마자 반납, 길게 누르면 타고 감</span></button>
           <p class="key-hint" aria-hidden="true"><b>짧게</b> 점 · <b>길게</b> 선</p>
         </div>
         <div class="key-r">
@@ -140,10 +140,10 @@
         </div>
       </div>
       <dl class="rules reveal stagger">
-        <div><dt>점 (헛대여)</dt><dd>같은 대여소에 <kbd>3분</kbd> 안에, <kbd>300m</kbd>도 안 가고 반납한 대여.</dd></div>
-        <div><dt>서로 다른 사람</dt><dd>한 사람이 여러 번 해 본 건 한 번으로. 생년·성별로 거르고, 그 자료가 없으면 <kbd>2분</kbd> 안에 다시 빌린 사람을 같은 사람으로 봅니다(차이 0.2%p).</dd></div>
-        <div><dt>경보</dt><dd>서로 다른 사람의 점이 <kbd>2명</kbd> 이어지면 켜지고, <kbd>3명</kbd>부터는 더 강하게.</dd></div>
-        <div><dt>꺼짐</dt><dd>누군가 정상적으로 타고 가면(선) 연쇄가 끊기고 경보도 꺼집니다.</dd></div>
+        <div><dt>점 (헛대여)</dt><dd>같은 대여소에 <kbd>3분</kbd> 안에, <kbd>300m</kbd>도 안 가고 반납한 대여입니다.</dd></div>
+        <div><dt>서로 다른 사람</dt><dd>한 사람이 여러 번 해 본 건 한 번으로 셉니다. 공개 자료의 생년과 성별로 거르고, 그 자료가 없으면 <kbd>2분</kbd> 안에 다시 빌린 사람을 같은 사람으로 봅니다.</dd></div>
+        <div><dt>경보</dt><dd>서로 다른 사람의 점이 <kbd>2명</kbd> 이어지면 켜집니다. <kbd>3명</kbd>부터는 강한 경보입니다.</dd></div>
+        <div><dt>꺼짐</dt><dd>누군가 제대로 타고 가면(선) 연쇄가 끊기고 경보도 꺼집니다.</dd></div>
       </dl>
     </div>
   </section>
@@ -154,7 +154,7 @@
       <header class="head">
         <p class="label"><span class="no">04</span>검증</p>
         <h2>앞사람이 포기할수록,<br>다음 사람도 포기합니다.</h2>
-        <p class="sub">기준은 2026년 1월 기록으로만 정하고, 3·6월과 대전 타슈에 그대로 적용했습니다. 서울 3개월·대전 2개월, 약 1천만 건.</p>
+        <p class="sub">기준은 2026년 1월 기록으로만 정했습니다. 3월, 6월, 대전 타슈에는 그대로 적용했습니다. 서울 3개월과 대전 2개월, 약 1천만 건입니다.</p>
       </header>
       <div class="split reveal">
         <div class="card chart">
@@ -163,11 +163,12 @@
           <p class="cap">앞서 서로 다른 사람 몇 명이 바로 반납했나 → 다음 사람도 바로 반납한 비율</p>
         </div>
         <div class="stats">
-          <div class="stat"><b class="num">14<small>배</small></b><p>서로 다른 두 사람이 포기한 자전거는 다음 사람도 <strong>35~44%</strong>가 포기. 평소엔 2.5~2.9%.</p></div>
-          <div class="stat"><b class="num">20~25<small>시간</small></b><p>신호가 고장 신고보다 먼저 켜집니다(중앙값). 그사이 한 대에서 평균 3.5~4.6명이 헛걸음.</p></div>
-          <div class="stat"><b class="num">90~243<small>명</small></b><p>서울에서 경보가 있었다면 하루에 막을 수 있었던 헛걸음(달·계절에 따라).</p></div>
+          <div class="stat"><b class="num">14<small>배</small></b><p>서로 다른 두 사람이 포기한 자전거는 다음 사람도 <strong>35~44%</strong>가 포기했습니다. 평소엔 2.5~2.9%입니다.</p></div>
+          <div class="stat"><b class="num">20~25<small>시간</small></b><p>경보가 고장 신고보다 이만큼 먼저 켜집니다(중앙값). 그사이 한 대에서 평균 3.5~4.6명이 헛걸음했습니다.</p></div>
+          <div class="stat"><b class="num">90~243<small>명</small></b><p>경보가 있었다면 서울에서 하루에 막을 수 있었던 헛걸음입니다. 달마다 조금씩 다릅니다.</p></div>
         </div>
       </div>
+      <p class="easy reveal"><b>쉽게 말하면</b> 막대 하나는 '앞에서 몇 명이 연달아 포기했나'입니다. 앞에서 두 명이 포기한 자전거는, 다음 사람도 셋 중 한 명 넘게 또 포기했습니다. 아무 일 없던 자전거는 마흔 명 중 한 명꼴입니다. 앞사람들의 포기가 고장을 미리 알려 준다는 뜻입니다.</p>
       <div class="explore card reveal" id="explore">
         <header class="ex-head">
           <div>
@@ -192,7 +193,8 @@
             <p class="ex-say" id="ex-say"></p>
           </div>
         </div>
-        <p class="fine ex-fine">실제 대여기록으로 같은 18가지 기준을 모두 돌린 결과입니다. 기준은 <b>1월 기록만</b>으로 정했고(정밀도 30% 이상 중 하루 막은 수가 가장 큰 것), 다른 달·대전에는 그대로 적용했습니다. <code>analysis/rule_grid.py</code></p>
+        <p class="easy"><b>쉽게 말하면</b> 기준을 엄하게 하면 경보는 잘 맞지만, 그만큼 놓치는 자전거가 늘어납니다. 느슨하게 하면 많이 잡지만 헛경보도 늘어납니다. 그림의 점 하나가 기준 하나이고, 오른쪽 위로 갈수록 많이 잡으면서 잘 맞는 기준입니다. 단추를 눌러 직접 바꿔 보세요.</p>
+        <p class="fine ex-fine">18가지 기준을 실제 대여 기록에 모두 돌린 결과입니다. 기준은 <b>1월 기록만</b> 보고 정했습니다. 맞는 비율이 30% 이상인 것 중 하루에 헛걸음을 가장 많이 막는 것을 골랐고, 다른 달과 대전에는 그대로 썼습니다. <code>analysis/rule_grid.py</code></p>
       </div>
       <div class="replay dark-card reveal" aria-label="2026년 6월 15일 서울 따릉이 하루를 빠르게 재생하는 지도">
         <div class="replay-top">
@@ -204,9 +206,10 @@
             <div><span><i class="kd k-calm"></i>뒤늦은 고장 신고</span><b class="num" id="c3">0</b></div>
           </div>
         </div>
-        <canvas id="replay" role="img" aria-label="서울 대여소 2,789곳을 점으로 그린 지도. 재생 중 신호·신호 뒤 헛걸음·뒤늦은 고장 신고가 색 점으로 켜집니다."></canvas>
+        <canvas id="replay" role="img" aria-label="서울 대여소 2,789곳을 점으로 그린 지도. 재생하는 동안 경보, 경보 뒤 헛걸음, 뒤늦은 고장 신고가 색 점으로 켜집니다."></canvas>
         <button class="btn sm line" id="playbtn" type="button">일시정지</button>
       </div>
+      <p class="easy reveal"><b>쉽게 말하면</b> 2026년 6월 15일 하루를 몇 분으로 빨리 돌린 화면입니다. 회색 점은 누군가 빌리자마자 반납한 곳, 주황은 RIDEY가 경보를 켰을 곳, 흰 점은 경보가 켜진 뒤에도 또 헛걸음한 곳, 파랑은 그제야 들어온 고장 신고입니다. 주황이 파랑보다 한참 먼저 켜집니다.</p>
     </div>
   </section>
 
@@ -227,18 +230,19 @@
             <div class="dayaxis" aria-hidden="true"><span id="ls-d0">9/27</span><span id="ls-d1">10/7</span></div>
             <figcaption><b id="ls-days-head">11일 하루도 빠짐없이 평소의 9배 이상</b> (<span id="ls-range">24~39%</span>) · 점선은 평소 자전거 2.5%</figcaption>
           </figure>
-          <p class="fine">지난 기록(1·3·6월)으로 같은 방식은 32~34%. 95% 범위 <span id="ls-ci">28~31%</span> · 채점을 기다리는 경보 <span id="ls-w">140</span>건 · <span id="ls-at">10월 8일 17:45</span> 기준</p>
-          <p class="fine" id="ls-model" hidden>자체 모델 실시간 채점: 경보 때 모델이 말한 확률 평균 <b id="ls-mp">–</b> · 실제 <b id="ls-mr">–</b> (<span id="ls-mn">0</span>건) — 가을 실시간에선 연쇄 2명 자전거를 높게 봅니다. 실시간 정답만으로 맞춘 보정 층을 매주 시험 중(10월 8일 로그 손실 −1.7%, 2% 넘게 나아야 바꿈).</p>
+          <p class="easy"><b>쉽게 말하면</b> 경보가 켜진 자전거를 다음에 빌린 사람이 위 비율만큼 또 바로 반납했습니다. 아무 자전거나 빌리면 마흔 명 중 한 명꼴(2.5%)입니다. 경보가 헛짚은 게 아니라는 뜻입니다.</p>
+          <p class="fine">지난 기록(1·3·6월)으로 잰 값은 32~34%입니다. 오차를 따져도 <span id="ls-ci">28~31%</span> · 다음 사람이 아직 안 빌려 기다리는 경보 <span id="ls-w">140</span>건 · <span id="ls-at">10월 8일 17:45</span> 기준</p>
+          <p class="fine" id="ls-model" hidden>자체 모델 채점: 경보 때 모델이 말한 확률은 평균 <b id="ls-mp">–</b>, 실제는 <b id="ls-mr">–</b>입니다(<span id="ls-mn">0</span>건). 가을에는 연쇄 2명인 자전거를 조금 높게 봅니다. 고친 모델을 매주 시험하지만, 2% 넘게 나아질 때만 바꿉니다.</p>
         </div>
         <div>
           <ol class="flow">
-            <li><span class="n num">1</span><div><h3>누군가 반납</h3><p>서울 대여이력 API 에 자전거 번호·시각·대여소가 곧바로 올라옵니다(실측 지연 약 0분).</p></div></li>
-            <li><span class="n num">2</span><div><h3>클라우드가 5분마다</h3><p>서버도, 켜 둔 컴퓨터도 없이 클라우드 DB 가 스스로 받아서 최근 7일 연쇄를 다시 셉니다. 하루 288번, 한 번 평균 19초.</p></div></li>
-            <li><span class="n num">3</span><div><h3>어디서든 '지금' 목록</h3><p>이용자는 번호로 확인하고, 정비 기사는 구별 목록과 도는 순서를 받습니다.</p></div></li>
+            <li><span class="n num">1</span><div><h3>누군가 반납</h3><p>서울 대여이력 API에 자전거 번호와 시각, 대여소가 곧바로 올라옵니다. 재 보니 거의 바로입니다.</p></div></li>
+            <li><span class="n num">2</span><div><h3>클라우드가 5분마다</h3><p>켜 둔 서버나 컴퓨터 없이 클라우드 DB가 스스로 받아 최근 7일의 연쇄를 다시 셉니다. 하루 288번, 한 번에 평균 19초 걸립니다.</p></div></li>
+            <li><span class="n num">3</span><div><h3>어디서든 '지금' 목록</h3><p>시민은 타기 전에 확인하고, 직원은 재배치하는 길에 고장 의심도 거두는 추천 경로를 받습니다.</p></div></li>
             <li><span class="n num">4</span><div><h3>스스로 채점</h3><p>경보마다 다음에 빌린 다른 사람도 바로 반납했는지 적고, 날마다 공개합니다.</p></div></li>
           </ol>
           <table class="parity">
-            <caption>실시간 자료 = 검증한 자료? 6월 15일 하루를 둘 다로</caption>
+            <caption>실시간 자료는 검증한 자료와 같을까요? 6월 15일 하루로 비교했습니다.</caption>
             <thead><tr><th scope="col">항목</th><th scope="col">월별 파일</th><th scope="col">실시간 API</th></tr></thead>
             <tbody><tr><td>대여</td><td class="num">150,827</td><td class="num">150,830</td></tr><tr><td>헛대여</td><td class="num">4,085</td><td class="num">4,087</td></tr><tr><td>다음 날 아침 목록</td><td class="num">79대</td><td class="num">79대</td></tr></tbody>
           </table>
@@ -253,11 +257,11 @@
       <header class="head">
         <p class="label"><span class="no">06</span>앱</p>
         <h2>앱 하나, 두 가지 모드.</h2>
-        <p class="sub">시민은 타기 전에 고장 의심을 확인하고, 직원은 재배치 길에 고장 의심 수거를 얹은 추천 경로를 따라갑니다. 켤 때마다 어느 쪽인지 고릅니다.</p>
+        <p class="sub">시민은 타기 전에 고장 의심을 확인합니다. 직원은 재배치하는 길에 고장 의심도 거둡니다. 켤 때마다 누가 쓰는지 고릅니다.</p>
       </header>
       <div class="phones reveal stagger">
-        <figure><img src="img/1_morning.webp" alt="직원 모드: 오늘 추천 경로" width="600" height="1300" loading="lazy"><figcaption><b>관리 직원</b><span>넘친 대여소에서 싣고 빈 대여소에 내려놓으면서 고장 의심도 함께 거두는 순서. 실제 도로를 따라 앱 안에서 길안내합니다.</span></figcaption></figure>
-        <figure><img src="img/2_lookup.webp" alt="시민 모드: 서울 전체 고장 의심 지도" width="600" height="1300" loading="lazy"><figcaption><b>일반 시민</b><span>서울 전체 고장 의심을 내 근처부터 지도로. 타기 전에 번호나 번호표 QR 로 확인하고, 갈 곳을 검색해 미리 봅니다.</span></figcaption></figure>
+        <figure><img src="img/1_morning.webp" alt="직원 모드: 오늘 추천 경로" width="600" height="1300" loading="lazy"><figcaption><b>관리 직원</b><span>넘친 대여소에서 싣고, 빈 대여소에 내려놓으면서, 고장 의심도 함께 거두는 순서입니다. 실제 도로를 따라 앱 안에서 길안내합니다.</span></figcaption></figure>
+        <figure><img src="img/2_lookup.webp" alt="시민 모드: 서울 전체 고장 의심 지도" width="600" height="1300" loading="lazy"><figcaption><b>일반 시민</b><span>서울 전체의 고장 의심을 내 근처부터 지도로 봅니다. 번호나 번호표 QR로 타기 전에 확인하고, 갈 곳을 검색해 미리 봅니다.</span></figcaption></figure>
       </div>
       <div class="try-row reveal" id="try">
         <div class="card try">
@@ -269,18 +273,18 @@
           </form>
           <div class="chips" id="samples"><span>눌러 보기</span></div>
           <div class="result" id="result" role="status" aria-live="polite"><span class="muted">번호를 넣고 확인을 눌러 보세요.</span></div>
-          <p class="fine">시연 자료: 2026년 6월 15일 아침 목록(전날 자정까지의 실제 기록). 앱에서는 5분마다 바뀌는 실시간 목록으로 확인합니다.</p>
+          <p class="fine">시연 자료는 2026년 6월 15일 아침 목록입니다(전날 자정까지의 실제 기록). 앱에서는 5분마다 바뀌는 실시간 목록으로 확인합니다.</p>
         </div>
         <div class="card qr-card">
           <img src="img/qr-app.svg" alt="RIDEY 소개 페이지 QR 코드" width="148" height="148">
-          <div><h3>이 페이지에서 열어 보기</h3><p>카메라로 비추거나 <a href="./">zmflm0110.github.io/ridey</a> 를 엽니다. 번호 확인은 아래 시연에서, 실제 조회는 RIDEY 앱에서 합니다.</p></div>
+          <div><h3>이 페이지에서 열어 보기</h3><p>카메라로 비추면 <a href="./">zmflm0110.github.io/ridey</a>가 열립니다. 실제 조회는 RIDEY 앱에서 합니다.</p></div>
         </div>
       </div>
       <div class="stk-row reveal" id="stk">
         <div class="stk-copy">
           <p class="label"><span class="no">실물</span>대여소 스티커</p>
-          <h3>대여소 기둥에 붙이면,<br>스캔 한 번에 그곳의 피할 번호.</h3>
-          <p class="stk-p">대여소를 고르면 QR 스티커가 만들어져요. 기둥에 붙이면 이 소개 페이지가 열립니다. 실제 조회는 RIDEY 앱의 자전거 확인에서 합니다.</p>
+          <h3>대여소 기둥에 붙이는<br>RIDEY 스티커.</h3>
+          <p class="stk-p">대여소를 고르면 그 이름이 들어간 QR 스티커가 만들어집니다. 비추면 이 소개 페이지가 열립니다. 실제 조회는 RIDEY 앱에서 합니다.</p>
           <form class="stk-form" id="stk-form" autocomplete="off" role="search">
             <label class="sr" for="stk-q">대여소 이름으로 찾기</label>
             <input id="stk-q" type="search" placeholder="대여소 이름 (예: 망원역)" enterkeyhint="search" aria-controls="stk-sugg">
@@ -290,7 +294,7 @@
             <button class="btn solid" id="stk-print" type="button">인쇄 · PDF 로 저장</button>
             <a class="btn line" id="stk-open" href="#try">번호로 확인해 보기</a>
           </div>
-          <p class="fine">100×140mm 로 인쇄됩니다. QR 은 이 브라우저에서 만들고 서버로 보내지 않습니다.</p>
+          <p class="fine">100×140mm로 인쇄됩니다. QR은 이 브라우저에서 만들고 서버로 보내지 않습니다.</p>
         </div>
         <figure class="stk-prev" aria-live="polite">
           <div class="sbox"><div class="sticker" id="sticker" role="img" aria-label="대여소 스티커 미리보기"></div></div>
@@ -305,13 +309,13 @@
       <header class="head">
         <p class="label"><span class="no">07</span>자체 AI</p>
         <h2>확률과 이유까지,<br>이길 때만 씁니다.</h2>
-        <p class="sub">규칙만으로도 됩니다. 그래서 규칙과 공정하게 겨뤄 이긴 곳에만 넣었습니다. 나무 60그루 모델을 SQL 식으로 바꿔 클라우드 DB 안에서 5분마다 계산합니다.</p>
+        <p class="sub">규칙만으로도 됩니다. 그래서 규칙과 같은 조건에서 겨뤄 이긴 곳에만 넣었습니다. 나무 60그루짜리 모델을 SQL로 옮겨 클라우드 DB 안에서 5분마다 계산합니다.</p>
       </header>
       <div class="split reveal">
         <div class="stats">
-          <div class="stat"><b class="num">+2.4~4.5<small>%p</small></b><p>확률 순으로 보여 주니 목록 위 20대 중 진짜 고장이 세 달 모두 늘었습니다.</p></div>
-          <div class="stat"><b class="num">98~100<small>%</small></b><p>"이 중 최소 몇 대는 진짜" 라는 90% 보장이 시험한 달에서 맞은 비율.</p></div>
-          <div class="stat"><b class="num">2<small>% 기준</small></b><p>실시간 정답으로 매주 다시 배우되, 미리 정한 기준(손실 2% 넘게 개선)을 넘을 때만 바꿉니다.</p></div>
+          <div class="stat"><b class="num">+2.4~4.5<small>%p</small></b><p>확률 순으로 보여 주니 목록 위 20대 중 진짜 고장이 세 달 모두 늘었습니다. 20대마다 한 대 가까이 더 찾은 셈입니다.</p></div>
+          <div class="stat"><b class="num">98~100<small>%</small></b><p>'이 목록 중 적어도 몇 대는 진짜 고장'이라고 말할 때, 열 번 중 아홉 번은 맞게 하겠다는 약속입니다. 시험한 달에서는 이만큼 맞았습니다.</p></div>
+          <div class="stat"><b class="num">2<small>% 기준</small></b><p>실시간 정답으로 다시 배웁니다. 다만 2% 넘게 나아질 때만 바꿉니다.</p></div>
         </div>
         <div class="card why-card" aria-label="앱이 보여 주는 AI 설명 예시">
           <p class="k">SPB-41860 · 다음 사람도 반납할 확률</p>
@@ -321,9 +325,10 @@
             <li><span>그사이 이 대여소에서 빌려 간 사람 0명 (외면)</span><em>+10%p</em></li>
             <li><span>22분 전에 반납 (최근)</span><em>+4%p</em></li>
           </ul>
-          <p class="fine">숫자만 던지지 않고, 확률을 가장 크게 움직인 이유 셋을 사람 말로.</p>
+          <p class="fine">숫자만 보여 주지 않습니다. 확률을 가장 크게 움직인 이유 셋을 사람 말로 적습니다.</p>
         </div>
       </div>
+      <p class="easy reveal"><b>쉽게 말하면</b> 규칙은 '경보냐 아니냐'만 말합니다. 모델은 여기에 '얼마나 확실한지'와 '왜 그렇게 봤는지'를 붙입니다. 정비하는 사람이 어느 자전거부터 볼지 정하도록 돕습니다.</p>
     </div>
   </section>
 
@@ -335,9 +340,9 @@
         <h2>같은 방법,<br>다른 곳.</h2>
       </header>
       <div class="grid3 reveal stagger">
-        <div class="card"><b class="num">41.6~43.6<small>%</small></b><h3>대전 타슈 — 이미 검증</h3><p>서울 기준을 그대로 적용했는데 다음 사람도 이만큼 포기했습니다. 도시마다 기준을 다시 맞출 필요가 없었습니다.</p></div>
-        <div class="card"><b class="num">5<small>분</small></b><h3>다른 공유 자전거 — 같은 구조</h3><p>대여·반납 기록만 공개되면 됩니다. 5분마다 공개 기록을 다시 계산하는 지금 구조 그대로 세종 어울링·창원 누비자로.</p></div>
-        <div class="card"><b class="num">0<small>개</small></b><h3>새로 달 장비 — 서울시설공단</h3><p>센서·단말기·앱 가입 없이, 이미 가진 대여기록만으로 신고에 기대지 않는 고장 현황판.</p></div>
+        <div class="card"><b class="num">41.6~43.6<small>%</small></b><h3>대전 타슈, 이미 확인</h3><p>서울 기준을 그대로 적용했는데 다음 사람도 이만큼 포기했습니다. 도시마다 기준을 다시 맞출 필요가 없었습니다.</p></div>
+        <div class="card"><b class="num">5<small>분</small></b><h3>다른 도시, 같은 구조</h3><p>대여와 반납 기록만 공개되면 됩니다. 세종 어울링, 창원 누비자도 지금 구조 그대로 돌릴 수 있습니다.</p></div>
+        <div class="card"><b class="num">0<small>개</small></b><h3>새로 달 장비는 없습니다</h3><p>센서도, 단말기도, 가입도 필요 없습니다. 공단이 이미 가진 대여 기록만으로 고장 현황판이 됩니다.</p></div>
       </div>
     </div>
   </section>
@@ -355,12 +360,12 @@
         </ul>
       </header>
       <div class="qa">
-        <details><summary>고장 신고랑 뭐가 다른가요?</summary><p>신고는 사람이 앱을 열고 적어야 해서 늦고 드뭅니다. 서로 다른 사람의 연속 헛대여 중 절반 넘게(49~61%)는 7일이 지나도 신고가 없었습니다. RIDEY 는 이미 남아 있는 대여기록을 읽으니 아무도 따로 할 일이 없습니다.</p></details>
-        <details><summary>정확도가 왜 두 가지인가요?</summary><p>경보 한 건마다 그 뒤 처음 빌린 다른 사람만 세면 32~34%, 경보가 켜져 있는 동안 빌린 모든 사람을 세면 52~60% 가 또 헛걸음했습니다. 평소엔 2.5% 라서 어느 쪽이든 10배가 넘습니다.</p></details>
-        <details><summary>정말 실시간인가요?</summary><p>네. 서울 대여이력 API 는 반납된 기록을 바로 줍니다. 같은 날을 월별 공개 파일과 비교해 대여·헛대여·아침 목록이 모두 같다는 것도 확인했습니다. 기록이 평소보다 크게 줄면(추석 당일엔 평소의 2~5%) 앱에 '자료 지연' 을 띄웁니다.</p></details>
+        <details><summary>고장 신고랑 뭐가 다른가요?</summary><p>신고는 사람이 앱을 열고 적어야 해서 늦고 드뭅니다. 서로 다른 사람이 연달아 포기한 자전거의 절반 넘게(49~61%)는 7일이 지나도 신고가 없었습니다. RIDEY는 이미 남아 있는 대여 기록을 읽으니, 누가 따로 할 일이 없습니다.</p></details>
+        <details><summary>정확도가 왜 두 가지인가요?</summary><p>경보 한 건마다 그 뒤 처음 빌린 다른 사람만 세면 32~34%, 경보가 켜져 있는 동안 빌린 모든 사람을 세면 52~60%가 또 헛걸음했습니다. 평소엔 2.5%라서 어느 쪽이든 10배가 넘습니다.</p></details>
+        <details><summary>정말 실시간인가요?</summary><p>네. 서울 대여이력 API는 반납된 기록을 바로 줍니다. 같은 날을 월별 공개 파일과 비교해 대여, 헛대여, 아침 목록이 모두 같다는 것도 확인했습니다. 기록이 평소보다 크게 줄면(추석 당일엔 평소의 2~5%) 앱에 '자료 지연'을 띄웁니다.</p></details>
         <details><summary>다른 도시에서도 되나요?</summary><p>대전 타슈 2025년 5·10월 기록에 서울 기준을 그대로 적용해 확인했습니다. 대여기록만 있으면 어느 공공자전거에도 쓸 수 있습니다.</p></details>
-        <details><summary>개인정보는요?</summary><p>이름·연락처·이동 경로는 쓰지 않습니다. 공개 자료의 생년·성별은 같은 사람의 재시도를 거르는 데만 쓰고, 클라우드는 8일 지난 기록을 지웁니다. 이 정보가 없어도 정밀도 차이는 0.2%p 입니다.</p></details>
-        <details><summary>왜 이름이 RIDEY 이고, 점은 뭔가요?</summary><p>Ride + Ready — 타기 전에 준비. 로고의 점은 마침표이자 신호입니다. 제대로 탄 대여는 선, 빌리자마자 반납은 점 — 서로 다른 두 사람의 점이 이어지면 그게 신호입니다.</p></details>
+        <details><summary>개인정보는요?</summary><p>이름, 연락처, 이동 경로는 쓰지 않습니다. 공개 자료의 생년과 성별은 같은 사람이 여러 번 해 본 것을 거르는 데만 쓰고, 클라우드는 8일 지난 기록을 지웁니다. 이 정보를 빼도 맞는 비율은 0.2%p밖에 차이 나지 않습니다.</p></details>
+        <details><summary>왜 이름이 RIDEY 이고, 점은 뭔가요?</summary><p>Ride와 Ready를 합쳤습니다. 타기 전에 준비한다는 뜻입니다. 로고의 점은 마침표이자 신호입니다. 제대로 탄 대여는 선, 빌리자마자 반납은 점. 서로 다른 두 사람의 점이 이어지면, 그게 신호입니다.</p></details>
       </div>
     </div>
   </section>
