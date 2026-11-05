@@ -640,6 +640,24 @@
     sec.addEventListener("pointermove", (e) => { const r = sec.getBoundingClientRect(); sec.style.setProperty("--mx", `${(e.clientX - r.left).toFixed(0)}px`); sec.style.setProperty("--my", `${(e.clientY - r.top).toFixed(0)}px`); }, { passive: true });
   }
 
+  // ── 06 앱: 시민 / 직원 탭 — 고르면 그 모드의 화면 3장이 차례로 올라옴
+  (() => {
+    const tabs = $$(".modes [role=tab]"); if (!tabs.length) return;
+    const pick = (tab, focus) => {
+      for (const t of tabs) {
+        const on = t === tab, panel = document.getElementById(t.getAttribute("aria-controls"));
+        t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1;
+        if (on && panel.hidden) { panel.classList.remove("in"); panel.hidden = false; panel.scrollLeft = 0; void panel.offsetWidth; panel.classList.add("in"); }
+        else if (!on) panel.hidden = true;
+      }
+      if (focus) tab.focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => pick(t));
+      t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { e.preventDefault(); pick(tabs[(i + d + tabs.length) % tabs.length], true); } });
+    });
+  })();
+
   // ── 앱 화면 사진: 커서 쪽으로 살짝 기울어짐(3D)
   if (!reduce && matchMedia("(hover: hover)").matches) for (const f of $$(".phones figure")) {
     const img = f.querySelector("img"); if (!img) continue;

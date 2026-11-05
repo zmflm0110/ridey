@@ -342,12 +342,20 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
 .parity td.num { font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
 
 /* 06 앱 */
-.phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 3vw, 40px); }
-.phones figure { margin: 0; display: grid; gap: 22px; align-content: start; }
-.phones img { width: 100%; height: auto; border-radius: 34px; border: 9px solid #0B0C0E; background: #0B0C0E; box-shadow: 0 30px 60px -30px rgba(17, 19, 23, .45); }
-.phones figcaption { display: grid; gap: 6px; }
+.modes { display: flex; width: max-content; gap: 4px; padding: 5px; border-radius: 999px; background: var(--chip); margin: 0 auto clamp(28px, 4vw, 48px); }
+.modes button { border: 0; cursor: pointer; padding: 11px 22px; border-radius: 999px; font: 700 15.5px var(--font); letter-spacing: -.02em; color: var(--fg2); background: transparent; transition: background-color .3s var(--ease), color .3s, box-shadow .3s; }
+.modes button[aria-selected="true"] { background: var(--fg); color: var(--bg); box-shadow: 0 6px 16px -8px rgba(17, 19, 23, .35); }
+.modes button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.phones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); --gap: clamp(20px, 4vw, 56px); gap: var(--gap); max-width: 980px; margin: 0 auto; }
+.phones[hidden] { display: none; }
+.phones figure { margin: 0; display: grid; gap: 22px; align-content: start; position: relative; }
+.phones img { width: 100%; height: auto; border-radius: 36px; border: 8px solid #0B0C0E; background: #0B0C0E; box-shadow: 0 0 0 1px rgba(255, 255, 255, .06) inset, 0 1px 0 1.5px #2A2C31, 0 30px 60px -30px rgba(17, 19, 23, .45); }
+.phones figcaption { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: baseline; position: relative; }
+.phones figcaption em { grid-row: span 2; font: 700 13px/26px var(--font); font-style: normal; width: 26px; height: 26px; border-radius: 50%; text-align: center; background: var(--fg); color: var(--bg); align-self: start; margin-top: 1px; }
+/* 차례를 잇는 줄: 번호 동그라미 사이 */
+.phones figure + figure figcaption::before { content: ""; position: absolute; top: 13px; right: calc(100% + 8px); width: calc(100% + var(--gap) - 26px - 16px); border-top: 1.5px dashed var(--cline2); pointer-events: none; }
 .phones figcaption b { font-size: 19px; letter-spacing: -.03em; }
-.phones figcaption span { font-size: 15.5px; color: var(--fg2); line-height: 1.6; }
+.phones figcaption span { grid-column: 2; font-size: 15.5px; color: var(--fg2); line-height: 1.6; }
 /* 06 대여소 스티커 — 크기를 cqw(스티커 너비의 1%)로 잡아 미리보기(약 340px)와 인쇄(100mm)가 같은 모양 */
 .stk-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(24px, 4vw, 64px); align-items: center; margin-top: clamp(40px, 5vw, 64px);
   padding: clamp(24px, 3.4vw, 48px); border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--cline); }
@@ -486,8 +494,11 @@ kbd { font: 800 12.5px/1 var(--num); padding: 3px 7px; border-radius: 6px; backg
   .proof-strip li, .proof-strip li + li, .proof-strip li:first-child { padding: 16px 20px; border-left: 0; }
   .proof-strip li + li { border-top: 1px solid var(--cline); }
   .proof-strip b { font-size: 24px; }
-  .facts, .phones, .grid3 { grid-template-columns: minmax(0, 1fr); }
-  .phones { gap: 44px; } .phones img { max-width: 320px; }
+  .facts, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  /* 휴대폰 폭: 옆으로 넘겨 보는 띠 */
+  .phones { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 68%; --gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -20px; padding: 4px 20px 18px; scroll-padding: 0 20px; scrollbar-width: none; }
+  .phones::-webkit-scrollbar { display: none; }
+  .phones figure { scroll-snap-align: center; }
   .mtrack { grid-template-columns: 1fr; gap: 6px; }
   .mtrack::before { left: 10px; right: auto; top: 10px; bottom: 10px; width: 2px; height: auto; }
   .m { grid-template-columns: 70px 1fr; column-gap: 12px; padding: 0 0 18px; }

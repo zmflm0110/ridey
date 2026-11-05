@@ -261,11 +261,21 @@
       <header class="head">
         <p class="label"><span class="no">06</span>앱</p>
         <h2>앱 하나, 두 가지 모드.</h2>
-        <p class="sub">시민은 타기 전에 고장 의심을 확인합니다. 직원은 재배치하는 길에 고장 의심도 거둡니다. 켤 때마다 누가 쓰는지 고릅니다.</p>
+        <p class="sub">시민은 타기 전에 고장 의심을 확인합니다. 직원은 재배치하는 길에 고장 의심도 거둡니다. 처음 켤 때 누가 쓰는지 고릅니다.</p>
       </header>
-      <div class="phones reveal stagger">
-        <figure><img src="img/1_morning.webp" alt="직원 모드: 오늘 추천 경로" width="600" height="1300" loading="lazy"><figcaption><b>관리 직원</b><span>넘친 대여소에서 싣고, 빈 대여소에 내려놓으면서, 고장 의심도 함께 거두는 순서입니다. 실제 도로를 따라 앱 안에서 길안내합니다.</span></figcaption></figure>
-        <figure><img src="img/2_lookup.webp" alt="시민 모드: 서울 전체 고장 의심 지도" width="600" height="1300" loading="lazy"><figcaption><b>일반 시민</b><span>서울 전체의 고장 의심을 내 근처부터 지도로 봅니다. 번호나 번호표 QR로 타기 전에 확인하고, 갈 곳을 검색해 미리 봅니다.</span></figcaption></figure>
+      <div class="modes reveal" role="tablist" aria-label="앱 모드">
+        <button role="tab" id="tab-c" aria-controls="ph-c" aria-selected="true">일반 시민</button>
+        <button role="tab" id="tab-s" aria-controls="ph-s" aria-selected="false" tabindex="-1">관리 직원</button>
+      </div>
+      <div class="phones reveal stagger" id="ph-c" role="tabpanel" aria-labelledby="tab-c">
+          <figure><img src="img/app_home.webp" alt="시민 모드 홈: 내 근처 고장 의심 지도" width="600" height="1300" loading="lazy"><figcaption><em>1</em><b>지도에서 먼저 봅니다</b><span>내 근처 대여소마다 고장 의심이 몇 대인지 숫자로 보입니다.</span></figcaption></figure>
+          <figure><img src="img/app_check.webp" alt="자전거 확인: 강한 경보가 켜진 자전거" width="600" height="1300" loading="lazy"><figcaption><em>2</em><b>번호로 확인합니다</b><span>번호를 넣거나 QR을 찍으면 경보가 켜졌는지 바로 나옵니다.</span></figcaption></figure>
+          <figure><img src="img/app_evidence.webp" alt="판단 근거: 앞사람들의 반납 기록" width="600" height="1300" loading="lazy"><figcaption><em>3</em><b>이유를 봅니다</b><span>앞사람들이 빌리자마자 반납한 기록을 그대로 보여 줍니다.</span></figcaption></figure>
+      </div>
+      <div class="phones stagger" id="ph-s" role="tabpanel" aria-labelledby="tab-s" hidden>
+          <figure><img src="img/app_staff_list.webp" alt="직원 모드: 구별 고장 의심 현황" width="600" height="1300" loading="lazy"><figcaption><em>1</em><b>구별로 봅니다</b><span>어느 구에 고장 의심이 몰렸는지 많은 순서로 봅니다.</span></figcaption></figure>
+          <figure><img src="img/app_staff_route.webp" alt="직원 모드: 오늘 추천 경로" width="600" height="1300" loading="lazy"><figcaption><em>2</em><b>들를 순서를 받습니다</b><span>재배치하는 길에 고장 의심도 함께 거두는 순서입니다.</span></figcaption></figure>
+          <figure><img src="img/app_staff_nav.webp" alt="직원 모드: 앱 안 길안내" width="600" height="1300" loading="lazy"><figcaption><em>3</em><b>길을 따라갑니다</b><span>실제 도로를 따라 앱 안에서 길안내합니다.</span></figcaption></figure>
       </div>
       <div class="try-row reveal" id="try">
         <div class="card try">

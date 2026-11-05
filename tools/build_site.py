@@ -12,11 +12,12 @@ S = ROOT / "site"
 st = json.load(open(ROOT / "app" / "assets" / "data" / "stations.json"))
 json.dump([[s["id"], s["name"].strip(), s["gu"], round(s["lat"], 5), round(s["lon"], 5)] for s in st],
           open(S / "data" / "stations.json", "w"), ensure_ascii=False, separators=(",", ":"))
+# 06 앱: 시민 3장 · 직원 3장 (docs/shots/app 의 앱 화면 → webp)
+from PIL import Image
+for n in ("home", "check", "evidence", "staff_list", "staff_route", "staff_nav"):
+    Image.open(ROOT / "docs" / "shots" / "app" / f"{n}.png").convert("RGB").save(S / "img" / f"app_{n}.webp", quality=82, method=6)
 for n in ("1_morning", "2_lookup", "3_rescue", "4_replay"):
-    src = ROOT / "docs" / "shots" / f"{n}.webp"
-    if src.exists():
-        shutil.copy(src, S / "img" / f"{n}.webp")
-    (S / "img" / f"{n}.png").unlink(missing_ok=True)
+    (S / "img" / f"{n}.webp").unlink(missing_ok=True)
 for p in sorted((S / "data").iterdir()) + sorted((S / "img").iterdir()):
     print(f"{p.relative_to(ROOT)}  {p.stat().st_size / 1024:.0f}KB")
 
