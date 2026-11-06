@@ -6,7 +6,6 @@
 // '내 위치' 는 RIDEY_DEMO_LOCATION 으로 고정하고, 길안내 동안에는 실제 도로 경로를 따라 움직인다.
 // 다른 앱(지도·따릉이)으로 넘어갈 때 'DEMO AWAY' 를 찍는다 — 맥에서 그 줄을 보고 RIDEY 를 다시 앞으로 부른다.
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,14 +25,18 @@ import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 마지막으로 받은 도로 경로를 기억한다(길안내 때 그 길을 따라 위치를 옮기려고).
+/// 마지막으로 받은 도로 경로와 그때 넣은 들를 곳(출발점 + 대여소들)을 기억한다.
 class _RecordingRouter extends RoadRouter {
   RoadRoute? last;
+  List<LatLng> stops = const [];
 
   @override
   Future<RoadRoute?> route(List<LatLng> waypoints) async {
     final got = await super.route(waypoints);
-    if (got != null) last = got;
+    if (got != null) {
+      last = got;
+      stops = waypoints;
+    }
     return got;
   }
 }
@@ -424,60 +427,80 @@ void main() {
       debugPrint('DEMO skip scroll');
     }
     await hold(600);
-    await tap(find.text('길안내 시작'), after: 3000);
+    await tap(find.text('길안내 시작'), after: 2500);
+    // 길을 따라 빨리 감기(멀리서는 45m, 대여소 가까이서는 10m씩). 대여소 30m 안이면 그 자리에 서서
+    // '다음 곳으로' 를 누른다 — 지도의 점이 체크로 바뀌고 '이번 길' 대수가 쌓인다. 세 곳까지.
     final road = router.last;
-    if (road != null) {
-      final stops = [
-        for (final leg in road.legs)
-          if (leg.isNotEmpty) leg.last.location,
-      ];
-      // 빨리 감기: 길을 따라 일정한 간격(45m)으로, 1초에 10번 옮긴다.
-      var stop = 0;
+    final targets = router.stops.length > 1
+        ? router.stops.sublist(1)
+        : const <LatLng>[];
+    var done = 0;
+    if (road != null && road.points.length > 1) {
+      Future<void> finishStop() async {
+        await until(find.text('다음 곳으로'), seconds: 3);
+        await hold(2200);
+        await tap(find.text('다음 곳으로'), after: 2000);
+        done++;
+      }
+
+      if (targets.isNotEmpty &&
+          metersBetween(
+                now.latitude,
+                now.longitude,
+                targets.first.latitude,
+                targets.first.longitude,
+              ) <
+              35) {
+        await finishStop();
+      }
       var i = 0;
       var along = 0.0;
-      double seg(int k) => metersBetween(
-        road.points[k].latitude,
-        road.points[k].longitude,
-        road.points[k + 1].latitude,
-        road.points[k + 1].longitude,
-      );
-      final last = road.points.length - 2;
-      while (last >= 0 && stop < math.min(1, stops.length)) {
-        along += 45;
-        var d = seg(i);
-        while (along > d && i < last) {
+      var closest = double.infinity;
+      while (done < 3 && done < targets.length && i < road.points.length - 1) {
+        final target = targets[done];
+        final away = metersBetween(
+          now.latitude,
+          now.longitude,
+          target.latitude,
+          target.longitude,
+        );
+        if (away < 30 || (closest < 90 && away > closest + 20)) {
+          now = (latitude: target.latitude, longitude: target.longitude);
+          moving.add(now);
+          await hold(400);
+          await finishStop();
+          closest = double.infinity;
+          continue;
+        }
+        if (away < closest) closest = away;
+        along += away < 160 ? 10 : 45;
+        var d = metersBetween(
+          road.points[i].latitude,
+          road.points[i].longitude,
+          road.points[i + 1].latitude,
+          road.points[i + 1].longitude,
+        );
+        while (along > d && i < road.points.length - 2) {
           along -= d;
           i++;
-          d = seg(i);
+          d = metersBetween(
+            road.points[i].latitude,
+            road.points[i].longitude,
+            road.points[i + 1].latitude,
+            road.points[i + 1].longitude,
+          );
         }
-        final end = along >= d && i == last;
-        if (end) along = d;
-        final a = road.points[i], b = road.points[i + 1];
-        final t = d == 0 ? 1.0 : along / d;
+        final p = road.points[i], q = road.points[i + 1];
+        final f = d == 0 ? 1.0 : (along / d).clamp(0.0, 1.0);
         now = (
-          latitude: a.latitude + (b.latitude - a.latitude) * t,
-          longitude: a.longitude + (b.longitude - a.longitude) * t,
+          latitude: p.latitude + (q.latitude - p.latitude) * f,
+          longitude: p.longitude + (q.longitude - p.longitude) * f,
         );
         moving.add(now);
         await hold(100);
-        final target = stops[stop];
-        if (metersBetween(
-              now.latitude,
-              now.longitude,
-              target.latitude,
-              target.longitude,
-            ) <
-            35) {
-          now = (latitude: target.latitude, longitude: target.longitude);
-          moving.add(now);
-          await hold(3500);
-          await tap(find.text('다음 곳으로'), after: 1500);
-          stop++;
-        }
-        if (end) break;
       }
     }
-    await hold(1500);
+    await hold(3000);
     await tap(find.byTooltip('길안내 끝내기'), after: 1500);
     now = here;
     moving.add(now);

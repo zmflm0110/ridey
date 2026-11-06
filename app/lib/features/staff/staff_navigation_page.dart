@@ -15,6 +15,7 @@ import 'package:ridey_app/widgets/ridey_ui.dart';
 /// 앱 안 길안내: 추천 경로를 차로 따라간다. 지도는 내 위치를 따라가며 가는 방향이 위로 오고,
 /// 위에는 다음 갈림길(남은 거리·도는 방향·길 이름), 아래에는 지금 가는 대여소와 거기서 할 일.
 /// 대여소 40m 안에 들어오면 '도착' 으로 바뀌고, '다음 곳' 을 누르면 다음 대여소로 이어진다.
+/// 도착해서 넘긴 곳은 지도에 체크로 바뀌고, 이번 길에서 거둔·실은·내린 대수가 쌓인다(이 폰에서만 셈).
 class StaffNavigationPage extends StatefulWidget {
   const StaffNavigationPage({
     super.key,
@@ -41,6 +42,9 @@ class _StaffNavigationPageState extends State<StaffNavigationPage> {
   late DeviceLocation _here = widget.start;
   var _stop = 0;
   var _step = 0;
+
+  /// 도착해서 할 일을 마친 곳(건너뛴 곳은 빠진다).
+  final _done = <int>{};
   var _follow = true;
   var _ready = false;
   double _heading = 0;
@@ -111,8 +115,27 @@ class _StaffNavigationPageState extends State<StaffNavigationPage> {
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
+  bool get _arrived {
+    final t = _target;
+    return t != null &&
+        _distTo(LatLng(t.station.latitude, t.station.longitude)) <
+            _arriveMeters;
+  }
+
+  /// 이번 길에서 마친 곳들의 합.
+  ({int suspects, int pickedUp, int dropped}) get _tally {
+    var suspects = 0, pickedUp = 0, dropped = 0;
+    for (final i in _done) {
+      suspects += _stops[i].suspects.length;
+      pickedUp += _stops[i].pickUp;
+      dropped += _stops[i].dropOff;
+    }
+    return (suspects: suspects, pickedUp: pickedUp, dropped: dropped);
+  }
+
   void _next() {
     setState(() {
+      if (_arrived) _done.add(_stop);
       _stop++;
       _step = 0;
     });
@@ -196,6 +219,7 @@ class _StaffNavigationPageState extends State<StaffNavigationPage> {
                         child: _StopDot(
                           number: i + 1,
                           done: i < _stop,
+                          checked: _done.contains(i),
                           current: i == _stop,
                           suspects: _stops[i].suspects.isNotEmpty,
                         ),
@@ -271,6 +295,7 @@ class _StaffNavigationPageState extends State<StaffNavigationPage> {
               stop: target,
               remaining: targetPoint == null ? null : _distTo(targetPoint),
               arrived: arrived,
+              tally: _tally,
               onNext: _next,
               onFinish: () => Navigator.of(context).maybePop(),
             ),
@@ -371,10 +396,12 @@ class _StopPanel extends StatelessWidget {
     required this.stop,
     required this.remaining,
     required this.arrived,
+    required this.tally,
     required this.onNext,
     required this.onFinish,
   });
 
+  final ({int suspects, int pickedUp, int dropped}) tally;
   final int index;
   final int total;
   final PlanStop? stop;
@@ -388,6 +415,31 @@ class _StopPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final c = context.ridey;
     final s = stop;
+    final sum = [
+      if (tally.suspects > 0) '고장 의심 ${tally.suspects}대 거둠',
+      if (tally.pickedUp > 0) '${tally.pickedUp}대 실음',
+      if (tally.dropped > 0) '${tally.dropped}대 내림',
+    ].join(' · ');
+    final tallyLine = sum.isEmpty
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_rounded, size: 18, color: c.calm),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '이번 길: $sum',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: c.calmText,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
     return Material(
       color: theme.colorScheme.surface,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -400,6 +452,7 @@ class _StopPanel extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    ?tallyLine,
                     Text(
                       '추천 경로를 모두 돌았어요',
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -421,6 +474,7 @@ class _StopPanel extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    ?tallyLine,
                     Text(
                       '${index + 1} / $total곳'
                       '${remaining == null || arrived ? '' : ' · ${navDistance(remaining!)} 남음'}',
@@ -480,10 +534,14 @@ class _StopDot extends StatelessWidget {
     required this.done,
     required this.current,
     required this.suspects,
+    this.checked = false,
   });
 
   final int number;
   final bool done;
+
+  /// 도착해서 마친 곳(건너뛴 곳은 번호만 흐리게).
+  final bool checked;
   final bool current;
   final bool suspects;
 
@@ -506,16 +564,18 @@ class _StopDot extends StatelessWidget {
           width: 3,
         ),
       ),
-      child: Text(
-        '$number',
-        style: context
-            .rideyNumbers(const TextStyle())
-            ?.copyWith(
-              fontSize: 13,
-              height: 1,
-              color: suspects && !done ? RideyColors.ink : Colors.white,
+      child: checked
+          ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+          : Text(
+              '$number',
+              style: context
+                  .rideyNumbers(const TextStyle())
+                  ?.copyWith(
+                    fontSize: 13,
+                    height: 1,
+                    color: suspects && !done ? RideyColors.ink : Colors.white,
+                  ),
             ),
-      ),
     );
   }
 }
