@@ -1,13 +1,17 @@
-"""경보 기준 탐색기용 격자 — 사이트 '기준을 바꿔 보세요' 가 읽는 site/data/rule_grid.json.
+"""경보 기준 탐색기용 격자 — 사이트 '기준을 바꿔 보세요' 가 읽는 analysis/out/rule_grid.json.
 
     python analysis/rule_grid.py            # 서울 1·3·6월 + 대전 5·10월, 기준 18가지(시간 60/120/180초 × 거리 100/200/300m × 연쇄 2/3)
-                                            # → site/data/rule_grid.json (사이트 탐색기) + docs/img/rule-grid.svg (발표·README 그림)
+                                            # → analysis/out/rule_grid.json (사이트 탐색기) + analysis/out/img/rule-grid.svg (발표·README 그림)
 
-analysis/phase1_rules.py 와 같은 정의(metrics)로 계산 — 1월 값은 docs/phase1.md 와 같아야 한다(아래에서 확인).
+analysis/phase1_rules.py 와 같은 정의(metrics)로 계산 — 1월 값은 analysis/out/phase1.md 와 같아야 한다(아래에서 확인).
 선택 규칙은 1월에서만 정했다(정밀도 ≥ 30% 중 하루 막은 수 최대 = 180초·300m·2연속). 다른 달·도시는 같은 기준을 그대로 시험한 결과.
 """
 import itertools, json, pathlib, sys, time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "analysis"))
 from engine.core import Rule, load_seoul, load_tashu, mark
 from phase1_rules import metrics
@@ -76,11 +80,11 @@ def main():
             rows.append([sec, m, k, r["precision_%"], r["alarms_per_day"], r["prevented_per_day"], r["base_%"]])
         out["sets"].append({"key": key, "name": name, "rows": rows})
         print(f"{name}: {len(R):,}행 {time.time() - t:.0f}초", flush=True)
-    dest = ROOT / "site" / "data" / "rule_grid.json"
+    dest = ensure_out() / "rule_grid.json"
     dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
-    figure(out, ROOT / "docs" / "img" / "rule-grid.svg")
+    figure(out, ensure_out() / "rule-grid.svg")
     jan = {(r[0], r[1], r[2]): r for r in out["sets"][0]["rows"]}[(180, 300, 2)]
-    print("1월 180·300·2:", jan, "(docs/phase1.md: 54.1% · 95.1건 · 89.7명)")
+    print("1월 180·300·2:", jan, "(analysis/out/phase1.md: 54.1% · 95.1건 · 89.7명)")
 
 
 if __name__ == "__main__":

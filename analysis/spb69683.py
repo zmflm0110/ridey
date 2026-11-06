@@ -1,13 +1,17 @@
 """실제 자전거 한 대의 12일 (SPB-69683, 2026년 6월) — 이야기의 첫 장면 그림.
 
-    python analysis/spb69683.py      # → docs/img/spb69683.svg · spb69683-dark.svg (README) · spb69683-slide.svg (발표) + site/data/spb69683.json (사이트가 그림)
+    python analysis/spb69683.py      # → analysis/out/img/spb69683.svg · spb69683-dark.svg (README) · spb69683-slide.svg (발표) + analysis/out/spb69683.json (사이트가 그림)
 
 6월 12일 15:20 부터 두 번째 신고(24일 17:18)까지, 사이트와 같은 '하루에 한 줄' 표로: 날마다 한 줄, 그날의 대여를 시간 순서대로
 그냥 타고 간 대여는 선(—), 서로 다른 사람의 '빌리자마자 반납'(재시도 뺌)은 점(•, 신호색), 고장 신고는 세로 막대(|).
-첫 사람은 빈 점, 서로 다른 두 번째 사람(RIDEY 경보)은 고리를 두른 점 — 그 줄은 옅게 물들임 (docs/brand.md 색).
+첫 사람은 빈 점, 서로 다른 두 번째 사람(RIDEY 경보)은 고리를 두른 점 — 그 줄은 옅게 물들임 (analysis/out/brand.md 색).
 """
 import datetime as dt, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 import pandas as pd
 
 BIKE, START, END = "SPB-69683", "2026-06-12 15:20", "2026-06-24 17:18:45"
@@ -89,13 +93,13 @@ def main():
     D = timeline()
     after = sum(1 for h in D["duds"] if h > D["alarm"])
     print(f"{BIKE}: 서로 다른 {len(D['duds'])}명(경보 뒤 {after}명), 그냥 타고 감 {len(D['rides'])}번")
-    (ROOT / "docs" / "img" / "spb69683.svg").write_text(svg(D, LIGHT))
-    (ROOT / "docs" / "img" / "spb69683-dark.svg").write_text(svg(D, DARK))
-    (ROOT / "docs" / "img" / "spb69683-slide.svg").write_text(svg(D, LIGHT, RH=22))   # 발표 2장 — 1280×720 한 장에 13줄
+    (ensure_out() / "spb69683.svg").write_text(svg(D, LIGHT))
+    (ensure_out() / "spb69683-dark.svg").write_text(svg(D, DARK))
+    (ensure_out() / "spb69683-slide.svg").write_text(svg(D, LIGHT, RH=22))   # 발표 2장 — 1280×720 한 장에 13줄
     import json   # 사이트는 같은 숫자로 직접 그림(밝은·어두운 화면 색은 CSS)
-    (ROOT / "site" / "data").mkdir(parents=True, exist_ok=True)
+    (ensure_out()).mkdir(parents=True, exist_ok=True)
     json.dump({k: ([round(v, 3) for v in D[k]] if isinstance(D[k], list) else round(D[k], 3)) for k in ("duds", "rides", "alarm", "reports")},
-              open(ROOT / "site" / "data" / "spb69683.json", "w"), separators=(",", ":"))
+              open(ensure_out() / "spb69683.json", "w"), separators=(",", ":"))
     return 0
 
 

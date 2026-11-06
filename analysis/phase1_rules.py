@@ -10,6 +10,10 @@
 """
 import itertools, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import pandas as pd
 from engine.core import Rule, load_seoul, load_tashu, mark
@@ -52,7 +56,7 @@ def main():
           f"선택 규칙(정밀도 ≥ 30% 중 하루 막은 수 최대): **{rule.max_sec}초 · {rule.max_m:.0f}m · 서로 다른 사람 {rule.alarm_k}연속**", "",
           "## 같은 규칙을 다른 달·다른 도시에 그대로", "", T.to_markdown(index=False), "",
           f"정밀도 범위(서울 시험 달): {T.iloc[1:3]['precision_%'].min()}~{T.iloc[1:3]['precision_%'].max()}% vs 기준 달 {T.iloc[0]['precision_%']}%"]
-    (ROOT / "docs" / "phase1.md").write_text("\n".join(md) + "\n")
+    (ensure_out() / "phase1.md").write_text("\n".join(md) + "\n")
 
 
 if __name__ == "__main__":

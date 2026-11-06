@@ -5,6 +5,10 @@
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np, pandas as pd
 from engine.core import load_seoul, load_faults, mark
@@ -45,4 +49,4 @@ for lab, m in (("1번 이상", X["n_dud"] >= 1), ("2번 이상", X["n_dud"] >= 2
     rec = allfast[y].mean() if y.any() else float("nan")
     out.append(f"| {lab} | {len(S):,} | {100 * y.mean():.1f}% | {auroc(S['fast_share'].to_numpy(), y):.2f} | {100 * prec:.1f}% / {100 * rec:.1f}% |")
     print(out[-1], flush=True)
-(ROOT / "docs" / "fault_kind_per_bike.md").write_text("\n".join(out) + "\n")
+(ensure_out() / "fault_kind_per_bike.md").write_text("\n".join(out) + "\n")

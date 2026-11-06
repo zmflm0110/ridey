@@ -7,6 +7,10 @@
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import pandas as pd
 from engine.core import load_seoul, mark, next_dud_table
@@ -34,5 +38,5 @@ if __name__ == "__main__":
         rows.append({"달": f"20{ym[:2]}-{ym[2:]}", "경보(다음 사람 있음)": n, "경보 한 건 기준 %": round(100 * hit / n, 1), "연쇄 유지 기준 %": k2})
         print(rows[-1], flush=True)
     T = pd.DataFrame(rows)
-    (ROOT / "docs" / "per_alarm.md").write_text("# 경보 한 건 기준 정밀도 (자동 생성: `python analysis/per_alarm.py`)\n\n"
+    (ensure_out() / "per_alarm.md").write_text("# 경보 한 건 기준 정밀도 (자동 생성: `python analysis/per_alarm.py`)\n\n"
         + (__doc__.split("\n", 1)[1]) + "\n" + T.to_markdown(index=False) + "\n")

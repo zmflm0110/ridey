@@ -5,6 +5,10 @@
 """
 import json, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import pandas as pd
 from engine.core import load_seoul, from_rows, mark
@@ -38,4 +42,4 @@ bF, bA = {x["bike"] for x in mF.get(nd, [])}, {x["bike"] for x in mA.get(nd, [])
 out += [f"헛대여: 파일 {dF:,} / API {dA:,}", "",
         f"그날 기록만으로 만든 다음 날 아침 목록: 파일 {len(bF)}대 / API {len(bA)}대, 같은 자전거 {len(bF & bA)}대"]
 print("\n".join(out))
-(ROOT / "docs" / "api_parity.md").write_text("\n".join(out) + "\n")
+(ensure_out() / "api_parity.md").write_text("\n".join(out) + "\n")

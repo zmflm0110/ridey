@@ -1,7 +1,7 @@
 """정비 동선용 자료 → data/busy.json (대여소별 하루 평균·시간대별 대여). 값 표는 data/route_value.json.
 
     python analysis/export_busy.py 2606      # 시연 날짜(6월) 앞 7일로
-값 표는 analysis/route_backtest.py 가 1·3월로 맞춘 것 (docs/route_backtest.md). 운영(실시간)에선 server/live.py 가 ops/busy.json 을 쓴다.
+값 표는 analysis/route_backtest.py 가 1·3월로 맞춘 것 (analysis/out/route_backtest.md). 운영(실시간)에선 server/live.py 가 ops/busy.json 을 쓴다.
 """
 import json, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]

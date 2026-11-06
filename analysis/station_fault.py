@@ -1,6 +1,6 @@
 """자전거 고장인가, 대여소 고장인가 — 한 대여소에서 '다른 자전거들' 이 같이 헛대여를 내면 거치대·단말기 문제일 수 있다.
 
-    python analysis/station_fault.py       # → docs/station_fault.md (서울 1·3·6월)
+    python analysis/station_fault.py       # → analysis/out/station_fault.md (서울 1·3·6월)
 
 재는 것
   1) 자전거 경보(서로 다른 2명 연달아)가 울릴 때, 같은 대여소에서 지난 60분 안에 '다른 자전거' 헛대여가 몇 번 있었나(대여소 소란) →
@@ -10,6 +10,10 @@
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -86,8 +90,8 @@ def main():
             "## 결론", "",
             "- 같은 대여소가 소란할 때 울린 자전거 경보는 다음 사람 헛대여가 몇 %p 낮지만(달마다 들쭉날쭉, 경보의 2\\~4% 뿐) 여전히 평소의 10배 넘게 높다 — **고장은 대부분 자전거 탓**이고, 경보에서 빼지 않는다.",
             "- 여러 자전거가 한꺼번에 헛대여한 대여소의 다음 60분은 그 대여소들의 평소보다 조금 높을 뿐이다(위 표) — 대여소 고장 경보는 자전거 경보(평소의 약 14배)보다 훨씬 약해서 **만들지 않는다.**"]
-    (ROOT / "docs" / "station_fault.md").write_text("\n".join(out) + "\n")
-    print("→ docs/station_fault.md")
+    (ensure_out() / "station_fault.md").write_text("\n".join(out) + "\n")
+    print("→ analysis/out/station_fault.md")
 
 
 if __name__ == "__main__":

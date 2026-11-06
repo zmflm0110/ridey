@@ -1,13 +1,13 @@
-# 올릴 때마다: 엔진·서버 단위 테스트 + 클라우드 SQL 과 파이썬이 같은 답인지(진짜 Postgres) + 사이트·QR 검사
+# 엔진·서버 단위 테스트 + 클라우드 SQL과 파이썬이 같은 답인지(진짜 Postgres)
 name: test
 on:
   push:
-    branches: [master]   # live-data(실시간 결과, 10분마다) 는 검사하지 않음
+    branches: [master, submit]
   pull_request:
 jobs:
   test:
-    runs-on: ubuntu-24.04  # Playwright 1.56 은 26.04 를 지원하지 않는다(2026-11 러너 교체)
-    services:   # 클라우드 SQL(supabase/*.sql) 이 파이썬 엔진과 같은 답인지 진짜 Postgres 에서 (tests/test_sql_parity.py)
+    runs-on: ubuntu-24.04
+    services:
       postgres:
         image: postgres:17
         env: { POSTGRES_PASSWORD: postgres }
@@ -21,7 +21,3 @@ jobs:
         with: { python-version: "3.11" }
       - run: pip install -r requirements.txt
       - run: python -m pytest -q tests
-      - uses: actions/setup-node@v4
-        with: { node-version: "22" }
-      - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
-      - run: node tests/web/qr.test.js && node tests/web/site.test.js

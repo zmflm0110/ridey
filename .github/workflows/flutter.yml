@@ -52,7 +52,7 @@ jobs:
           path: app/build/screens
           retention-days: 14
 
-  # 대회 제출용 안드로이드 설치 파일 — Actions 실행 화면의 'ridey-apk' 에서 받는다(tools/make_submission.py 는 dist/RIDEY.apk 로 둔 것을 씀)
+  # 안드로이드 설치 파일 — Actions 실행 화면의 'ridey-apk'에서 받는다
   apk:
     needs: test
     runs-on: ubuntu-latest

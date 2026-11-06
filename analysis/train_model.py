@@ -1,14 +1,18 @@
 """자체 모델 학습 → 클라우드 DB 용 SQL — 자전거마다 '다음에 빌린 다른 사람도 바로 반납할 확률'
 
-    python analysis/train_model.py      # → docs/model_event.md (반납 순간 모델 — 배포는 analysis/snapshot_model.py 의 목록 모델)
+    python analysis/train_model.py      # → analysis/out/model_event.md (반납 순간 모델 — 배포는 analysis/snapshot_model.py 의 목록 모델)
 
 특징 5개 (그 헛대여 반납 시점, 지난 7일): 연쇄(서로 다른 사람 수), 헛대여 수, 대여 수, 이번 줄 전의 경보 수, 이번 대여 시간(초).
-17개를 다 쓴 모델과 같은 정밀도라(docs/related_work.md 3-1, 아래 표) DB 안에서 셀 수 있는 5개만 쓴다. 이용자 정보는 안 쓴다.
+17개를 다 쓴 모델과 같은 정밀도라(analysis/out/related_work.md 3-1, 아래 표) DB 안에서 셀 수 있는 5개만 쓴다. 이용자 정보는 안 쓴다.
 모델: 그래디언트 부스팅 60그루·깊이 3 → 나무를 SQL CASE 식으로 바꿔 Supabase 가 5분마다 직접 계산(서버 없음).
 바꾼 SQL 식이 sklearn 과 같은 답인지 이 스크립트가 직접 확인한다(파이썬으로 같은 식을 계산해 비교).
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -100,8 +104,8 @@ def main():
               "규칙 목록 **안의 순서**를 바꾸는 효과는 거의 없었다(위 25% 정밀도 76\\~77% 로 같음) — 그래서 순서는 바꾸지 않는다.",
               "", "DB 안 계산이 파이썬과 같은지: `python tools/supabase_live_load.py --parity-model` (2026-10-01: 목록 86대 특징 모두 같음).",
               "적용 순서: `supabase/model.sql` → `supabase/live.sql` (live.compute 가 live.p_next_dud 를 부른다)."]
-    (ROOT / "docs" / "model_event.md").write_text("\n".join(lines) + "\n")
-    print(f"→ docs/model_event.md (학습 {len(allE):,}건, SQL 식 차이 {diff:.1e})")
+    (ensure_out() / "model_event.md").write_text("\n".join(lines) + "\n")
+    print(f"→ analysis/out/model_event.md (학습 {len(allE):,}건, SQL 식 차이 {diff:.1e})")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,10 @@
-"""발표용 그림: 연쇄 수 → 다음 사람 헛걸음 확률, 도시·달별 (docs/fig_chain.png)."""
+"""발표용 그림: 연쇄 수 → 다음 사람 헛걸음 확률, 도시·달별 (analysis/out/fig_chain.png)."""
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import matplotlib
 matplotlib.use("Agg")
@@ -28,5 +32,5 @@ ax.text(3.2, 4.5, "평소 약 2.5%", color="gray")
 ax.grid(alpha=0.3)
 ax.legend()
 fig.tight_layout()
-fig.savefig(ROOT / "docs" / "fig_chain.png")
-print("docs/fig_chain.png")
+fig.savefig(ensure_out() / "fig_chain.png")
+print("analysis/out/fig_chain.png")

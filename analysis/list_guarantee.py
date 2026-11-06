@@ -1,6 +1,6 @@
 """목록 보장 — "지금 목록 N대 중 다음 사람도 바로 반납할 자전거가 최소 몇 대" 를 90% 로 보장하는 하한 (분할 컨포멀 예측)
 
-    python analysis/list_guarantee.py        # → docs/list_guarantee.md, supabase/model.sql 끝에 붙일 상수 출력
+    python analysis/list_guarantee.py        # → analysis/out/list_guarantee.md, supabase/model.sql 끝에 붙일 상수 출력
 
 지금 목록 흉내: 날마다 9·13·18시에, 그 시각 전 마지막 대여가 '서로 다른 2명+ 연쇄의 헛대여' 이고 24시간 안인 자전거들.
 자전거마다 자체 모델 확률 p (analysis/train_model.py 와 같은 5특징·같은 모델) → 기대 수 μ = Σp, 흩어짐 σ = √Σp(1−p).
@@ -10,6 +10,10 @@
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -71,7 +75,7 @@ def main():
     lines += ["## 시험 (배움·보정·시험 달을 모두 다르게)", "", T.to_markdown(index=False), "",
               f"→ 앱에 쓰는 q = **{q_use:.2f}** (세 조합 중 가장 조심스러운 값). 기대 수는 실제와 맞고(위 '기대' vs '실제'), 하한은 시험 달에서 90% 안팎으로 맞는다.",
               "", "화면: \"지금 목록 N대 중 약 μ대는 다음 사람도 바로 반납할 거예요 — 90% 확률로 최소 ⌊μ + q·σ⌋대\"."]
-    (ROOT / "docs" / "list_guarantee.md").write_text("\n".join(lines) + "\n")
+    (ensure_out() / "list_guarantee.md").write_text("\n".join(lines) + "\n")
     print(f"q_use={q_use:.4f}")
 
 

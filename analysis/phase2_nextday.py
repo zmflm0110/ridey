@@ -7,6 +7,10 @@
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np, pandas as pd
 from engine.core import Rule, load_seoul, load_faults, mark
@@ -65,4 +69,4 @@ if __name__ == "__main__":
     lines = ["# Phase 2 대안 — 하루 늦은 자전거별 기록 (자동 생성)", "",
              "| 달 | 아침 목록(대/일) | 오늘 첫 대여자가 헛걸음 | 오늘 막을 수 있는 헛걸음(명/일) | 아직 고장 신고 없음 |", "|---|---|---|---|---|"]
     lines += [f"| {o['month']} | {o['morning_list_per_day']} | {o['first_rider_dud_%']}% | {o['preventable_today_per_day']} | {o['not_yet_reported_%']}% |" for o in out]
-    (ROOT / "docs" / "phase2_nextday.md").write_text("\n".join(lines) + "\n")
+    (ensure_out() / "phase2_nextday.md").write_text("\n".join(lines) + "\n")

@@ -11,10 +11,14 @@
   고장 포착률   사람이 고장이라고 본 자전거 중 엔진도 경보였던 비율
   헛경보율      사람이 멀쩡하다고 본 자전거 중 엔진이 경보였던 비율
   경보 적중률   엔진이 경보였던 자전거 중 사람이 고장이라고 본 비율
-표본이 작으니(150대쯤) 95% 신뢰구간(윌슨)을 같이 낸다. 결과는 docs/field_validation.md (보고서에 그대로 붙임).
+표본이 작으니(150대쯤) 95% 신뢰구간(윌슨)을 같이 낸다. 결과는 analysis/out/field_validation.md (보고서에 그대로 붙임).
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np, pandas as pd
 from engine.core import load_seoul, mark
@@ -132,6 +136,6 @@ if __name__ == "__main__":
     S, m = validate(survey, R)
     S = add_ai(S, R)
     print(m)
-    S.to_csv(ROOT / "docs" / "field_validation_rows.csv", index=False, encoding="utf-8-sig")
-    (ROOT / "docs" / "field_validation.md").write_text(to_markdown(S, m))
-    print("→ docs/field_validation.md")
+    S.to_csv(ensure_out() / "field_validation_rows.csv", index=False, encoding="utf-8-sig")
+    (ensure_out() / "field_validation.md").write_text(to_markdown(S, m))
+    print("→ analysis/out/field_validation.md")

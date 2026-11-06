@@ -1,4 +1,4 @@
-"""규칙 vs 머신러닝 — '다음에 빌린 다른 사람도 바로 반납할까' 를 누가 더 잘 맞히나 (자동 생성: docs/ml_compare.md)
+"""규칙 vs 머신러닝 — '다음에 빌린 다른 사람도 바로 반납할까' 를 누가 더 잘 맞히나 (자동 생성: analysis/out/ml_compare.md)
 
     python analysis/ml_compare.py            # 서울 1·3월로 배우고 6월로 시험 (처음엔 월별 파일 읽느라 1~2분)
 
@@ -15,6 +15,10 @@
 """
 import pathlib, sys, time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -185,7 +189,7 @@ def main():
            "모델이 가장 기대는 것은 '지난 7일 이 자전거의 헛대여 수' 와 연쇄 길이 — 앱 목록에 참고로 보여 줄 만하다.", "",
            __doc__.split("\n", 1)[1].strip(), "",
            "※ 여기 실시간 정밀도(규칙 약 49%)는 목록에 올라 있는 동안의 **모든** 헛대여 반납을 한 건씩 센다(긴 연쇄가 여러 번 들어감). "
-           "경보 한 건에 한 번만 세는 실시간 채점(32\\~34%, docs/per_alarm.md)과는 세는 법이 다르다 — 규칙과 모델을 **같은 사건**으로 비교하려고 이렇게 쟀다.", ""]
+           "경보 한 건에 한 번만 세는 실시간 채점(32\\~34%, analysis/out/per_alarm.md)과는 세는 법이 다르다 — 규칙과 모델을 **같은 사건**으로 비교하려고 이렇게 쟀다.", ""]
     RT, MO = {}, {}
     for ym, M in Ms.items():
         refs = [Ms[x] for x in TRAIN if x != ym] if ym in TRAIN else [Ms[x] for x in TRAIN]
@@ -299,7 +303,7 @@ def main():
     out += ["## 4. 모델이 기대는 특징 (실시간 모델, 섞었을 때 AUC 가 떨어지는 정도)", "", "| 특징 | AUC 감소 |", "|---|---:|"]
     out += [f"| {f} | {v:.4f} |" for f, v in imp]
     out.append("")
-    (ROOT / "docs" / "ml_compare.md").write_text("\n".join(out) + "\n")
+    (ensure_out() / "ml_compare.md").write_text("\n".join(out) + "\n")
     print("\n".join(out))
     print(f"총 {time.time() - t:.0f}s")
 

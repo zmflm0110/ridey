@@ -1,13 +1,17 @@
 """운영 성적표 그림 — 실시간 경보가 울린 날마다 '다음 다른 사람도 바로 반납' 비율 (README).
 
-    python analysis/ops_days.py      # → docs/img/ops-days.svg · ops-days-dark.svg
+    python analysis/ops_days.py      # → analysis/out/img/ops-days.svg · ops-days-dark.svg
 
 자료는 클라우드 DB 의 공개 뷰 public.ops_alarm_days (supabase/live.sql) — 앱·사이트와 같은 공개 키로 읽기만.
-결과가 100건 넘게 정해진 날만 그린다(오늘처럼 아직 모이는 날은 뺌). 점선 = 평소 자전거 2.5%(서울 3개월, docs/results.md 연쇄0).
+결과가 100건 넘게 정해진 날만 그린다(오늘처럼 아직 모이는 날은 뺌). 점선 = 평소 자전거 2.5%(서울 3개월, analysis/out/results.md 연쇄0).
 """
 import json, pathlib, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 URL = "https://iqvquwvoljzuvdgtbpnu.supabase.co/rest/v1/ops_alarm_days?select=day,scored,hit&order=day"
 KEY = "sb_publishable_YFBKlBvyPFAhBpLdS3o8_A_xIeUmTVE"   # 공개(publishable) 키 — 앱·사이트와 같음
 USUAL, TOP = 2.5, 50.0
@@ -49,7 +53,7 @@ def svg(D, c):
 def main():
     D = days()
     assert len(D) >= 3, D
-    out = ROOT / "docs" / "img"
+    out = ensure_out()
     (out / "ops-days.svg").write_text(svg(D, LIGHT))
     (out / "ops-days-dark.svg").write_text(svg(D, DARK))
     pct = [100 * k / n for _, n, k in D]

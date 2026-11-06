@@ -16,6 +16,10 @@
 import json, pathlib, sys
 from collections import defaultdict
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -190,8 +194,8 @@ def main():
         md += [f"## {label} (9시 출발)", "", Tb.to_markdown(index=False), "",
                f"- 한 번(구역·날)에 목록 대여소 평균 {per_area:.1f}곳 · 9시 뒤 실제로 난 헛걸음 전체 {possible:,}명",
                f"- {n}번 중 막는 동선이 순위 10곳보다 많이 막음 {100 * win:.0f}%, 적게 막음 {100 * lose:.0f}%", ""]
-    (ROOT / "docs" / "route_backtest.md").write_text("\n".join(md) + "\n")
-    print("→ docs/route_backtest.md")
+    (ensure_out() / "route_backtest.md").write_text("\n".join(md) + "\n")
+    print("→ analysis/out/route_backtest.md")
 
 
 if __name__ == "__main__":

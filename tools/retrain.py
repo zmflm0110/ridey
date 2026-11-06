@@ -1,6 +1,6 @@
 """스스로 배우기 — 클라우드 DB 가 쌓은 실시간 정답(live.samples)으로 AI 모델을 점검하고, 나을 때만 바꾼다.
 
-    python tools/retrain.py            # 점검만: 지금 모델이 실시간 목록에서 얼마나 맞나 → docs/model_live.md
+    python tools/retrain.py            # 점검만: 지금 모델이 실시간 목록에서 얼마나 맞나 → analysis/out/model_live.md
     python tools/retrain.py --deploy   # 새 모델(지난 기록 + 실시간)이 최근 자료에서 더 나으면 supabase/model.sql 을 바꾸고 DB 에 적용
 
 규칙(과적합·우연 방지):
@@ -13,6 +13,10 @@ DB 비밀번호는 키체인 'supabase-db'.
 """
 import argparse, datetime as dt, io, pathlib, subprocess, sys, os
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -70,7 +74,7 @@ def main():
     lines = [f"# 실시간 점검 — AI 모델이 지금 목록에서 맞나 (자동 생성: `python tools/retrain.py`, {dt.date.today()})", "", __doc__.split("\n", 1)[1].strip(), ""]
     if len(S) == 0:
         lines.append("아직 정답이 정해진 실시간 표본이 없다(3시간마다 쌓이고, 다음 사람이 빌린 뒤 7시간 지나야 정답이 정해진다).")
-        (ROOT / "docs" / "model_live.md").write_text("\n".join(lines) + "\n"); print(lines[-1]); return 0
+        (ensure_out() / "model_live.md").write_text("\n".join(lines) + "\n"); print(lines[-1]); return 0
     report(S, lines)
     decision = "바꾸지 않음"
     if len(S) >= MIN_LIVE:
@@ -124,7 +128,7 @@ def main():
     else:
         lines += ["", f"실시간 표본이 {MIN_LIVE}개 이상 모이면 다시 배우기를 비교한다(지금 {len(S)}개)."]
     lines += ["", f"**결정: {decision}**"]
-    (ROOT / "docs" / "model_live.md").write_text("\n".join(lines) + "\n")
+    (ensure_out() / "model_live.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines[-12:]))
     return 0
 

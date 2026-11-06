@@ -10,6 +10,10 @@
 """
 import re, math, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np, pandas as pd
 from engine.core import Rule, load_seoul, mark
@@ -87,4 +91,4 @@ if __name__ == "__main__":
         print(t, flush=True)
         lines.append(f"| {t['tier']} | {t['stations']} | {t['dud_recall_%']}% | {t['flip_precision_%']}% | {t['alarm_recall_%']}% | {t['alarm_precision_%']}% |")
     md = re.sub(r"(?<!\\)~", r"\\~", "\n".join(lines))   # GitHub 은 한 줄의 ~ 두 개 사이를 취소선으로 그린다
-    (ROOT / "docs" / "phase2.md").write_text(md + "\n")
+    (ensure_out() / "phase2.md").write_text(md + "\n")

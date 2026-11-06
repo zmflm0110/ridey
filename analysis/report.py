@@ -1,9 +1,13 @@
-"""명령 하나로 핵심 결과를 다시 만든다 → docs/results.md
+"""명령 하나로 핵심 결과를 다시 만든다 → analysis/out/results.md
 
     python analysis/report.py
 """
 import pathlib, sys, time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 from engine.core import Rule, load_seoul, load_tashu, load_faults, mark, next_dud_table, prevented, lead_time, unreported_chains
 
@@ -35,7 +39,7 @@ def main():
         lines.append(f"| {city} | {month} | {len(R):,} | {100*R['dud'].mean():.2f} | {cell(0)} | {cell(1)} | **{cell(2)}** | {cell(3)} | "
                      f"{P['per_day']} | {L.get('share_%', '—')} | {L.get('lead_h_median', '—')} | {L.get('victims_mean', '—')} | {U} |")
         print(f"{city} {month}: {time.time()-t:.0f}초", flush=True)
-    (ROOT / "docs" / "results.md").write_text("\n".join(lines) + "\n")
+    (ensure_out() / "results.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
 

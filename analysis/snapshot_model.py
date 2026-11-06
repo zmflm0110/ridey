@@ -1,7 +1,7 @@
 """지금 목록에 맞춘 자체 모델 — '목록에 올라 있는 동안' 의 자전거로 배운다 (반납 순간만 배운 모델은 목록에서 확률을 크게 잡았다)
 
     python analysis/snapshot_model.py --check      # 시험만 (배움·시험 달을 나눠)
-    python analysis/snapshot_model.py              # 세 달로 배워 supabase/model.sql 다시 만듦 + docs/model.md 갱신
+    python analysis/snapshot_model.py              # 세 달로 배워 supabase/model.sql 다시 만듦 + analysis/out/model.md 갱신
 
 목록 흉내: 3시간마다(0·3·…·21시) 그 시각 전 마지막 대여가 '서로 다른 2명+ 연쇄의 헛대여' 이고 24시간 안인 자전거.
 특징 7개 = 반납 순간 5개(analysis/train_model.py) + **경과 시간**(마지막 헛대여 뒤 몇 시간) + **외면**(그사이 같은 대여소에서 다른 사람이 빌려 간 수).
@@ -9,6 +9,10 @@
 """
 import argparse, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -139,8 +143,8 @@ def main():
             "- 홈 맨 위: \"이 중 약 Σp 대는 다음 사람도 바로 반납할 거예요 · 최소 ⌊Σp + q·σ⌋대(90%)\".", "",
             "DB 안 계산이 파이썬과 같은지: `python tools/supabase_live_load.py --parity-model`.",
             "적용 순서: `supabase/model.sql` → `supabase/live.sql`."]
-    (ROOT / "docs" / "model.md").write_text("\n".join(doc) + "\n")
-    print(f"→ supabase/model.sql, docs/model.md (표본 {len(allS):,}, q={q_use:.3f}, 차이 {diff:.1e})")
+    (ensure_out() / "model.md").write_text("\n".join(doc) + "\n")
+    print(f"→ supabase/model.sql, analysis/out/model.md (표본 {len(allS):,}, q={q_use:.3f}, 차이 {diff:.1e})")
 
 
 if __name__ == "__main__":

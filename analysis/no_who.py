@@ -11,6 +11,10 @@
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import pandas as pd
 from engine.core import Rule, load_seoul, mark
@@ -57,7 +61,7 @@ def main():
     out += ["## 결론 (시험 달)", ""] + summary + ["",
             f"생년·성별이 없으면 **{best.split()[1]} 안 재대여를 같은 사람으로** 보면 된다 — 확정 규칙과 정밀도·경보 수가 거의 같다. "
             "안 거르면 정밀도가 떨어지고 경보가 늘어난다(한 사람이 두 번 해 보면 경보)."]
-    (ROOT / "docs" / "no_who.md").write_text("\n".join(out) + "\n")
+    (ensure_out() / "no_who.md").write_text("\n".join(out) + "\n")
 
 
 if __name__ == "__main__":

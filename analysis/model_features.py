@@ -1,6 +1,6 @@
 """자체 모델에 특징을 더하면 나아지나 — 더하기 전에 재 본다 (2026-10-06).
 
-    python analysis/model_features.py      # → docs/model_features.md
+    python analysis/model_features.py      # → analysis/out/model_features.md
 
 목록 모델(analysis/snapshot_model.py, 특징 7개)에 '목록을 보는 시각(시간대)' 과 '주말', 그리고 '대여소 탓'
 (지난 7일 그 대여소에서 다른 자전거들이 바로 반납된 비율 — 거치대·단말기 문제면 자전거 탓이 아닐 수 있어서, 2026-10-08)을 더해,
@@ -9,6 +9,10 @@ SQL 로 옮기기 쉬운 것부터 시험했다 — 이득이 없으면 넣지 �
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -73,7 +77,7 @@ def main():
              "",
              "→ '대여소 탓' 도 손실 차이 0.001 안팎, 위 20대 +0\\~0.1%p — **넣지 않는다**. 남의 헛대여가 많은 대여소(위 4분위)는 다음 사람 반납 비율이 1·6월에 4\\~6%p 낮았지만 3월엔 차이가 없었고, 모델엔 보탬이 안 됐다",
              "(서로 다른 두 사람이 같은 자전거를 연달아 포기해야 경보라, 대여소 문제는 이미 대부분 걸러지는 듯)."]
-    (ROOT / "docs" / "model_features.md").write_text("\n".join(lines) + "\n")
+    (ensure_out() / "model_features.md").write_text("\n".join(lines) + "\n")
     return 0
 
 

@@ -1,11 +1,15 @@
 """서울로 배운 AI 가 대전에서도 맞나 — 대전 타슈(2025년 5·10월)에 서울 모델을 그대로 (다시 배우지 않음)
 
-    python analysis/daejeon_model.py      # → docs/model_daejeon.md
+    python analysis/daejeon_model.py      # → analysis/out/model_daejeon.md
 
 대전 기록엔 생년·성별이 없어 같은 사람은 '반납 2분 안 재대여' 로 본다(engine/morning.py RULE). 목록 흉내·특징·정답은 서울과 같다(analysis/snapshot_model.py).
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "analysis" / "out"
+def ensure_out():
+    OUT.mkdir(parents=True, exist_ok=True)
+    return OUT
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
@@ -48,8 +52,8 @@ def main():
            "대전 목록은 작아서(한 번에 수십 대) 위 10대로 비교한다.", "", pd.DataFrame(rows).to_markdown(index=False), "",
            "## 확률이 실제와 맞나 (대전 2025-10)", "", "| 모델이 말한 확률 | 표본 | 모델 평균 | 실제 |", "|---|---:|---:|---:|"]
     out += [f"| {b} | {int(r.n):,} | {100 * r.pred:.1f}% | {100 * r.real:.1f}% |" for b, r in c.iterrows()]
-    (ROOT / "docs" / "model_daejeon.md").write_text("\n".join(out) + "\n")
-    print("→ docs/model_daejeon.md")
+    (ensure_out() / "model_daejeon.md").write_text("\n".join(out) + "\n")
+    print("→ analysis/out/model_daejeon.md")
 
 
 if __name__ == "__main__":

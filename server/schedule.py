@@ -1,4 +1,4 @@
-"""맥에서 자동으로 돌리기 (launchd) — 실시간 경보 상시, 매일 아침 목록, 웹 서버 상시.
+"""맥에서 자동으로 돌리기 (launchd) — 실시간 경보 상시, 매일 아침 목록.
 
     python server/schedule.py install --api-url '<공공데이터포털 요청주소>'   # 아침 목록을 공공데이터포털 API 로 (예전 방식)
     python server/schedule.py status                                       # 등록 상태·마지막 기록
@@ -6,7 +6,7 @@
     python server/schedule.py print                                        # 만들 plist 만 보여 주기 (설치 안 함)
 
 - 인증키는 키체인에서 읽는다(로그인한 사용자로 돌아서 키체인이 열려 있음). plist 에 키를 넣지 않는다.
-- 맥이 잠들어 06:10 을 놓치면 깨어난 뒤 한 번 돈다(launchd 규칙). 덮개를 닫아 두면 안 돈다 — 전원에 꽂고 열어 두기(PLAN 표 9번).
+- 맥이 잠들어 06:10 을 놓치면 깨어난 뒤 한 번 돈다(launchd 규칙). 덮개를 닫아 두면 안 돈다.
 - 실시간 경보는 전원에 꽂혀 있을 때 맥이 잠들지 않게 한다(caffeinate -s — 배터리일 땐 평소처럼 잠듦).
 - 기록: data/logs/<이름>.log
 """
@@ -36,7 +36,6 @@ def plists(api_url=None, port=8765, hour=6, minute=10):
     out = dict([
         job("live", [str(ROOT / "server" / "live.py")], RunAtLoad=True, KeepAlive=True),
         job("morning", [str(ROOT / "server" / "daily_job.py"), *src], StartCalendarInterval={"Hour": hour, "Minute": minute}),
-        job("web", [str(ROOT / "server" / "app.py"), str(port)], RunAtLoad=True, KeepAlive=True),
     ])
     lab, pl = f"{PREFIX}.live", out[f"{PREFIX}.live"]
     pl["ProgramArguments"] = ["/usr/bin/caffeinate", "-s", *pl["ProgramArguments"]]
