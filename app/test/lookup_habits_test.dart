@@ -33,7 +33,8 @@ void main() {
   test('stores a snapped lookup and clears it', () async {
     SharedPreferences.setMockInitialValues({});
     final store = LookupHabitStore();
-    final at = DateTime.utc(2026, 10, 25, 3, 10);
+    // 저장할 때 14일 지난 기록은 지금 시각 기준으로 지워지므로 오늘 가까운 시각을 쓴다.
+    final at = DateTime.now().toUtc().subtract(const Duration(hours: 2));
 
     await rememberLookup(
       kind: LookupKind.number,

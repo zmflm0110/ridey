@@ -18,7 +18,8 @@ final class RideyAlertActivity {
         let args = call.arguments as? [String: Any]
         self.show(
           text: args?["text"] as? String ?? "",
-          compact: args?["compact"] as? String ?? ""
+          compact: args?["compact"] as? String ?? "",
+          bikes: args?["bikes"] as? [String] ?? []
         )
         result(nil)
       case "hide":
@@ -30,11 +31,11 @@ final class RideyAlertActivity {
     }
   }
 
-  private func show(text: String, compact: String) {
+  private func show(text: String, compact: String, bikes: [String]) {
     guard #available(iOS 16.1, *) else { return }
     hide()
     let attributes = RideyAlertAttributes()
-    let state = RideyAlertAttributes.ContentState(text: text, compact: compact)
+    let state = RideyAlertAttributes.ContentState(text: text, compact: compact, bikes: bikes)
     do {
       if #available(iOS 16.2, *) {
         let activity = try Activity<RideyAlertAttributes>.request(

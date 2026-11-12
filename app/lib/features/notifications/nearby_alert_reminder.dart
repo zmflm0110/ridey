@@ -21,6 +21,9 @@ String nearbyAlertReminderText(List<String> bikes, {int limit = 4}) {
 
 String nearbyAlertCompactText(List<String> bikes) => '${bikes.length}';
 
+/// 다이내믹 아일랜드에 칩으로 보여 줄 번호(앞의 3대).
+List<String> nearbyAlertChipBikes(List<String> bikes) => bikes.take(3).toList();
+
 abstract interface class NearbyAlertReminder {
   Future<void> sync(List<String> bikeIds);
 }
@@ -59,6 +62,7 @@ class PlatformNearbyAlertReminder implements NearbyAlertReminder {
         await _channel.invokeMethod<void>('show', {
           'text': text,
           'compact': compact,
+          'bikes': nearbyAlertChipBikes(bikeIds),
         });
         return;
       } catch (_) {}
