@@ -6,8 +6,10 @@
 // '내 위치' 는 RIDEY_DEMO_LOCATION 으로 고정하고, 길안내 동안에는 실제 도로 경로를 따라 움직인다.
 // 다른 앱(지도·따릉이)으로 넘어갈 때 'DEMO AWAY' 를 찍는다 — 맥에서 그 줄을 보고 RIDEY 를 다시 앞으로 부른다.
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -68,11 +70,17 @@ void main() {
     // 오늘 시연에서 하는 확인까지 더해져 '자주 확인하는 시간' 이 된다.
     final grid = snapToGrid(here.latitude, here.longitude);
     final clock = DateTime.now();
-    for (final m in const [3, 9]) {
+    final slotStart = DateTime(
+      clock.year,
+      clock.month,
+      clock.day,
+      clock.hour,
+    ).subtract(const Duration(days: 7));
+    for (final m in const [1, 2]) {
       await LookupHabitStore().add(
         LookupEvent(
           kind: LookupKind.number,
-          at: clock.subtract(Duration(days: 7, minutes: m)),
+          at: slotStart.add(Duration(minutes: m)),
           latitude: grid.latitude,
           longitude: grid.longitude,
           subject: 'SPB-5629$m',
@@ -105,6 +113,22 @@ void main() {
       (b) => away(b) < 3000,
       orElse: () => nearby.first,
     );
+
+    var myGu = '서초구';
+    var nearestGu = double.infinity;
+    for (final s in stations.values) {
+      final d = metersBetween(
+        here.latitude,
+        here.longitude,
+        s.latitude,
+        s.longitude,
+      );
+      if (d < nearestGu && s.district.isNotEmpty) {
+        nearestGu = d;
+        myGu = s.district;
+      }
+    }
+    debugPrint('DEMO gu $myGu pick ${pick.bike}');
 
     final router = _RecordingRouter();
     final moving = StreamController<DeviceLocation>.broadcast();
@@ -281,16 +305,48 @@ void main() {
       await tap(f, after: after);
     }
 
-    Widget app() => RideyApp(
-      key: UniqueKey(),
-      showIntro: true,
-      askRoleOnLaunch: true,
-      readLocation: () async => now,
-      watchLocation: () async* {
-        yield now;
-        yield* moving.stream;
-      },
-      roadRouter: router,
+    // 두 손가락으로 지도를 돌린다(실제 손가락처럼 조금씩). 돌린 뒤 '북쪽 위로' 로 되돌린다.
+    Future<void> rotateMap(double degrees) async {
+      final maps = find.byType(FlutterMap);
+      await until(maps, seconds: 5);
+      if (maps.evaluate().isEmpty) {
+        debugPrint('DEMO skip rotate');
+        return;
+      }
+      final box = tester.getRect(maps.first);
+      final c = Offset(box.center.dx, box.top + box.height * 0.32);
+      const r = 95.0;
+      final g1 = await tester.startGesture(
+        c + const Offset(-r, 0),
+        pointer: 41,
+      );
+      final g2 = await tester.startGesture(c + const Offset(r, 0), pointer: 42);
+      const steps = 40;
+      for (var i = 1; i <= steps; i++) {
+        final a = degrees * math.pi / 180 * i / steps;
+        final o = Offset(math.cos(a) * r, math.sin(a) * r);
+        await g1.moveTo(c - o);
+        await g2.moveTo(c + o);
+        await hold(28);
+      }
+      await g1.up();
+      await g2.up();
+      await hold(1800);
+      await tap(find.byTooltip('북쪽 위로'), after: 1500, seconds: 3);
+    }
+
+    Widget app() => _TouchMarks(
+      child: RideyApp(
+        key: UniqueKey(),
+        showIntro: true,
+        askRoleOnLaunch: true,
+        readLocation: () async => now,
+        watchLocation: () async* {
+          yield now;
+          yield* moving.stream;
+        },
+        roadRouter: router,
+      ),
     );
 
     debugPrint('DEMO START');
@@ -300,24 +356,15 @@ void main() {
     await tap(find.text('따릉이를 이용하는 일반 시민이에요'), after: 1600);
     await tap(find.text('위치 허용하기'), after: 3500);
 
-    // ───── 2. 시민 홈: 바텀시트 올리고 내리기, 고장 의심 ↔ 대여소 현황 ─────
+    // ───── 2. 시민 홈: 바텀시트, 지도 두 손가락으로 돌리기 → 북쪽 위로, 고장 의심 ↔ 대여소 현황 ─────
     await swipe(find.byType(DraggableScrollableSheet), const Offset(0, -260));
-    await hold(1500);
+    await hold(1200);
     await swipe(find.byType(DraggableScrollableSheet), const Offset(0, 260));
-    await tap(find.text('주변 대여소 현황'), after: 2500);
-    await tap(find.text('고장 의심 따릉이'), after: 1500);
+    await rotateMap(70);
+    await tap(find.text('주변 대여소 현황'), after: 2200);
+    await tap(find.text('고장 의심 따릉이'), after: 1400);
 
-    // ───── 3. 지도의 대여소 누르기 → 카드 → 길 찾기(지도 앱) / 대여하기(따릉이 앱) ─────
-    await tapPin();
-    await hold(1500);
-    await tap(find.text('길 찾기'), after: 300);
-    await awayAndBack('길 찾기');
-    await tapPin();
-    await hold(1000);
-    await tap(find.text('대여하기'), after: 300);
-    await awayAndBack('대여하기');
-
-    // ───── 4. 갈 곳 미리 보기: 검색 → 역 이름 → 그 근처 ─────
+    // ───── 3. 가기 전에 미리: 검색 → 역 이름 → 그 근처 → 내 위치로 ─────
     await tap(pressable((l) => l == '장소 검색'), after: 900);
     await type('고속터미널');
     await hold(900);
@@ -326,16 +373,14 @@ void main() {
     await tap(pressable((l) => l.endsWith('근처 보기')), after: 3500);
     await tap(find.text('내 위치로'), after: 2500);
 
-    // 목록의 자전거 → 상세
-    await tap(labelled((l) => l.endsWith('고장 의심 자세히 보기')).first, after: 2500);
-    await back(after: 1200);
-
-    // ───── 5. 자전거 확인: QR 하나만(번호판 읽기는 없음), 번호 → 경보 → 근거 ─────
-    await tap(find.text('자전거 확인'), after: 1800);
-    debugPrint(
-      'DEMO plate button: ${find.textContaining('번호판').evaluate().length}, '
-      'QR: ${find.text('QR로 찍기').evaluate().length}',
-    );
+    // ───── 4. 눈앞의 자전거: 화면 모드를 어둡게 → (여기에 친구가 찍은 실제 QR 장면이 들어간다)
+    //        → 번호 → 경보 → 판단 근거 → '고장 신고하기'(보여 주기만) → 다시 밝게 ─────
+    await tap(find.text('더보기'), after: 1500);
+    await tapRow('화면 모드', after: 300);
+    await tap(find.byType(Switch), after: 1800);
+    await tap(find.text('자전거 확인'), after: 600);
+    debugPrint('DEMO QR CUT');
+    await hold(2500);
     await tap(find.byType(TextField), after: 600);
     await type(pick.bike.replaceFirst('SPB-', ''));
     await hold(600);
@@ -350,11 +395,31 @@ void main() {
     await back(after: 1200);
     await swipe(find.byType(Scrollable).last, const Offset(0, -600), ms: 900);
     // '고장 신고하기' 는 보여 주기만 한다 — 누르면 서울시 사이트 로그인 화면과 폰에 저장된 계정이 뜬다.
-    await hold(2500);
+    await hold(2800);
     await swipe(find.byType(Scrollable).last, const Offset(0, 900), ms: 800);
     await back(after: 1000);
 
-    // ───── 6. 자주 쓰는 대여소: 지도에서 누르기 → 바텀시트 카드 → 넣기, 검색으로 넣기 ─────
+    await tap(find.text('더보기'), after: 1500);
+    await tapRow('화면 모드', after: 300);
+    await tap(find.byType(Switch), after: 1800);
+
+    // ───── 5. 대여소 카드: 걸어서 몇 분 → 길 찾기(지도 앱) ─────
+    await tap(find.text('홈'), after: 2000);
+    await tapPin();
+    await hold(1800);
+    await tap(find.text('길 찾기'), after: 300);
+    await awayAndBack('길 찾기');
+    await hold(800);
+    await tapPin();
+    await hold(1500);
+    // '대여하기' → 따릉이 앱이 열린다. 따릉이 앱 안의 장면(대여소 고르기 → 타기 → 결제 직전)은
+    // 사람이 직접 찍은 영상을 이 자리에 붙인다.
+    debugPrint('DEMO RENT CUT');
+    await tap(find.text('대여하기'), after: 300);
+    await awayAndBack('대여하기');
+    await hold(800);
+
+    // ───── 6. 내 대여소: 지도에서 누르기 → 넣기, 검색으로 넣기 ─────
     await tap(find.text('더보기'), after: 1500);
     await tapRow('자주 쓰는 대여소', after: 3000);
     await tapPin(alert: false, after: 2500);
@@ -376,35 +441,27 @@ void main() {
       after: 2800,
     );
     await tap(find.text('내 대여소에 넣기'), after: 2200);
-    await tap(find.textContaining('즐겨찾기 '), after: 2500);
     await back(after: 1500);
 
-    // ───── 7. 이용 시간과 알림: 습관 알림 켜기 → 조회 기록(이용 시간) → 실제 알림 ─────
+    // ───── 7. 이용 시간과 알림: 켜기 → 실제 알림 받기 → 조회 기록 ─────
     await tapRow('이용 시간과 알림', after: 1800);
     await tap(find.byType(Switch), after: 2500);
     await back(after: 1200);
     // 백그라운드 작업(15분마다)이 하는 확인을 지금 한 번 돌린다 — 조건이 맞으면 진짜 알림이 뜬다.
-    await deliverHabitNotification();
-    debugPrint(
-      'DEMO notification sent: ${await HabitNotificationStore().lastSent()}',
-    );
-    await hold(6000);
+    // 실제 알림 화면은 따로 찍은 스크린샷을 이 자리에 넣는다.
+    await hold(1500);
     await tapRow('조회 기록', after: 3500);
     await back(after: 1200);
 
-    // ───── 8. 화면 모드: 어두운 화면 → 홈 → 밝은 화면 ─────
-    await tapRow('화면 모드', after: 300);
-    await tap(find.byType(Switch), after: 2200);
-    await tap(find.text('홈'), after: 3500);
-    await tap(find.text('더보기'), after: 1500);
-    await tapRow('화면 모드', after: 300);
-    await tap(find.byType(Switch), after: 2000);
+    // ───── 8. 알림 · 다이내믹 아일랜드: 따로 찍은 스크린샷을 이 자리에 넣는다 ─────
+    debugPrint('DEMO NOTICE CUT');
 
     // ───── 9. 이용 목적 바꾸기 → 관리 직원, 담당 구 고르기 ─────
     await tapRow('이용 목적 바꾸기', after: 1500);
     await tap(find.text('바꾸기'), after: 3000);
-    await tap(find.text('서초구'), after: 700);
+    await tap(find.text(myGu), after: 700);
     await tap(find.text('이 구부터 보기'), after: 6000);
+    await rotateMap(-60);
 
     // 오늘 추천 경로: 재배치 + 고장 의심 ↔ 고장 의심만
     await swipe(find.text('오늘 추천 경로'), const Offset(0, -250));
@@ -417,17 +474,27 @@ void main() {
       of: find.byType(DraggableScrollableSheet),
       matching: find.byType(Scrollable),
     );
-    try {
-      await tester.scrollUntilVisible(
-        find.text('길안내 시작'),
-        120,
-        scrollable: sheet.first,
+    // 손가락으로 천천히 끌어 내려가며 '길안내 시작' 을 찾는다(순간 이동처럼 보이지 않게).
+    for (var k = 0; k < 6; k++) {
+      final b = find.text('길안내 시작');
+      if (b.evaluate().isNotEmpty) {
+        final r = tester.getRect(b.first);
+        final h =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio;
+        if (r.bottom < h - 120) break;
+      }
+      if (sheet.evaluate().isEmpty) break;
+      await tester.timedDrag(
+        sheet.first,
+        const Offset(0, -260),
+        const Duration(milliseconds: 1100),
       );
-    } catch (_) {
-      debugPrint('DEMO skip scroll');
+      await hold(700);
     }
-    await hold(600);
-    await tap(find.text('길안내 시작'), after: 2500);
+    await hold(1200);
+    await tap(find.text('길안내 시작'), after: 600);
+    debugPrint('DEMO NAV IN');
+    await hold(1900);
     // 길을 따라 빨리 감기(멀리서는 45m, 대여소 가까이서는 10m씩). 대여소 30m 안이면 그 자리에 서서
     // '다음 곳으로' 를 누른다 — 지도의 점이 체크로 바뀌고 '이번 길' 대수가 쌓인다. 세 곳까지.
     final road = router.last;
@@ -500,7 +567,9 @@ void main() {
         await hold(100);
       }
     }
-    await hold(3000);
+    await hold(1500);
+    debugPrint('DEMO NAV OUT');
+    await hold(1500);
     await tap(find.byTooltip('길안내 끝내기'), after: 1500);
     now = here;
     moving.add(now);
@@ -509,7 +578,7 @@ void main() {
     await swipe(find.text('오늘 추천 경로'), const Offset(0, -300));
     try {
       await tester.scrollUntilVisible(
-        find.text('서초구'),
+        find.text(myGu),
         150,
         scrollable: sheet.first,
       );
@@ -517,24 +586,11 @@ void main() {
       debugPrint('DEMO skip scroll');
     }
     await hold(800);
-    await tap(find.text('서초구'), after: 2500);
+    await tap(find.text(myGu), after: 2500);
     await tap(find.textContaining('SPB-').first, after: 3500);
     await tap(find.text('목록으로 돌아가기'), after: 1200);
     await back(after: 1500);
-
-    // ───── 12. 직원 더보기: 담당 구 바꾸기(강남구 더하기) → 화면 모드 → 시민으로 ─────
-    await tap(find.text('더보기'), after: 1500);
-    await tapRow('담당 구', after: 1800);
-    await tap(find.text('강남구'), after: 900);
-    await tap(find.text('이 구부터 보기'), after: 2500);
-    await tap(find.text('구별 현황'), after: 3500);
-    await tap(find.text('더보기'), after: 1500);
-    await tapRow('화면 모드', after: 300);
-    await tap(find.byType(Switch), after: 2500);
-    await tap(find.byType(Switch), after: 1800);
-    await tapRow('이용 목적 바꾸기', after: 1500);
-    await tap(find.text('바꾸기'), after: 4000);
-    await hold(3000);
+    await hold(2500);
     debugPrint('DEMO DONE');
   });
 }
@@ -545,4 +601,122 @@ DeviceLocation? _parse(String raw) {
   final lat = double.tryParse(p[0].trim()), lon = double.tryParse(p[1].trim());
   if (lat == null || lon == null) return null;
   return (latitude: lat, longitude: lon);
+}
+
+/// 누른 자리를 보여 주는 표시(화면 녹화의 '터치 표시' 처럼). 시연 영상에서만 쓴다.
+class _TouchMarks extends StatefulWidget {
+  const _TouchMarks({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_TouchMarks> createState() => _TouchMarksState();
+}
+
+class _TouchMarksState extends State<_TouchMarks> {
+  final Map<int, Offset> _down = {};
+  final List<(Offset, DateTime)> _fading = [];
+  Timer? _timer;
+
+  static const _fade = Duration(milliseconds: 450);
+
+  void _tick() {
+    _timer ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
+      final now = DateTime.now();
+      _fading.removeWhere((f) => now.difference(f.$2) > _fade);
+      if (_fading.isEmpty && _down.isEmpty) {
+        _timer?.cancel();
+        _timer = null;
+      }
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (e) {
+        _down[e.pointer] = e.position;
+        _tick();
+      },
+      onPointerMove: (e) {
+        if (_down.containsKey(e.pointer)) _down[e.pointer] = e.position;
+      },
+      onPointerUp: (e) {
+        final at = _down.remove(e.pointer) ?? e.position;
+        _fading.add((at, DateTime.now()));
+        _tick();
+      },
+      onPointerCancel: (e) => _down.remove(e.pointer),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Stack(
+          children: [
+            widget.child,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _TouchPainter(
+                    down: _down.values.toList(),
+                    fading: [
+                      for (final f in _fading)
+                        (
+                          f.$1,
+                          (DateTime.now().difference(f.$2).inMilliseconds /
+                                  _fade.inMilliseconds)
+                              .clamp(0.0, 1.0),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TouchPainter extends CustomPainter {
+  _TouchPainter({required this.down, required this.fading});
+
+  final List<Offset> down;
+  final List<(Offset, double)> fading;
+
+  void _mark(Canvas canvas, Offset at, double radius, double alpha) {
+    canvas.drawCircle(
+      at,
+      radius,
+      Paint()..color = Colors.white.withValues(alpha: 0.55 * alpha),
+    );
+    canvas.drawCircle(
+      at,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = Colors.black.withValues(alpha: 0.28 * alpha),
+    );
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final p in down) {
+      _mark(canvas, p, 24, 1);
+    }
+    for (final (p, t) in fading) {
+      _mark(canvas, p, 24 + 14 * t, 1 - t);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TouchPainter old) => true;
 }
