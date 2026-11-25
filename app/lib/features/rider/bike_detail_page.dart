@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
-import 'package:ridey_app/features/reports/citizen_reports.dart';
 import 'package:ridey_app/features/rider/official_bike_app.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -121,12 +120,6 @@ class BikeDetailPage extends StatelessWidget {
                 },
               ),
             ),
-            // 시민이 타 보고 고장을 확인했을 때의 다음 행동: 신고. RIDEY 에 남겨 직원 화면에 바로 보이게 하고,
-            // 이어서 서울시 공식 신고 화면(공단이 받는 곳)을 연다.
-            if (!forStaff) ...[
-              const SizedBox(height: 22),
-              ReportBikeButton(bike: bike.bike),
-            ],
           ],
         ),
       ),
@@ -197,10 +190,6 @@ class BikeCheckMessagePage extends StatelessWidget {
                   color: context.ridey.muted,
                 ),
               ),
-              const SizedBox(height: 14),
-            ],
-            if (bikeId != null) ...[
-              ReportBikeButton(bike: bikeId!),
               const SizedBox(height: 14),
             ],
             // 대여하기가 있으면 그것이 주 동작이고, 다른 자전거 확인은 한 단 낮춘다(검은 단추 둘이면 무엇을 누를지 흐려짐).
@@ -611,37 +600,6 @@ class _DataNote extends StatelessWidget {
           context,
         ).textTheme.bodyMedium?.copyWith(color: context.ridey.calmText),
       ),
-    );
-  }
-}
-
-/// 고장 신고: 신고를 잊거나 귀찮아 넘기는 일이 많아서 자전거 화면에 바로 둔다.
-/// RIDEY 는 신고를 받지 않는다 — 누르면 서울시 공식 신고 화면이 열리고, 신고는 거기서 마친다.
-class ReportBikeButton extends StatelessWidget {
-  const ReportBikeButton({super.key, required this.bike, this.open});
-
-  final String bike;
-  final Future<bool> Function(Uri uri)? open;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final c = context.ridey;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RideyButton.secondary(
-          label: '고장 신고하기',
-          icon: Icons.report_outlined,
-          onPressed: () => openOfficialReport(open: open),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '타 보니 고장이었다면 서울시 따릉이 신고 화면에서 알려 주세요. 자전거 번호 $bike 를 적으면 돼요.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
-        ),
-      ],
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
-import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup_page.dart';
 
@@ -25,14 +24,12 @@ class BikeCheckTab extends StatefulWidget {
   const BikeCheckTab({
     super.key,
     required this.repository,
-    required this.readLocation,
     required this.cameraEnabled,
     this.request,
     this.onRequestHandled,
   });
 
   final LiveSnapshotRepository? repository;
-  final Future<DeviceLocation?> Function()? readLocation;
   final bool cameraEnabled;
   final RideyCheckRequest? request;
   final VoidCallback? onRequestHandled;
@@ -102,7 +99,6 @@ class _BikeCheckTabState extends State<BikeCheckTab> {
           snapshot: snapshot,
           onRetry: _retry,
           repository: _repository,
-          readLocation: widget.readLocation,
           cameraEnabled: widget.cameraEnabled,
           child: Navigator(
             key: _navKey,
@@ -124,7 +120,6 @@ class _CheckScope extends InheritedWidget {
     required this.snapshot,
     required this.onRetry,
     required this.repository,
-    required this.readLocation,
     required this.cameraEnabled,
     required super.child,
   });
@@ -132,7 +127,6 @@ class _CheckScope extends InheritedWidget {
   final AsyncSnapshot<LiveSnapshot> snapshot;
   final VoidCallback onRetry;
   final LiveSnapshotRepository repository;
-  final Future<DeviceLocation?> Function()? readLocation;
   final bool cameraEnabled;
 
   static _CheckScope of(BuildContext context) {
@@ -147,8 +141,7 @@ class _CheckScope extends InheritedWidget {
         snapshot.hasData != oldWidget.snapshot.hasData ||
         snapshot.hasError != oldWidget.snapshot.hasError ||
         snapshot.data != oldWidget.snapshot.data ||
-        cameraEnabled != oldWidget.cameraEnabled ||
-        readLocation != oldWidget.readLocation;
+        cameraEnabled != oldWidget.cameraEnabled;
   }
 }
 
@@ -168,7 +161,6 @@ class _CheckEntry extends StatelessWidget {
     return BikeLookupPage(
       snapshot: snapshot.requireData,
       repository: scope.repository,
-      readLocation: scope.readLocation,
       cameraEnabled: scope.cameraEnabled,
     );
   }

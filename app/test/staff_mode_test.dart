@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
@@ -143,22 +142,14 @@ void main() {
       },
     );
 
-    expect(find.text('구별 현황'), findsWidgets);
+    expect(find.text('추천 경로'), findsOneWidget);
+    expect(find.text('구별 현황'), findsNothing);
     expect(find.byType(NearbyMap), findsOneWidget);
-    // 아래 탭은 '구별 현황'·'더보기' 둘(구별 목록은 구를 누르면 열린다).
+    // 아래 탭은 '추천 경로'·'더보기' 둘.
     expect(find.text('목록'), findsNothing);
     expect(find.text('더보기'), findsOneWidget);
     expect(find.text('홈'), findsNothing);
     expect(find.text('자전거 확인'), findsNothing);
-    // 지도 아래 구 목록은 작은 테스트 화면에서는 스크롤해야 보인다.
-    await tester.scrollUntilVisible(
-      find.text('강남구'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('강남구'), findsOneWidget);
-    expect(find.textContaining('1대'), findsWidgets);
-
     await tester.tap(find.text('더보기').last);
     await tester.pumpAndSettle();
     expect(find.text('이용 목적 바꾸기'), findsOneWidget);

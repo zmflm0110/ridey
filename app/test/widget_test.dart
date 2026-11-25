@@ -113,7 +113,7 @@ void main() {
     expect(preferences.getString('user_mode'), 'rider');
   });
 
-  testWidgets('keeps a bike lookup in on-device history', (tester) async {
+  testWidgets('looks up a bike by number or QR', (tester) async {
     await pumpRidey(tester);
     await tester.tap(find.text('자전거 확인'));
     await tester.pumpAndSettle();
@@ -125,25 +125,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('경보가 켜졌어요.'), findsOneWidget);
-    await tester.ensureVisible(find.text('다른 자전거 확인하기'));
-    await tester.tap(find.text('다른 자전거 확인하기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('더보기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('조회 기록'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('번호 조회'), findsOneWidget);
-    expect(find.textContaining('SPB-69683'), findsOneWidget);
-    expect(find.textContaining('위치 없음'), findsOneWidget);
-
-    await tester.tap(find.text('기록 지우기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('지우기'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('아직 조회 기록이 없어요.'), findsOneWidget);
-    expect(find.text('번호 조회'), findsNothing);
   });
 
   testWidgets('changes the app appearance from settings', (tester) async {
@@ -216,19 +197,5 @@ void main() {
     expect(find.textContaining('고장 의심 1대 · 탈 만한 자전거 약 3대'), findsOneWidget);
     expect(find.text('대여하기 ›'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('따릉이 앱에서 대여하기')), findsOneWidget);
-  });
-
-  testWidgets('opens saved stations from the rider tab', (tester) async {
-    await pumpRidey(tester);
-    await tester.tap(find.text('더보기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('자주 쓰는 대여소'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('내 대여소'), findsOneWidget);
-    expect(find.text('힐스테이트에코'), findsOneWidget);
-    for (final label in _staffLabels) {
-      expect(find.text(label), findsNothing);
-    }
   });
 }

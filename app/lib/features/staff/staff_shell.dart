@@ -6,7 +6,6 @@ import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/staff/staff_district_picker.dart';
-import 'package:ridey_app/features/staff/staff_list_page.dart';
 import 'package:ridey_app/features/staff/staff_more_page.dart';
 import 'package:ridey_app/features/staff/staff_overview_page.dart';
 import 'package:ridey_app/features/staff/staff_session.dart';
@@ -63,7 +62,7 @@ class _StaffShellState extends State<StaffShell> {
   var _askingDistricts = false;
 
   static const _navigationItems = [
-    RideyNavigationItem('구별 현황', Symbols.map_rounded),
+    RideyNavigationItem('추천 경로', Symbols.map_rounded),
     RideyNavigationItem('더보기', Symbols.apps_rounded),
   ];
 
@@ -123,7 +122,7 @@ class _StaffShellState extends State<StaffShell> {
                 bottom: false,
                 child: Column(
                   children: [
-                    // 시민 모드 머리(로고 + 알림 단추 48px)와 같은 높이·여백이라야 모드를 바꿔도 로고가 제자리에 있다.
+                    // 시민 모드 머리(로고, 48px)와 같은 높이·여백이라야 모드를 바꿔도 로고가 제자리에 있다.
                     const Padding(
                       padding: EdgeInsets.fromLTRB(20, 8, 8, 4),
                       child: SizedBox(
@@ -138,25 +137,7 @@ class _StaffShellState extends State<StaffShell> {
                       child: IndexedStack(
                         index: _index,
                         children: [
-                          StaffOverviewPage(
-                            session: _session,
-                            // 구를 누르면 그 구의 대여소별 목록이 위로 열린다(탭은 '구별 현황'·'더보기' 둘).
-                            onOpenDistrict: (district) async {
-                              _session.focusDistrict(district);
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ListenableBuilder(
-                                    listenable: _session,
-                                    builder: (_, _) => StaffListPage(
-                                      session: _session,
-                                      title: district,
-                                    ),
-                                  ),
-                                ),
-                              );
-                              _session.clearFocus();
-                            },
-                          ),
+                          StaffOverviewPage(session: _session),
                           StaffMorePage(
                             session: _session,
                             themeMode: widget.themeMode,

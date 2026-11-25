@@ -272,14 +272,6 @@ void main() {
       await shot(tester, '05_detail$tag');
     }, skip: _out == null);
 
-    testWidgets('stations$tag', (tester) async {
-      await open(tester, dark: dark, height: 1100);
-      await tester.tap(find.text('더보기'));
-      await settle(tester);
-      await tester.tap(find.text('자주 쓰는 대여소'));
-      await shot(tester, '06_stations$tag');
-    }, skip: _out == null);
-
     testWidgets('more$tag', (tester) async {
       await open(tester, dark: dark);
       await tester.tap(find.text('더보기'));
@@ -294,28 +286,6 @@ void main() {
     testWidgets('staff overview$tag', (tester) async {
       await open(tester, dark: dark, prefs: _staff);
       await shot(tester, '09_staff_overview$tag');
-    }, skip: _out == null);
-
-    testWidgets('staff list$tag', (tester) async {
-      await open(tester, dark: dark, prefs: _staff);
-      // 직원 탭은 구별 현황·더보기 두 개 — 구를 누르면 그 구의 대여소별 목록이 열린다.
-      await tester.scrollUntilVisible(
-        find.text('강서구'),
-        150,
-        scrollable: find
-            .descendant(
-              of: find.byType(DraggableScrollableSheet),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await Scrollable.ensureVisible(
-        tester.element(find.text('강서구').last),
-        alignment: .5,
-      );
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.text('강서구').last);
-      await shot(tester, '10_staff_list$tag');
     }, skip: _out == null);
 
     testWidgets('staff more$tag', (tester) async {

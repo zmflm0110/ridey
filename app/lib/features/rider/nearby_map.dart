@@ -48,7 +48,6 @@ class NearbyMap extends StatefulWidget {
     this.routePoints = const [],
     this.fitPoints,
     this.viewKey,
-    this.favoriteIds = const {},
     this.stopNumbers = const {},
     this.controlsTop = 12,
   });
@@ -70,9 +69,6 @@ class NearbyMap extends StatefulWidget {
 
   /// 바뀌면 처음 모습을 다시 맞춘다(장소 검색·담당 구 바꾸기).
   final Object? viewKey;
-
-  /// 즐겨찾는 대여소 — 별 고리로 따로 보인다.
-  final Set<String> favoriteIds;
 
   /// 들를 순서 번호(대여소 id → 1부터). 핀 옆 파란 원.
   final Map<String, int> stopNumbers;
@@ -335,7 +331,6 @@ class _NearbyMapState extends State<NearbyMap>
     for (final s in widget.stations) {
       final asWidget =
           s.alertCount > 0 ||
-          widget.favoriteIds.contains(s.id) ||
           widget.stopNumbers.containsKey(s.id) ||
           s.id == _selected ||
           (countsHere && inView(s));
@@ -434,7 +429,6 @@ class _NearbyMapState extends State<NearbyMap>
                       occupancy: widget.showCounts,
                       showCount: countsHere,
                       selected: _selected == s.id,
-                      favorite: widget.favoriteIds.contains(s.id),
                       stop: widget.stopNumbers[s.id],
                     ),
                   ),
@@ -564,7 +558,6 @@ class _StationPin extends StatelessWidget {
     this.occupancy = false,
     this.showCount = false,
     this.selected = false,
-    this.favorite = false,
     this.stop,
   });
 
@@ -577,23 +570,20 @@ class _StationPin extends StatelessWidget {
   /// 카드가 열린 대여소: 잉크 테두리 고리.
   final bool selected;
 
-  /// 즐겨찾는 대여소: 파란 고리.
-  final bool favorite;
-
   /// 들를 순서 번호(1부터): 오른쪽 위 파란 원.
   final int? stop;
 
   @override
   Widget build(BuildContext context) {
     final pin = _pin(context);
-    if (!selected && !favorite && stop == null) return pin;
+    if (!selected && stop == null) return pin;
     final ink = Theme.of(context).colorScheme.onSurface;
     final surface = Theme.of(context).colorScheme.surface;
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: [
-        if (selected || favorite)
+        if (selected)
           Container(
             width: 42,
             height: 42,

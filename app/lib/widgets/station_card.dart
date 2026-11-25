@@ -8,7 +8,7 @@ import 'package:ridey_app/widgets/ridey_ui.dart';
 /// 지도에서 대여소를 누르면 아래에서 올라오는 카드(지도 앱의 '핀 정보' 꼴):
 /// 대여소 이름 · 구 · 거리 · 탈 만한 자전거 수, 그리고 그곳의 고장 의심 자전거 목록.
 /// 자전거를 누르면 [onBike] (보통 상세 화면), [onRent] 가 있으면 공식 앱 대여 단추.
-/// 시민 홈과 직원 구별 현황이 같은 카드를 쓴다.
+/// 시민 홈과 직원 추천 경로이 같은 카드를 쓴다.
 Future<void> showStationCard(
   BuildContext context, {
   required String name,
