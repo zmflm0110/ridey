@@ -1,16 +1,11 @@
-// 내 대여소: 검색 결과를 누르면 지도에서 자리만 보여 주고, '넣기' 를 눌러야 들어간다.
 // 켤 때마다 역할을 묻는다(지난번 고른 것은 표시만).
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ridey_app/app/seoul_hero.dart';
 import 'package:ridey_app/app/ridey_app.dart';
-import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
-import 'package:ridey_app/features/stations/saved_stations.dart';
-import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -55,43 +50,6 @@ class _Stations implements StationRepository {
 }
 
 void main() {
-  testWidgets('a search result shows its place; only 넣기 adds it', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
-    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
-    tester.view.devicePixelRatio = 3;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: RideyTheme.light(),
-        home: SavedStationsDestination(
-          liveRepository: _Live(),
-          stationRepository: _Stations(),
-          readLocation: () async => null,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('즐겨찾기 0/5'), findsOneWidget);
-
-    await tester.tap(find.text('대여소 검색'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '망원');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('망원역 1번출구 앞').last);
-    await tester.pumpAndSettle();
-    // 누르기만 했을 때: 지도에 자리(선택 카드)가 나오고 아직 저장 안 됨.
-    expect(find.text('내 대여소에 넣기'), findsOneWidget);
-    expect(find.textContaining('고장 의심 1대'), findsOneWidget);
-    expect(await SavedStationsStore().load(), isEmpty);
-
-    await tester.tap(find.text('넣기').first);
-    await tester.pumpAndSettle();
-    expect(await SavedStationsStore().load(), ['00102']);
-    expect(find.text('즐겨찾기 1/5'), findsOneWidget);
-  });
-
   testWidgets('asks the role on every launch and shows the last one', (
     tester,
   ) async {

@@ -16,8 +16,6 @@ import 'package:ridey_app/features/staff/staff_districts.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 
-enum AlertLevelFilter { all, high, alert }
-
 class StaffSession extends ChangeNotifier {
   StaffSession({
     required LiveSnapshotRepository liveRepository,
@@ -58,17 +56,12 @@ class StaffSession extends ChangeNotifier {
   /// 최근 아침 목록 채점(새 날부터) — '이 목록이 맞았나' 를 직원이 직접 본다. 못 받으면 빈 목록.
   List<OpsScore> scores = const [];
 
-  /// 직원이 지금 서 있는 곳 — 재배치 길에서 '가까운 고장 의심' 을 먼저 보여 주려고 쓴다. 없으면 구별로만.
+  /// 직원이 지금 서 있는 곳 — 재배치 길에서 '가까운 고장 의심' 을 먼저 보여 주려고 쓴다. 없으면 담당 구만.
   final Future<DeviceLocation?> Function()? readLocation;
   DeviceLocation? location;
 
-  /// 목록을 가까운 순으로(위치가 있을 때 기본) 또는 위험한 순으로.
-  var sortByDistance = true;
-
   List<String>? assigned;
-  String? focusedDistrict;
   ListSource? sourceOverride;
-  AlertLevelFilter levelFilter = AlertLevelFilter.all;
 
   var loading = true;
   Object? error;
@@ -211,7 +204,7 @@ class StaffSession extends ChangeNotifier {
     } catch (_) {}
   }
 
-  /// 위치를 다시 찾는다(못 찾으면 그대로 구별 보기).
+  /// 위치를 다시 찾는다(못 찾으면 그대로 담당 구 기준).
   Future<void> locate() async {
     final read = readLocation;
     if (read == null) return;
@@ -221,12 +214,6 @@ class StaffSession extends ChangeNotifier {
       location = found;
       notifyListeners();
     } catch (_) {}
-  }
-
-  void setSortByDistance(bool value) {
-    if (sortByDistance == value) return;
-    sortByDistance = value;
-    notifyListeners();
   }
 
   /// 대여소까지의 거리(m). 위치나 대여소 좌표가 없으면 null.
@@ -304,26 +291,7 @@ class StaffSession extends ChangeNotifier {
   Future<void> saveDistricts(List<String> districts) async {
     await districtsStore.write(districts);
     assigned = districts;
-    focusedDistrict = null;
     road = null;
-    notifyListeners();
-  }
-
-  void focusDistrict(String district) {
-    focusedDistrict = district;
-    notifyListeners();
-  }
-
-  /// 구별 현황에서 한 구를 눌러 목록을 좁혔다가 다른 탭으로 가면 담당 구 전체로 돌아온다.
-  void clearFocus() {
-    if (focusedDistrict == null) return;
-    focusedDistrict = null;
-    notifyListeners();
-  }
-
-  void setLevelFilter(AlertLevelFilter filter) {
-    if (levelFilter == filter) return;
-    levelFilter = filter;
     notifyListeners();
   }
 
@@ -383,22 +351,5 @@ class StaffSession extends ChangeNotifier {
         notifyListeners();
       }
     }
-  }
-
-  Iterable<LiveBike> get visibleBikes {
-    final selected = focusedDistrict == null
-        ? (assigned ?? const <String>[])
-        : <String>[focusedDistrict!];
-    return bikes.where((bike) {
-      if (selected.isNotEmpty &&
-          !selected.contains(districtOf(bike, stations))) {
-        return false;
-      }
-      return switch (levelFilter) {
-        AlertLevelFilter.all => true,
-        AlertLevelFilter.high => bike.isHighAlert,
-        AlertLevelFilter.alert => !bike.isHighAlert,
-      };
-    });
   }
 }

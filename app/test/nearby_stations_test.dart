@@ -72,20 +72,6 @@ void main() {
     expect(nearest.single.meters, lessThan(nearbyAlertRadiusMeters));
   });
 
-  test('uses saved stations, including ones with no alert', () {
-    final saved = savedStationAlerts(
-      bikes: bikes,
-      stations: [near, far],
-      savedIds: ['00999', '02720'],
-    );
-
-    expect(saved.map((group) => group.id), ['00999', '02720']);
-    expect(saved.first.count, 0);
-    expect(saved.first.name, '00999');
-    expect(saved.last.count, 2);
-    expect(firstBikeAt(bikes, '02720')?.bike, 'SPB-00001');
-  });
-
   test('lists suspect bikes near the user and skips far stations', () {
     final nearby = bikesNear(
       bikes: bikes,

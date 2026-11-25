@@ -19,7 +19,6 @@ class StaffSourceLine extends StatelessWidget {
     final source = session.source == ListSource.morning
         ? '아침 목록 ${session.morningDay ?? ''} 07:00'.trim()
         : '실시간';
-    final focus = session.focusedDistrict;
 
     String? warning;
     if (session.error != null) {
@@ -39,7 +38,6 @@ class StaffSourceLine extends StatelessWidget {
             '$source 기준',
             if (session.source == ListSource.live && updatedAt != null)
               '${rideyAgo(updatedAt)} 갱신',
-            if (focus != null) '$focus만',
           ].join(' · '),
           style: theme.textTheme.bodyMedium?.copyWith(color: c.muted),
         ),

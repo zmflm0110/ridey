@@ -109,10 +109,4 @@ void main() {
     expect(s.updatedAt, DateTime.utc(2026, 10, 20, 6));
     expect(s.feed?.isHealthy, isFalse);
   });
-
-  test('leaving the list clears a district picked on the overview', () {
-    final s = session(_Ops())..focusDistrict('강남구');
-    s.clearFocus();
-    expect(s.focusedDistrict, isNull);
-  });
 }

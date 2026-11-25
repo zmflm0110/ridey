@@ -8,18 +8,15 @@ import 'package:ridey_app/app/onboarding_page.dart';
 import 'package:ridey_app/app/ridey_actions.dart';
 import 'package:ridey_app/app/user_mode.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
-import 'package:ridey_app/features/habits/lookup_habits_page.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/live/station_status_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/notifications/nearby_alert_reminder.dart';
-import 'package:ridey_app/features/notifications/notification_settings_page.dart';
 import 'package:ridey_app/features/ops/ops_list_repository.dart';
 import 'package:ridey_app/features/rider/bike_check_tab.dart';
 import 'package:ridey_app/features/rider/rider_home_page.dart';
 import 'package:ridey_app/features/staff/staff_shell.dart';
-import 'package:ridey_app/features/stations/saved_stations_page.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_tab_bar.dart';
@@ -266,12 +263,6 @@ class _RideyShellState extends State<RideyShell> {
     setState(() => _index = 1);
   }
 
-  void _openNotifications() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const NotificationSettingsPage()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -281,7 +272,7 @@ class _RideyShellState extends State<RideyShell> {
             bottom: false,
             child: Column(
               children: [
-                _AppHeader(onNotifications: _openNotifications),
+                const _AppHeader(),
                 Expanded(
                   child: IndexedStack(
                     index: _index,
@@ -296,7 +287,6 @@ class _RideyShellState extends State<RideyShell> {
                       ),
                       BikeCheckTab(
                         repository: widget.liveRepository,
-                        readLocation: widget.readLocation,
                         cameraEnabled: widget.enableCamera,
                         request: widget.pendingCheck.value,
                         onRequestHandled: () =>
@@ -306,9 +296,6 @@ class _RideyShellState extends State<RideyShell> {
                         themeMode: widget.themeMode,
                         onThemeModeChanged: widget.onThemeModeChanged,
                         onSwitchToStaff: widget.onSwitchToStaff,
-                        liveRepository: widget.liveRepository,
-                        stationRepository: widget.stationRepository,
-                        readLocation: widget.readLocation,
                       ),
                     ],
                   ),
@@ -333,27 +320,18 @@ class _RideyShellState extends State<RideyShell> {
 }
 
 class _AppHeader extends StatelessWidget {
-  const _AppHeader({required this.onNotifications});
-
-  final VoidCallback onNotifications;
+  const _AppHeader();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 8, 4),
-      child: Row(
-        children: [
-          const RideyWordmark(size: 26),
-          const Spacer(),
-          IconButton(
-            tooltip: '알림',
-            onPressed: onNotifications,
-            icon: Icon(
-              Symbols.notifications_rounded,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 8, 8, 4),
+      child: SizedBox(
+        height: 48,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: RideyWordmark(size: 26),
+        ),
       ),
     );
   }
@@ -377,17 +355,11 @@ class _MorePage extends StatelessWidget {
     required this.themeMode,
     required this.onThemeModeChanged,
     required this.onSwitchToStaff,
-    required this.liveRepository,
-    required this.stationRepository,
-    required this.readLocation,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final VoidCallback onSwitchToStaff;
-  final LiveSnapshotRepository? liveRepository;
-  final StationRepository? stationRepository;
-  final Future<DeviceLocation?> Function()? readLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -406,47 +378,6 @@ class _MorePage extends StatelessWidget {
           child: Text('더보기', style: theme.textTheme.displayLarge),
         ),
         const SizedBox(height: 18),
-        const _SectionLabel('자주 가는 곳'),
-        RideyListCard(
-          children: [
-            RideyRow(
-              leading: const RideyIco(icon: Icons.pedal_bike_outlined),
-              title: '자주 쓰는 대여소',
-              subtitle: '저장해 둔 곳의 고장 의심 자전거',
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: context.ridey.muted,
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => SavedStationsDestination(
-                      liveRepository: liveRepository,
-                      stationRepository: stationRepository,
-                      readLocation: readLocation,
-                    ),
-                  ),
-                );
-              },
-            ),
-            RideyRow(
-              leading: const RideyIco(icon: Icons.schedule_outlined),
-              title: '이용 시간과 알림',
-              subtitle: '자주 확인하는 시간대에, 하루 한 번',
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: context.ridey.muted,
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const NotificationSettingsPage(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
         const _SectionLabel('설정'),
         RideyListCard(
           children: [
@@ -479,27 +410,6 @@ class _MorePage extends StatelessWidget {
                   next: UserMode.staff,
                 );
                 if (confirmed) onSwitchToStaff();
-              },
-            ),
-          ],
-        ),
-        const _SectionLabel('기타'),
-        RideyListCard(
-          children: [
-            RideyRow(
-              leading: const RideyIco(icon: Icons.history_rounded),
-              title: '조회 기록',
-              subtitle: '최근 14일, 이 폰에만 저장돼요.',
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: context.ridey.muted,
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const LookupHabitsPage(),
-                  ),
-                );
               },
             ),
           ],

@@ -16,11 +16,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:ridey_app/app/launch_mark.dart';
 import 'package:ridey_app/app/ridey_app.dart';
 import 'package:ridey_app/config/ridey_config.dart';
-import 'package:ridey_app/features/habits/lookup_habits.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
 import 'package:ridey_app/features/location/device_location.dart';
-import 'package:ridey_app/features/notifications/habit_notifier.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
@@ -59,34 +57,9 @@ void main() {
         child: CustomPaint(painter: LaunchMarkPainter(), size: Size.infinite),
       ),
     );
-    // 알림 권한은 녹화 앞부분(잘라 냄)에서 미리 받는다 — 처음 깔았을 때만 묻는다.
-    debugPrint('DEMO PERMISSION');
-    await requestHabitNotificationPermission();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await LaunchMark.load();
-
-    // 이용 시간: 지난주 이 요일·이 시간에 이 근처에서 두 번 확인했다고 둔다(실제로 쓰던 사람처럼).
-    // 오늘 시연에서 하는 확인까지 더해져 '자주 확인하는 시간' 이 된다.
-    final grid = snapToGrid(here.latitude, here.longitude);
-    final clock = DateTime.now();
-    final slotStart = DateTime(
-      clock.year,
-      clock.month,
-      clock.day,
-      clock.hour,
-    ).subtract(const Duration(days: 7));
-    for (final m in const [1, 2]) {
-      await LookupHabitStore().add(
-        LookupEvent(
-          kind: LookupKind.number,
-          at: slotStart.add(Duration(minutes: m)),
-          latitude: grid.latitude,
-          longitude: grid.longitude,
-          subject: 'SPB-5629$m',
-        ),
-      );
-    }
 
     // 지금 실시간 자료에서 내 근처의 강한 경보 자전거 하나(번호 입력 장면에 쓴다).
     final snapshot = await SupabaseLiveSnapshotRepository().fetch();
@@ -374,7 +347,7 @@ void main() {
     await tap(find.text('내 위치로'), after: 2500);
 
     // ───── 4. 눈앞의 자전거: 화면 모드를 어둡게 → (여기에 친구가 찍은 실제 QR 장면이 들어간다)
-    //        → 번호 → 경보 → 판단 근거 → '고장 신고하기'(보여 주기만) → 다시 밝게 ─────
+    //        → 번호 → 경보 → 판단 근거 → 다시 밝게 ─────
     await tap(find.text('더보기'), after: 1500);
     await tapRow('화면 모드', after: 300);
     await tap(find.byType(Switch), after: 1800);
@@ -394,8 +367,6 @@ void main() {
     await swipe(find.byType(Scrollable).last, const Offset(0, 900), ms: 700);
     await back(after: 1200);
     await swipe(find.byType(Scrollable).last, const Offset(0, -600), ms: 900);
-    // '고장 신고하기' 는 보여 주기만 한다 — 누르면 서울시 사이트 로그인 화면과 폰에 저장된 계정이 뜬다.
-    await hold(2800);
     await swipe(find.byType(Scrollable).last, const Offset(0, 900), ms: 800);
     await back(after: 1000);
 
@@ -419,44 +390,11 @@ void main() {
     await awayAndBack('대여하기');
     await hold(800);
 
-    // ───── 6. 내 대여소: 지도에서 누르기 → 넣기, 검색으로 넣기 ─────
-    await tap(find.text('더보기'), after: 1500);
-    await tapRow('자주 쓰는 대여소', after: 3000);
-    await tapPin(alert: false, after: 2500);
-    await tap(find.text('내 대여소에 넣기'), after: 2200);
-    await tap(find.byTooltip('닫기'), after: 1200);
-    await tap(find.text('대여소 검색'), after: 900);
-    await tap(find.byType(TextField), after: 300);
-    await type('반포종합운동장');
-    await hold(900);
-    FocusManager.instance.primaryFocus?.unfocus();
-    await hold(700);
-    await tap(
-      find
-          .descendant(
-            of: find.byType(RideyRow),
-            matching: find.textContaining('반포종합운동장'),
-          )
-          .first,
-      after: 2800,
-    );
-    await tap(find.text('내 대여소에 넣기'), after: 2200);
-    await back(after: 1500);
-
-    // ───── 7. 이용 시간과 알림: 켜기 → 실제 알림 받기 → 조회 기록 ─────
-    await tapRow('이용 시간과 알림', after: 1800);
-    await tap(find.byType(Switch), after: 2500);
-    await back(after: 1200);
-    // 백그라운드 작업(15분마다)이 하는 확인을 지금 한 번 돌린다 — 조건이 맞으면 진짜 알림이 뜬다.
-    // 실제 알림 화면은 따로 찍은 스크린샷을 이 자리에 넣는다.
-    await hold(1500);
-    await tapRow('조회 기록', after: 3500);
-    await back(after: 1200);
-
-    // ───── 8. 알림 · 다이내믹 아일랜드: 따로 찍은 스크린샷을 이 자리에 넣는다 ─────
+    // ───── 6. 알림 · 다이내믹 아일랜드: 따로 찍은 스크린샷을 이 자리에 넣는다 ─────
     debugPrint('DEMO NOTICE CUT');
 
-    // ───── 9. 이용 목적 바꾸기 → 관리 직원, 담당 구 고르기 ─────
+    // ───── 7. 이용 목적 바꾸기 → 관리 직원, 담당 구 고르기 ─────
+    await tap(find.text('더보기'), after: 1500);
     await tapRow('이용 목적 바꾸기', after: 1500);
     await tap(find.text('바꾸기'), after: 3000);
     await tap(find.text(myGu), after: 700);
@@ -469,7 +407,7 @@ void main() {
     await tap(find.text('고장 의심만'), after: 4500);
     await tap(find.text('재배치 + 고장 의심'), after: 4500);
 
-    // ───── 10. 길안내: 실제 도로를 따라 움직인다 ─────
+    // ───── 8. 길안내: 실제 도로를 따라 움직인다 ─────
     final sheet = find.descendant(
       of: find.byType(DraggableScrollableSheet),
       matching: find.byType(Scrollable),
@@ -574,22 +512,6 @@ void main() {
     now = here;
     moving.add(now);
 
-    // ───── 11. 구별 현황 → 구 → 자전거(타 봐야 아는 고장) ─────
-    await swipe(find.text('오늘 추천 경로'), const Offset(0, -300));
-    try {
-      await tester.scrollUntilVisible(
-        find.text(myGu),
-        150,
-        scrollable: sheet.first,
-      );
-    } catch (_) {
-      debugPrint('DEMO skip scroll');
-    }
-    await hold(800);
-    await tap(find.text(myGu), after: 2500);
-    await tap(find.textContaining('SPB-').first, after: 3500);
-    await tap(find.text('목록으로 돌아가기'), after: 1200);
-    await back(after: 1500);
     await hold(2500);
     debugPrint('DEMO DONE');
   });

@@ -108,15 +108,12 @@ RIDEY는 서울시가 공개하는 대여 기록에서 이런 자전거를 찾�
 - 홈 지도에 서울 전체의 고장 의심 따릉이가 뜹니다. 처음엔 내 근처를 크게 보여 줍니다.
 - 학원이나 역 이름을 검색하면, 지금 있는 곳이 아니라 갈 곳의 대여소를 미리 볼 수 있습니다.
 - 자전거 번호를 넣거나 번호표 QR을 찍으면 경보, 확률, 이유를 보여 줍니다.
-- 타 보니 고장이면 '고장 신고하기'로 서울시 공식 신고 화면을 바로 엽니다. RIDEY가 신고를 따로 받지는 않습니다.
-- 자주 쓰는 대여소를 넣어 두면 그곳부터 봅니다.
 
 **직원: 재배치하는 길에 고장 의심도 거둡니다.**
 
 - '오늘 추천 경로'는 넘친 대여소에서 싣고, 빈 대여소에 내려놓으면서, 고장 의심도 함께 거두는 순서입니다. 트럭 한 대 20대 기준입니다.
 - '고장 의심만'으로 바꾸면 가장 짧은 순서로 다시 짭니다.
 - 경로는 실제 도로를 따라 그립니다. 앱 안에서 다음 갈림길, 남은 거리, 그곳에서 할 일을 안내합니다.
-- 구별 현황에서 구를 누르면 그 구의 대여소별 목록이 나옵니다.
 
 공단 직원이 고장을 찾아 따로 돌지 않는다는 건 [전화로 확인했습니다](docs/operations.md). 직원 모드는 그 재배치 길에 얹는 목록입니다. 직원이 실제로 쓸지는 아직 확인하지 못했습니다.
 
@@ -130,10 +127,8 @@ RIDEY는 서울시가 공개하는 대여 기록에서 이런 자전거를 찾�
     <td align="center"><img src="docs/shots/app/evidence.png" alt="판단 근거" width="200"><br>판단 근거<br><sub>왜 경보가 켜졌는지</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/shots/app/stations.png" alt="내 대여소" width="200"><br>내 대여소<br><sub>지도에서 보고 넣기</sub></td>
     <td align="center"><img src="docs/shots/app/staff_route.png" alt="오늘 추천 경로" width="200"><br>오늘 추천 경로(직원)<br><sub>재배치와 수거를 한 길로</sub></td>
     <td align="center"><img src="docs/shots/app/staff_nav.png" alt="길안내" width="200"><br>길안내(직원)<br><sub>다음 갈림길과 할 일</sub></td>
-    <td align="center"><img src="docs/shots/app/staff_list.png" alt="구별 현황" width="200"><br>구별 현황(직원)<br><sub>구마다 강한 경보 대수</sub></td>
   </tr>
 </table>
 

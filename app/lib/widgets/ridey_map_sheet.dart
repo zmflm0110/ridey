@@ -4,7 +4,7 @@ import 'package:ridey_app/widgets/ridey_tab_bar.dart';
 
 /// 지도 앱의 기본 꼴: [map] 이 화면을 채우고, [children] 은 아래 시트에 담는다.
 /// 시트는 낮게·중간·높게 멈추고, 높이와 상관없이 뒤의 지도를 만질 수 있다.
-/// 홈(시민)과 구별 현황(직원)이 같은 모양을 쓴다.
+/// 홈(시민)과 추천 경로(직원)이 같은 모양을 쓴다.
 class RideyMapSheet extends StatelessWidget {
   const RideyMapSheet({
     super.key,

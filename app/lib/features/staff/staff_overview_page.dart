@@ -4,7 +4,6 @@ import 'package:ridey_app/design/ridey_theme.dart';
 import 'package:ridey_app/features/ops/ops_list.dart';
 import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
-import 'package:ridey_app/features/staff/district_stats.dart';
 import 'package:ridey_app/features/staff/pickup_plan.dart';
 import 'package:ridey_app/features/staff/road_route.dart';
 import 'package:ridey_app/features/staff/staff_bike.dart';
@@ -19,16 +18,11 @@ import 'package:ridey_app/widgets/station_card.dart';
 
 /// 직원 첫 화면: 지도(서울 전체 고장 의심 + 추천 경로) 위에 시트.
 /// 시트: 오늘 추천 경로(재배치 + 고장 의심 수거를 한 번에, 또는 고장 의심만) → 길안내 시작,
-/// 어제 아침 목록 성적, 구별 현황(누르면 그 구의 대여소별 목록).
+/// 어제 아침 목록 성적, 실시간·아침 목록 고르기.
 class StaffOverviewPage extends StatefulWidget {
-  const StaffOverviewPage({
-    super.key,
-    required this.session,
-    required this.onOpenDistrict,
-  });
+  const StaffOverviewPage({super.key, required this.session});
 
   final StaffSession session;
-  final ValueChanged<String> onOpenDistrict;
 
   @override
   State<StaffOverviewPage> createState() => _StaffOverviewPageState();
@@ -39,7 +33,6 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     if (session.loading && session.bikes.isEmpty) {
       return const Center(child: CircularProgressIndicator.adaptive());
     }
@@ -47,9 +40,6 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
       return _StaffFailure(onRetry: session.reload);
     }
 
-    final rows = districtRows(session.bikes, session.stations);
-    final total = session.bikes.length;
-    final high = session.bikes.where((bike) => bike.isHighAlert).length;
     final plan = session.plan;
     final road = session.roadForPlan;
     final here = session.location;
@@ -102,15 +92,6 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
           _ListScore(scores: session.scores),
         ],
         const SizedBox(height: 22),
-        Text('구별 현황', style: theme.textTheme.displayLarge),
-        const SizedBox(height: 8),
-        Text(
-          '지금 고장 의심 $total대 · 그중 강한 경보 $high대',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: context.ridey.muted,
-          ),
-        ),
-        const SizedBox(height: 14),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -129,33 +110,6 @@ class _StaffOverviewPageState extends State<StaffOverviewPage> {
         ),
         const SizedBox(height: 10),
         StaffSourceLine(session: session),
-        const SizedBox(height: 18),
-        if (rows.isEmpty)
-          Text(
-            '지금 목록에 고장 의심 자전거가 없어요.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: context.ridey.muted,
-            ),
-          )
-        else
-          RideyListCard(
-            children: [
-              for (final row in rows)
-                RideyRow(
-                  title: row.district,
-                  subtitle: [
-                    '강한 경보 ${row.highAlerts}대',
-                    if (row.expected != null)
-                      '다음에도 헛대여 예상 ${formatExpected(row.expected)}대',
-                  ].join(' · '),
-                  trailing: Text(
-                    '${row.bikes}대',
-                    style: context.rideyNumbers(theme.textTheme.titleMedium),
-                  ),
-                  onTap: () => widget.onOpenDistrict(row.district),
-                ),
-            ],
-          ),
       ],
     );
   }
@@ -368,7 +322,7 @@ class _RouteCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             session.suspectsOnly
-                ? '고장 의심 대여소만, 가장 짧게 도는 순서예요(가까운 순서를 잡고 구간을 바꿔 보며 줄임).'
+                ? '고장 의심 대여소만, 가장 짧게 도는 순서예요(여러 순서를 함께 견주고 구간을 바꿔 보며 줄임).'
                 : '차 한 대(${plan.capacity}대 실음) 기준. 넘친 곳(거치대의 1.2배 넘음)에서 싣고 빈 곳(25% 아래)에 내려놓으면서, '
                       '고장 의심은 정비센터로 가져가도록 거둬요.',
             style: theme.textTheme.bodySmall?.copyWith(color: c.muted),

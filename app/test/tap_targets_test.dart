@@ -198,9 +198,9 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'spb-69683');
     await tapText(tester, '조회하기');
     found.addAll(problems(tester, 'detail'));
-    // 맨 아래(고장 신고 단추)까지 내려야 '판단 근거' 가 떠 있는 탭 막대 위로 올라온다.
+    // 맨 아래까지 내려야 '판단 근거' 가 떠 있는 탭 막대 위로 올라온다.
     await tester.scrollUntilVisible(
-      find.text('고장 신고하기'),
+      find.text('판단 근거 자세히 보기'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
@@ -222,11 +222,6 @@ void main() {
 
     await tapText(tester, '더보기');
     found.addAll(problems(tester, 'more'));
-    for (final item in ['자주 쓰는 대여소', '이용 시간과 알림', '조회 기록']) {
-      await tapText(tester, item);
-      found.addAll(problems(tester, item));
-      await back(tester);
-    }
     expect(found, isEmpty, reason: found.join('\n'));
   });
 
@@ -274,17 +269,6 @@ void main() {
     expect(find.textContaining('고장 의심 2대 수거'), findsWidgets);
     await tester.tap(find.byTooltip('길안내 끝내기'));
     await tester.pumpAndSettle();
-    // 구별 현황의 구를 누르면 그 구의 대여소별 목록이 열린다.
-    await tester.drag(find.text('오늘 추천 경로'), const Offset(0, -600));
-    await tester.pumpAndSettle();
-    await center(tester, find.text('강서구'));
-    await tapText(tester, '강서구');
-    found.addAll(problems(tester, 'staff district list'));
-    await tapText(tester, 'SPB-69683');
-    found.addAll(problems(tester, 'staff detail'));
-    expect(find.text('목록으로 돌아가기'), findsOneWidget);
-    await back(tester);
-    await back(tester);
     await tapText(tester, '더보기');
     found.addAll(problems(tester, 'staff more'));
     expect(found, isEmpty, reason: found.join('\n'));

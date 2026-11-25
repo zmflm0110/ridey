@@ -84,6 +84,12 @@ class PlatformNearbyAlertReminder implements NearbyAlertReminder {
         iOS: _darwinSettings,
       ),
     );
+    // 안드로이드 13+ 는 권한이 있어야 알림이 뜬다.
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
     await _plugin.show(
       id: nearbyAlertNotificationId,
       title: 'RIDEY',

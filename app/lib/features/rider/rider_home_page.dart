@@ -14,7 +14,6 @@ import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/nearby_map.dart';
 import 'package:ridey_app/features/rider/nearby_stations.dart';
 import 'package:ridey_app/features/rider/official_bike_app.dart';
-import 'package:ridey_app/features/stations/saved_stations.dart';
 import 'package:ridey_app/features/stations/bike_station.dart';
 import 'package:ridey_app/features/stations/station_repository.dart';
 import 'package:ridey_app/widgets/ridey_status.dart';
@@ -29,7 +28,6 @@ class RiderHomePage extends StatefulWidget {
     this.repository,
     this.stationRepository,
     this.stationStatusRepository,
-    this.savedStationsStore,
     this.readLocation,
     this.openOfficialApp,
     this.nearbyAlertReminder,
@@ -38,7 +36,6 @@ class RiderHomePage extends StatefulWidget {
   final LiveSnapshotRepository? repository;
   final StationRepository? stationRepository;
   final StationStatusRepository? stationStatusRepository;
-  final SavedStationsStore? savedStationsStore;
   final Future<DeviceLocation?> Function()? readLocation;
   final Future<void> Function()? openOfficialApp;
   final NearbyAlertReminder? nearbyAlertReminder;
@@ -98,8 +95,6 @@ class _RiderHomePageState extends State<RiderHomePage> {
             stationStatusRepository:
                 widget.stationStatusRepository ??
                 SupabaseStationStatusRepository(),
-            savedStationsStore:
-                widget.savedStationsStore ?? SavedStationsStore(),
             readLocation: widget.readLocation ?? readDeviceLocation,
             onBikeSelected: (bike) => _openBike(bike, snapshot.requireData),
             openOfficialApp: widget.openOfficialApp ?? openOfficialBikeApp,
@@ -126,13 +121,11 @@ class _HomeData {
   const _HomeData({
     required this.stations,
     required this.parked,
-    required this.favorites,
     this.location,
   });
 
   final List<BikeStation> stations;
   final List<StationOccupancy> parked;
-  final List<String> favorites;
   final DeviceLocation? location;
 }
 
@@ -167,7 +160,6 @@ class _LoadedHome extends StatefulWidget {
     required this.snapshot,
     required this.stationRepository,
     required this.stationStatusRepository,
-    required this.savedStationsStore,
     required this.readLocation,
     required this.onBikeSelected,
     required this.openOfficialApp,
@@ -177,7 +169,6 @@ class _LoadedHome extends StatefulWidget {
   final LiveSnapshot snapshot;
   final StationRepository stationRepository;
   final StationStatusRepository stationStatusRepository;
-  final SavedStationsStore savedStationsStore;
   final Future<DeviceLocation?> Function() readLocation;
   final ValueChanged<LiveBike> onBikeSelected;
   final Future<void> Function() openOfficialApp;
@@ -203,13 +194,11 @@ class _LoadedHomeState extends State<_LoadedHome> {
         (_) => const <StationOccupancy>[],
       ),
       widget.readLocation().catchError((_) => null),
-      widget.savedStationsStore.load().catchError((_) => const <String>[]),
     ]);
     return _HomeData(
       stations: results[0]! as List<BikeStation>,
       parked: results[1]! as List<StationOccupancy>,
       location: results[2] as DeviceLocation?,
-      favorites: results[3]! as List<String>,
     );
   }
 
@@ -406,7 +395,6 @@ class _LoadedHomeState extends State<_LoadedHome> {
                     longitude: area.place!.longitude,
                   ),
             viewKey: _view,
-            favoriteIds: data.favorites.toSet(),
             controlsTop: 70,
             onStationTap: (id) => _openStation(id, area),
           ),

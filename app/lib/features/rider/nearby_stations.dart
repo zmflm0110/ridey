@@ -109,31 +109,6 @@ List<StationAlertGroup> nearestAlertStations({
   return ranked.take(limit).toList(growable: false);
 }
 
-List<StationAlertGroup> savedStationAlerts({
-  required List<LiveBike> bikes,
-  required List<BikeStation> stations,
-  required List<String> savedIds,
-}) {
-  final grouped = {
-    for (final group in stationAlertGroups(bikes: bikes, stations: stations))
-      group.id: group,
-  };
-  final byId = {for (final station in stations) station.id: station};
-
-  return [
-    for (final id in savedIds)
-      grouped[id] ??
-          StationAlertGroup(
-            id: id,
-            name: byId[id]?.name.isNotEmpty == true ? byId[id]!.name : id,
-            count: 0,
-            highAlertCount: 0,
-            latitude: byId[id]?.latitude,
-            longitude: byId[id]?.longitude,
-          ),
-  ];
-}
-
 LiveBike? firstBikeAt(List<LiveBike> bikes, String stationId) {
   LiveBike? fallback;
   for (final bike in bikes) {

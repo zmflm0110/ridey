@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ridey_app/design/ridey_theme.dart';
-import 'package:ridey_app/features/habits/lookup_habits.dart';
 import 'package:ridey_app/features/live/live_snapshot.dart';
 import 'package:ridey_app/features/live/live_snapshot_repository.dart';
-import 'package:ridey_app/features/location/device_location.dart';
 import 'package:ridey_app/features/rider/bike_detail_page.dart';
 import 'package:ridey_app/features/rider/bike_lookup.dart';
 import 'package:ridey_app/features/rider/bike_qr_scanner_page.dart';
@@ -15,13 +13,11 @@ class BikeLookupPage extends StatefulWidget {
     super.key,
     required this.snapshot,
     required this.repository,
-    this.readLocation,
     this.cameraEnabled = true,
   });
 
   final LiveSnapshot snapshot;
   final LiveSnapshotRepository repository;
-  final Future<DeviceLocation?> Function()? readLocation;
   final bool cameraEnabled;
 
   @override
@@ -92,7 +88,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     );
   }
 
-  Future<void> _lookup(LookupKind kind, {String? raw}) async {
+  Future<void> _lookup({String? raw}) async {
     if (_busy) return;
     FocusScope.of(context).unfocus();
     final typed = _controller.text.trim();
@@ -104,11 +100,6 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
       return;
     }
 
-    rememberLookup(
-      kind: kind,
-      subject: bikeId,
-      readLocation: widget.readLocation,
-    );
     _busy = true;
     try {
       await _refreshIfOld();
@@ -150,7 +141,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
     );
     if (!mounted || bikeId == null) return;
     _controller.text = bikeId.replaceFirst('SPB-', '');
-    _lookup(LookupKind.qr, raw: bikeId);
+    _lookup(raw: bikeId);
   }
 
   @override
@@ -195,7 +186,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
                       keyboardType: TextInputType.number,
                       textCapitalization: TextCapitalization.characters,
                       textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _lookup(LookupKind.number),
+                      onSubmitted: (_) => _lookup(),
                       style: context
                           .rideyNumbers(theme.textTheme.titleLarge)
                           ?.copyWith(
@@ -226,7 +217,7 @@ class _BikeLookupPageState extends State<BikeLookupPage> {
           ),
         ),
         const SizedBox(height: 12),
-        RideyButton(label: '조회하기', onPressed: () => _lookup(LookupKind.number)),
+        RideyButton(label: '조회하기', onPressed: () => _lookup()),
         const SizedBox(height: 10),
         // 번호표의 QR 에는 번호가 섞인 글자로 들어 있다 — 풀어서 바로 조회한다(bikeIdFromQr).
         RideyButton.secondary(label: 'QR로 찍기', onPressed: _scanQr),
