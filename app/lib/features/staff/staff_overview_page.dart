@@ -322,7 +322,7 @@ class _RouteCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             session.suspectsOnly
-                ? '고장 의심 대여소만, 가장 짧게 도는 순서예요(가까운 순서를 잡고 구간을 바꿔 보며 줄임).'
+                ? '고장 의심 대여소만, 가장 짧게 도는 순서예요(여러 순서를 함께 견주고 구간을 바꿔 보며 줄임).'
                 : '차 한 대(${plan.capacity}대 실음) 기준. 넘친 곳(거치대의 1.2배 넘음)에서 싣고 빈 곳(25% 아래)에 내려놓으면서, '
                       '고장 의심은 정비센터로 가져가도록 거둬요.',
             style: theme.textTheme.bodySmall?.copyWith(color: c.muted),

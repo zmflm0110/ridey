@@ -100,6 +100,90 @@ void main() {
     expect(plan.totalMeters, closeTo(900, 5));
   });
 
+  test('beam search avoids the near stop that sends greedy the long way', () {
+    // A(동 100m) 가 처음엔 가장 좋아 보이지만, 그 뒤 서쪽 B·C 까지 멀다. 서쪽 B(400m)·C(450m) 를 묶으면 더 적게 돈다.
+    final stations = [
+      _st('A', 100, suspects: [_bike('SPB-00011', 'A')]),
+      _st('B', -400, suspects: [_bike('SPB-00012', 'B')]),
+      _st('C', -450, suspects: [_bike('SPB-00013', 'C')]),
+    ];
+    PickupPlan plan(int width) => planPickup(
+      startLatitude: _lat,
+      startLongitude: 127.0,
+      stations: stations,
+      maxStops: 2,
+      beamWidth: width,
+    );
+    final greedy = plan(1), beam = plan(3);
+    expect([for (final s in greedy.stops) s.station.id], ['A', 'B']);
+    expect([for (final s in beam.stops) s.station.id], ['B', 'C']);
+    expect(beam.suspects, greedy.suspects);
+    expect(beam.totalMeters, lessThan(greedy.totalMeters));
+    expect(beam.score, greaterThan(greedy.score));
+  });
+
+  test('beam search never returns a lower score than greedy', () {
+    final stations = [
+      for (var i = 0; i < 12; i++)
+        _st(
+          's$i',
+          (i.isEven ? 1 : -1) * (150.0 + 170 * i),
+          bikes: i % 3 == 0 ? 30 : (i % 3 == 1 ? 1 : null),
+          racks: i % 3 == 2 ? null : 15,
+          suspects: [
+            for (var k = 0; k < i % 3; k++)
+              _bike('SPB-1${i}0$k', 's$i', high: k == 1),
+          ],
+        ),
+    ];
+    final greedy = planPickup(
+      startLatitude: _lat,
+      startLongitude: 127.0,
+      stations: stations,
+      beamWidth: 1,
+    );
+    final beam = planPickup(
+      startLatitude: _lat,
+      startLongitude: 127.0,
+      stations: stations,
+    );
+    expect(beam.score, greaterThanOrEqualTo(greedy.score));
+    expect(beam.suspects, greaterThanOrEqualTo(greedy.suspects));
+    // 실은 것보다 많이 내려놓지 않는다(순서를 바꿔도 짐 계산이 맞다).
+    var load = 0;
+    for (final s in beam.stops) {
+      load += s.pickUp - s.dropOff;
+      expect(load, greaterThanOrEqualTo(0));
+      expect(s.loadAfter, load);
+    }
+  });
+
+  test(
+    'suspects only: beam search finds a shorter path than nearest first',
+    () {
+      // 가까운 이웃: a(동 100) → b(서 150) → c(서 300) = 500m. 서쪽 b·c·d 를 차례로 = 450m.
+      final stations = [
+        _st('a', 100, suspects: [_bike('SPB-00021', 'a')]),
+        _st('b', -150, suspects: [_bike('SPB-00022', 'b')]),
+        _st('c', -300, suspects: [_bike('SPB-00023', 'c')]),
+        _st('d', -450, suspects: [_bike('SPB-00024', 'd')]),
+      ];
+      PickupPlan plan(int width) => planPickup(
+        startLatitude: _lat,
+        startLongitude: 127.0,
+        stations: stations,
+        suspectsOnly: true,
+        maxStops: 3,
+        beamWidth: width,
+      );
+      expect([for (final s in plan(1).stops) s.station.id], ['a', 'b', 'c']);
+      expect(plan(1).totalMeters, closeTo(500, 5));
+      expect([for (final s in plan(3).stops) s.station.id], ['b', 'c', 'd']);
+      expect(plan(3).totalMeters, closeTo(450, 5));
+      expect(plan(3).suspects, plan(1).suspects);
+    },
+  );
+
   test('2-opt untangles a crossing path', () {
     // 시작 (0,0), 점 A(0,1) B(1,1) C(1,0) D(0,2)... 직선 위 예: 순서 0→300→100→200 은 꼬임.
     final order = [_st('p300', 300), _st('p100', 100), _st('p200', 200)];
